@@ -1,6 +1,6 @@
 ---
-title: Example Guide
-description: A guide in my new Starlight docs site.
+title: GDG Docs
+description: GDG Docs introduction
 ---
 
 Guides lead a user through a specific task they want to accomplish, often with a sequence of steps.

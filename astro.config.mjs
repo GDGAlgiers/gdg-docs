@@ -5,17 +5,26 @@ import starlight from '@astrojs/starlight';
 export default defineConfig({
 	integrations: [
 		starlight({
-			title: 'My Docs',
+			title: 'GDG Docs',
 			social: {
-				github: 'https://github.com/withastro/starlight',
+				github: 'https://github.com/GDGAlgiers',
 			},
 			sidebar: [
 				{
+					label: 'Overview',
+					autogenerate: { directory: 'overview' },
+				},
+				{
+					label: 'Code Guidelines',
+					autogenerate: { directory: 'code-guidelines' },
+				},
+				{
 					label: 'Guides',
-					items: [
-						// Each item here is one entry in the navigation menu.
-						{ label: 'Example Guide', slug: 'guides/example' },
-					],
+					autogenerate: { directory: 'guides' },
+					// items: [
+					// 	// Each item here is one entry in the navigation menu.
+					// 	{ label: 'Example Guide', slug: 'guides/example' },
+					// ],
 				},
 				{
 					label: 'Reference',
