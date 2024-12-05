@@ -25,10 +25,8 @@ The following guide provides general advice to approach backend tasks effectivel
 - Ensure proper HTTP status codes are used in responses for better API usability.
 
 ### Testing
-- Write unit tests for services and integration tests for API endpoints (can be using tools like [Jest](https://jestjs.io/) or [Mocha](https://mochajs.org/)).
-- Use mock databases or in-memory databases (e.g., SQLite, MongoMemoryServer) for isolated tests.
+- Write unit tests, when required, for services and integration tests for API endpoints (can be using tools like [Jest](https://jestjs.io/) or [Mocha](https://mochajs.org/)).
 
 ## Further reading
 
-- Read [about backend best practices](https://github.com/i0natan/nodebestpractices) to refine your workflow and enhance productivity.
-
+- Some [Nodejs best practices](https://github.com/i0natan/nodebestpractices).
