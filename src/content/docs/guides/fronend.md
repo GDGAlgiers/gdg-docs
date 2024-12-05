@@ -4,7 +4,7 @@ description: Frontend work guide
 ---
 
 ## Frontend Workflow
-The following guide is a general advice that helps with approaching tasks. Note that this doesn't necessarily fit every context, and therefore different approaches might be followed depending on the context and on one's experience.
+The following guide is a general advice that helps with approaching frontend tasks. Note that this doesn't necessarily fit every context, and therefore different approaches might be followed depending on the context and on one's experience.
 
 ### Visual UI implementation
 - Start by focusing on the implementation of the static visual elements (e.g cards, lists).

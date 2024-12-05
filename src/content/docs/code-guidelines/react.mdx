@@ -4,20 +4,17 @@ description: GDG Docs inroduction
 sidebar:
     label: React
 ---
+import { Code } from '@astrojs/starlight/components';
+import reactMockDataCodeExample from '../../code-examples/react/mock-data.jsx?raw';
+
 ## Mock data
 1. When using mock (fake) data, create a file for it in the "data" folder, instead of declaring it in the component or page file. This will make refactoring and sharing the data with other related pages easier:
-```jsx
-// bad
-const items = [{}, {}, {}]; // mock data defined in the component
 
-// good
-import items from "@/data/items" // mock data defined in an external file
-```
-Note that it's preferable to use `.js` or `.ts` extensions instead of `.json` for data files.
+<Code code={reactMockDataCodeExample} lang="jsx" title="SomeComponent.jsx"/>
 
-2. Make sure to
+Note that it's preferable to use `.js` or `.ts` formats for data files, instead of `.json`.
 
-3. To keep your code ready for Backend integration, use the mock data in a state
+2. To keep your code ready for Backend integration, use the mock data in a state
 ```js
 import initialProduct from ''
 const [product, setProduct] = useState({}) // you can also specifiy default values like '' or 0 for some fiels to avoid crashes.
