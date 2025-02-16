@@ -3,6 +3,7 @@ import starlight from '@astrojs/starlight';
 
 import tailwind from '@astrojs/tailwind';
 
+
 // https://astro.build/config
 export default defineConfig({
     integrations: [starlight({
@@ -32,8 +33,16 @@ export default defineConfig({
                 // ],
             },
             {
-                label: 'Reference',
-                autogenerate: { directory: 'reference' },
+                label: 'Tools',
+                autogenerate: { directory: 'tools', exclude: ['react-scan'] },
+            },
+            {
+                label: 'Workflows',
+                autogenerate: { directory: 'workflows' },
+            },
+            {
+                label: 'References',
+                autogenerate: { directory: 'references' },
             },
         ],
         customCss: [

@@ -25,4 +25,3 @@ The following guide is a general advice that helps with approaching frontend tas
 
 ## Further reading
 
-- Read [about how-to guides](https://diataxis.fr/how-to-guides/) in the Diátaxis framework

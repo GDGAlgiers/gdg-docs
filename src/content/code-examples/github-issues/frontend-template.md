@@ -3,7 +3,7 @@ name: Frontend Task
 about: Template customized for a frontend task
 ---
 
-# Task DetailsL
+# Task Details
 - [ ] Task detail 1
 - [ ] Task detail 2
 

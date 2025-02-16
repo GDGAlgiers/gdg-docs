@@ -3,7 +3,7 @@ name: Backend Task
 about: Template customized for a Backend task
 ---
 
-# Task DetailsL
+# Task Details
 - [ ] Task detail 1
 - [ ] Task detail 2
 

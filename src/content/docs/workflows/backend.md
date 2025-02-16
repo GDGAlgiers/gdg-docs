@@ -29,4 +29,3 @@ The following guide provides general advice to approach backend tasks effectivel
 
 ## Further reading
 
-- Some [Nodejs best practices](https://github.com/i0natan/nodebestpractices).
