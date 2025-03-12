@@ -1,4 +1,470 @@
 ---
 title: "State Management"
-description: "State Management"
+description: "A comprehensive guide to state management in React, covering built-in hooks, external libraries, performance optimization with TanStack Query and React Compiler, and form state handling."
 ---
+import { Aside } from '@astrojs/starlight/components';
+
+**State management** is a cornerstone of scalable and maintainable React applications. This practical guide will help you choose the right approach for your needs.
+
+<Aside type="tip">
+  **When to use what?**
+  - **Component state** (`useState`): UI controls, toggles, local form fields
+  - **Reducer** (`useReducer`): Complex state logic within a component
+  - **Context API**: Theme, authentication, preferences shared across components
+  - **External libraries**: Application-wide state that persists across routes
+  - **TanStack Query**: Any server state (API data, CRUD operations)
+</Aside>
+
+---
+
+## 1. React's Built-in State Management
+
+### useState
+
+For simple, local component state:
+
+```jsx
+// Counter.jsx
+import { useState } from 'react';
+
+function Counter() {
+  const [count, setCount] = useState(0);
+  
+  // Best practice: use functional updates for values that depend on previous state
+  const increment = () => setCount(prevCount => prevCount + 1);
+
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={increment}>Increment</button>
+    </div>
+  );
+}
+```
+
+<Aside type="caution">
+  Avoid setting state directly from props without using an effect, as it can lead to unexpected behavior during re-renders.
+</Aside>
+
+### useReducer
+
+For complex state logic or when multiple values update together:
+
+```jsx
+// Counter.jsx
+import { useReducer } from 'react';
+
+function reducer(state, action) {
+  switch (action.type) {
+    case 'increment':
+      return { count: state.count + 1 };
+    case 'decrement':
+      return { count: state.count - 1 };
+    case 'reset':
+      return { count: 0 };
+    default:
+      throw new Error(`Unsupported action type: ${action.type}`);
+  }
+}
+
+function Counter() {
+  const [state, dispatch] = useReducer(reducer, { count: 0 });
+
+  return (
+    <div>
+      <p>Count: {state.count}</p>
+      <button onClick={() => dispatch({ type: 'increment' })}>+</button>
+      <button onClick={() => dispatch({ type: 'decrement' })}>-</button>
+      <button onClick={() => dispatch({ type: 'reset' })}>Reset</button>
+    </div>
+  );
+}
+```
+
+### Context API
+
+For sharing state across component trees:
+
+```jsx
+// AuthContext.jsx
+import { createContext, useContext, useReducer } from 'react';
+
+// Define a reducer for more complex state management
+function authReducer(state, action) {
+  switch (action.type) {
+    case 'LOGIN':
+      return { ...state, user: action.payload, isAuthenticated: true };
+    case 'LOGOUT':
+      return { ...state, user: null, isAuthenticated: false };
+    default:
+      return state;
+  }
+}
+
+const AuthContext = createContext();
+
+export function AuthProvider({ children }) {
+  const [state, dispatch] = useReducer(authReducer, {
+    user: null,
+    isAuthenticated: false
+  });
+
+  // Provide actions as simple functions
+  const login = (userData) => dispatch({ type: 'LOGIN', payload: userData });
+  const logout = () => dispatch({ type: 'LOGOUT' });
+
+  return (
+    <AuthContext.Provider value={{ ...state, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
+```
+
+<Aside type="tip">
+  **Context Best Practices**:
+  - Split contexts by domain (auth, theme, etc.)
+  - Keep contexts small and focused
+  - Use memoization to prevent unnecessary re-renders
+</Aside>
+
+---
+
+## 2. External State Libraries
+
+For complex applications, consider these popular libraries:
+
+| Library | Size | Learning Curve | Key Features | Best For |
+|---------|------|----------------|--------------|----------|
+| **Redux** | Larger bundle | Steep | Centralized store, middleware, devtools | Large enterprise apps |
+| **Zustand** | Tiny (3KB) | Easy | Simple API, hooks-based | Most React apps |
+| **Jotai** | Tiny (2.5KB) | Moderate | Atomic approach | Component-focused state |
+
+### Zustand Example
+
+```jsx
+// store.js
+import { create } from 'zustand';
+
+const useStore = create((set) => ({
+  count: 0,
+  increment: () => set((state) => ({ count: state.count + 1 })),
+  decrement: () => set((state) => ({ count: state.count - 1 })),
+  reset: () => set({ count: 0 }),
+}));
+
+// Component.jsx
+function Counter() {
+  const { count, increment, decrement, reset } = useStore();
+  
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={increment}>+</button>
+      <button onClick={decrement}>-</button>
+      <button onClick={reset}>Reset</button>
+    </div>
+  );
+}
+```
+
+---
+
+## 3. Performance Optimization
+
+### Memoization with useMemo and useCallback
+
+Use these hooks strategically to prevent unnecessary calculations and re-renders:
+
+```jsx
+// ExpensiveComponent.jsx
+import { useMemo, useCallback, useState } from 'react';
+
+export default function ProductList({ products, onProductSelect }) {
+  const [filter, setFilter] = useState('');
+  
+  // Memoize expensive calculations
+  const filteredProducts = useMemo(() => {
+    console.log('Filtering products'); // Will only run when products or filter changes
+    return products.filter(p => 
+      p.name.toLowerCase().includes(filter.toLowerCase())
+    );
+  }, [products, filter]);
+  
+  // Memoize callbacks passed to child components
+  const handleProductClick = useCallback((productId) => {
+    console.log('Product selected');
+    onProductSelect(productId);
+  }, [onProductSelect]);
+  
+  return (
+    <div>
+      <input 
+        type="text" 
+        value={filter} 
+        onChange={(e) => setFilter(e.target.value)}
+        placeholder="Filter products..."
+      />
+      <ul>
+        {filteredProducts.map(product => (
+          <li 
+            key={product.id} 
+            onClick={() => handleProductClick(product.id)}
+          >
+            {product.name}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+<Aside type="caution">
+  Don't overuse memoization. Only apply it when:
+  - You're computing expensive values
+  - You're passing callbacks to optimized child components
+  - You notice performance issues in dev tools
+</Aside>
+
+### React Compiler
+
+The React Compiler is an emerging build-time tool that can automatically optimize your components. It effectively acts as a replacement for manually writing `useMemo` and `useCallback` by analyzing your code during build time and applying memoization under the hood. This reduces boilerplate and ensures performance optimizations are consistently applied.
+
+<Aside type="note">
+    The React Compiler is still in its early stages but promises significant improvements in rendering performance without the manual overhead. For more information, refer to the [official React documentation](https://react.dev/learn/react-compiler).
+</Aside>
+
+---
+
+## 4. Asynchronous State Management with TanStack Query
+
+TanStack Query v5 (formerly React Query) simplifies fetching, caching, and synchronizing server state:
+
+```jsx
+// Todos.jsx
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
+
+function TodoList() {
+  const queryClient = useQueryClient();
+  
+  // Fetch todos
+  const { 
+    data: todos = [], 
+    isPending, 
+    error 
+  } = useQuery({
+    queryKey: ['todos'],
+    queryFn: () => axios.get('/api/todos').then(res => res.data),
+  });
+  
+  // Add new todo mutation
+  const addMutation = useMutation({
+    mutationFn: (newTodo) => axios.post('/api/todos', newTodo),
+    onSuccess: () => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries({ queryKey: ['todos'] })
+    },
+  });
+  
+  if (isPending) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  
+  return (
+    <div>
+      <h2>My Todos ({todos.length})</h2>
+      
+      {/* Add todo form */}
+      <form onSubmit={(e) => {
+        e.preventDefault();
+        const title = e.target.elements.title.value;
+        addMutation.mutate({ title, completed: false });
+        e.target.reset();
+      }}>
+        <input name="title" required placeholder="Add new todo" />
+        <button type="submit" disabled={addMutation.isPending}>
+          {addMutation.isPending ? 'Adding...' : 'Add'}
+        </button>
+      </form>
+      
+      {/* Todo list */}
+      <ul>
+        {todos.map((todo) => (
+          <li key={todo.id}>
+            {todo.title} {todo.completed ? '✅' : '⬜'}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+### Key TanStack Query Features
+
+- **Automatic caching** - Results are cached by query key
+- **Background data refreshing** - Keep data fresh without interrupting the user
+- **Automatic retry logic** - Handles intermittent failures
+- **Pagination and infinite scroll** - Built-in support
+- **Mutation helpers** - Simplifies CRUD operations
+- **Devtools** - Visualize queries and cache
+
+For more details on its benefits, see the [API Integration](/react/api-integration) section of our docs.
+
+---
+
+## 5. Form State Management
+
+Handling form state efficiently is vital for user experience and application performance.
+
+### React Hook Form
+
+Optimized for performance by using uncontrolled components and refs:
+
+```jsx
+// SignupForm.jsx
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+// Define validation schema with zod
+const schema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+function SignupForm() {
+  const { 
+    register, 
+    handleSubmit, 
+    formState: { errors, isSubmitting } 
+  } = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      email: '',
+      password: ''
+    }
+  });
+
+  const onSubmit = data => console.log('Form submitted:', data);
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <div>
+        <label htmlFor="email">Email</label>
+        <input id="email" type="email" {...register('email')} />
+        {errors.email && <p className="error">{errors.email.message}</p>}
+      </div>
+      
+      <div>
+        <label htmlFor="password">Password</label>
+        <input id="password" type="password" {...register('password')} />
+        {errors.password && <p className="error">{errors.password.message}</p>}
+      </div>
+      
+      <button type="submit" disabled={isSubmitting}>
+        {isSubmitting ? 'Submitting...' : 'Submit'}
+      </button>
+    </form>
+  );
+}
+```
+
+### Formik
+
+A more declarative API that's beginner-friendly:
+
+```jsx
+// LoginForm.jsx
+import { Formik, Form, Field, ErrorMessage } from 'formik';
+import * as Yup from 'yup';
+
+// Define validation schema with Yup
+const LoginSchema = Yup.object().shape({
+  email: Yup.string().email('Invalid email').required('Required'),
+  password: Yup.string().required('Required')
+});
+
+function LoginForm({ onLogin }) {
+  return (
+    <Formik
+      initialValues={{ email: '', password: '' }}
+      validationSchema={LoginSchema}
+      onSubmit={(values, { setSubmitting }) => {
+        onLogin(values)
+          .finally(() => setSubmitting(false));
+      }}
+    >
+      {({ isSubmitting }) => (
+        <Form>
+          <div className="form-group">
+            <label htmlFor="email">Email</label>
+            <Field type="email" id="email" name="email" />
+            <ErrorMessage name="email" component="div" className="error" />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="password">Password</label>
+            <Field type="password" id="password" name="password" />
+            <ErrorMessage name="password" component="div" className="error" />
+          </div>
+          
+          <button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Logging in...' : 'Log In'}
+          </button>
+        </Form>
+      )}
+    </Formik>
+  );
+}
+```
+
+### Which Form Library to Choose?
+
+| Feature | React Hook Form | Formik |
+|---------|----------------|--------|
+| **Performance** | Better (fewer re-renders) | Good |
+| **Bundle Size** | Smaller | Larger |
+| **Validation** | External (zod, yup, etc.) | External or built-in |
+| **Learning Curve** | Moderate | Easy |
+| **Best For** | Complex or large forms | Simple to medium forms |
+
+For detailed comparisons and additional best practices, refer to the [Forms Page](/react/forms-validation) of our documentation.
+
+---
+
+## Conclusion
+
+### Decision Framework
+
+Choose your state management approach based on:
+
+1. **Scope**: How widely is the state needed?
+   - Single component → `useState`
+   - Component tree → `useContext`
+   - App-wide → External library
+
+2. **Complexity**: How complex is your state logic?
+   - Simple values → `useState`
+   - Complex logic → `useReducer` 
+   - Multiple interrelated pieces → External library
+
+3. **Source**: Where does the state come from?
+   - Local UI state → React's built-in hooks
+   - Server data → TanStack Query
+   - Form inputs → React Hook Form / Formik
+
+4. **Performance needs**: Is rendering performance critical?
+   - Apply memoization strategically
+   - Consider atomic state libraries for frequent updates
+
+Remember that the simplest solution that solves your problem is usually the best. Start small and scale your state management approach as your application grows.
