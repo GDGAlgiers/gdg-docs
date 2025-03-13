@@ -1,55 +1,62 @@
-# Starlight Starter Kit: Basics
+# GDG Docs Project
 
-[![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
+## 📌 Project Overview
+
+GDG Docs is an initiative by GDG Algiers aimed at providing high-quality documentation to help members in their development journey. It serves as a structured knowledge base covering best practices, common pitfalls, and essential workflows for the tools and frameworks we frequently use.
+
+## 🚀 Table of Contents
+
+- [Overview](#-overview)
+- [Project Structure](#-project-structure)
+- [How to Contribute](#-how-to-contribute)
+- [Pull Request Guidelines](#-pull-request-guidelines)
+- [Issues & Project Management](#-issues--project-management)
+
+---
+
+## 📖 Overview
+
+This repository contains documentation for best practices and standards in **React, Express, and Flutter** development. It is structured to ensure consistency, maintainability, and scalability across all projects.
+
+## 📂 Project Structure
 
 ```
-npm create astro@latest -- --template starlight
+/docs
+   ├── code-guidelines
+   ├── react
+   ├── express
+   ├── flutter
 ```
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/withastro/starlight/tree/main/examples/basics)
-[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/withastro/starlight/tree/main/examples/basics)
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/withastro/starlight&create_from_path=examples/basics)
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fwithastro%2Fstarlight%2Ftree%2Fmain%2Fexamples%2Fbasics&project-name=my-starlight-docs&repository-name=my-starlight-docs)
+- `code-guidelines/` - General principles for code spacing, linting, etc.
+- `react/` - Documentation for React best practices.
+- `express/` - Documentation for Express.js best practices.
+- `flutter/` - Documentation for Flutter best practices.
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+## 🤝 How to Contribute
 
-## 🚀 Project Structure
+1. **Fork the repository** & clone it to your local machine.
+2. **Create an issue** or check existing issues to pick a task.
+3. **Create a branch** using the naming convention:
+   ```
+   <your-name>/<framework>/<task>
+   ```
+   Example: `khalil/react/state-management`
+4. Work on your branch and commit regularly.
+5. **Open a Pull Request (PR)** once your task is completed.
+6. A **co-manager** will review your PR and suggest any necessary changes.
+7. After approval, the PR will be merged!
 
-Inside of your Astro + Starlight project, you'll see the following folders and files:
+## 🔄 Pull Request Guidelines
 
-```
-.
-├── public/
-├── src/
-│   ├── assets/
-│   ├── content/
-│   │   ├── docs/
-│   │   └── config.ts
-│   └── env.d.ts
-├── astro.config.mjs
-├── package.json
-└── tsconfig.json
-```
+When opening a PR:
+✅ Ensure the PR title follows: `[Framework] - Task Description` (e.g., `[React] - State Management Docs`)
+✅ Provide a clear description of changes.
+✅ Reference the issue number (if applicable).
+✅ Keep PRs focused (avoid including unrelated changes).
 
-Starlight looks for `.md` or `.mdx` files in the `src/content/docs/` directory. Each file is exposed as a route based on its file name.
+## 📌 Issues & Project Management
 
-Images can be added to `src/assets/` and embedded in Markdown with a relative link.
-
-Static assets, like favicons, can be placed in the `public/` directory.
-
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Check out [Starlight’s docs](https://starlight.astro.build/), read [the Astro documentation](https://docs.astro.build), or jump into the [Astro Discord server](https://astro.build/chat).
+- Issues will be created for each major documentation task.
+- Tasks are managed via **GitHub Projects**, where progress will be tracked.
+- Assignments will be clearly defined in the issue descriptions.

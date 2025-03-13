@@ -1,5 +1,6 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
+
 import tailwind from '@astrojs/tailwind';
 
 // Astro Configuration
@@ -46,4 +47,4 @@ export default defineConfig({
             applyBaseStyles: false,
         }),
     ],
-});
+})
