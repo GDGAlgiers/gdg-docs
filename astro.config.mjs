@@ -1,50 +1,64 @@
-import { defineConfig } from 'astro/config';
-import starlight from '@astrojs/starlight';
+import { defineConfig } from "astro/config";
+import starlight from "@astrojs/starlight";
+import tailwind from "@astrojs/tailwind";
 
-import tailwind from '@astrojs/tailwind';
-
-// Astro Configuration
 export default defineConfig({
     integrations: [
         starlight({
-            title: 'GDG Docs',
+            title: "GDG Docs",
             logo: {
                 src: "./src/assets/gdg-logo.svg",
             },
             social: {
-                github: 'https://github.com/GDGAlgiers',
+                github: "https://github.com/GDGAlgiers",
                 discord: "https://discord.gg/tX2rAAvkxX",
             },
             sidebar: [
                 {
-                    label: 'Overview',
-                    autogenerate: { directory: 'overview' },
+                    label: "Overview",
+                    autogenerate: { directory: "overview" },
+                    collapsed: true,
                 },
                 {
-                    label: 'Code Guidelines',
-                    autogenerate: { directory: 'code-guidelines' },
+                    label: "Code Guidelines",
+                    autogenerate: { directory: "code-guidelines" },
+                    collapsed: true,
                 },
                 {
-                    label: 'Guides',
-                    autogenerate: { directory: 'guides' },
+                    label: "Guides",
+                    autogenerate: { directory: "guides" },
+                    collapsed: true,
                 },
                 {
-                    label: 'Tools',
-                    autogenerate: { directory: 'tools', exclude: ['react-scan'] },
+                    label: "React",
+                    autogenerate: { directory: "react" },
+                    collapsed: true,
                 },
                 {
-                    label: 'Workflows',
-                    autogenerate: { directory: 'workflows' },
+                    label: "Express",
+                    autogenerate: { directory: "express" },
+                    collapsed: true,
                 },
                 {
-                    label: 'References',
-                    autogenerate: { directory: 'references' },
+                    label: "Flutter",
+                    autogenerate: { directory: "flutter" },
+                    collapsed: true,
+                },
+                {
+                    label: "Workflows",
+                    autogenerate: { directory: "workflows" },
+                    collapsed: true,
+                },
+                {
+                    label: "References",
+                    autogenerate: { directory: "references" },
+                    collapsed: true,
                 },
             ],
-            customCss: ['./src/tailwind.css'],
+            customCss: ["./src/tailwind.css"],
         }),
         tailwind({
             applyBaseStyles: false,
         }),
     ],
-})
+});
