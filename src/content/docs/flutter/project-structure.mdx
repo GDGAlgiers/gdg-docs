@@ -1,4 +1,351 @@
 ---
 title: "Project Structure"
-description: "Project Structure"
+description: "A structured approach to organizing Flutter projects using feature-driven architecture and MVVM pattern."
+---
+
+import { Aside, Code, FileTree, Card } from '@astrojs/starlight/components';
+
+<Aside>
+A well-organized project structure is key to maintaining scalability, readability, and ease of collaboration in Flutter applications. By following a structured approach, developers can ensure modularity and maintainability.  
+**Related Guide**: [Flutter State Management](../state-management)
+</Aside>
+
+---
+
+## **Feature-Driven Architecture**
+
+Feature-Driven Architecture (FDA) structures Flutter projects around self-contained features, each handling its UI, business logic, and state management. This ensures a modular, scalable, and maintainable codebase.
+
+---
+
+## **Why Feature-Driven Architecture?**  
+
+- **Modularity** Features are self-contained and reusable.
+- **Scalability** New features can be added without disrupting existing ones.
+- **Separation of Concerns** Clear division between UI, logic, and data layers.  
+- **Improved Collaboration** Teams can work on features independently.
+- **Easier Testing & Maintenance** Isolated features simplify debugging and testing.
+
+This structure helps developers build maintainable and efficient Flutter apps.  
+
+---
+
+## **Getting Started**
+
+To implement this structure in a new project:
+
+1. Create a new Flutter project: `flutter create my_app`
+2. Set up the base folder structure:
+   ```
+   lib/
+   ├── features/
+   ├── shared/
+   ├── core/
+   └── main.dart
+   ```
+3. Define your app's features and start coding!
+
+For developers using VSCode, the [Flutter Feature Scaffolding](https://marketplace.visualstudio.com/items?itemName=KiritchoukC.flutter-clean-architecture) extension can automate feature folder creation.
+
+---
+
+## **Suggested Folder Structure**
+This folder structure organizes features into distinct layers, ensuring a clean separation of concerns
+
+<FileTree>
+- features
+  - feature_1
+  - feature_2
+    - domain (Data Layer - Models, Providers, Repositories)
+      - models        # Data Classes
+      - providers     # Handles API/database interactions
+      - repository    # Business logic interacting with models & providers
+    - logic (Business Logic Layer - ViewModel equivalent)
+      - cubits        # Handles state changes
+      - states        # Defines different states
+    - presentation (UI Layer - View equivalent)
+      - screens       # Full-screen widgets
+      - fragments     # Partial UI components
+      - widgets       # Reusable UI elements
+- shared              # Code shared between multiple features
+- core                # Core functionality, constants, helpers, and routing
+</FileTree>
+
+---
+
+## **Architecture Flow Diagram**
+
+```
+┌───────────────────┐     ┌───────────────────┐     ┌───────────────────┐
+│   Presentation    │     │       Logic       │     │      Domain       │
+│      Layer        │◄────┤      Layer        │◄────┤      Layer        │
+│    (UI/View)      │     │   (ViewModel)     │     │ (Data/Models)     │
+└───────────────────┘     └───────────────────┘     └───────────────────┘
+        ▲                          │                          ▲
+        │                          ▼                          │
+        │                  ┌───────────────────┐              │
+        └──────────────────┤  State Updates    ├──────────────┘
+                           │ (Cubit to View)   │
+                           └───────────────────┘
+```
+
+Data flows from the Domain Layer (API/DB) through the Logic Layer (state processing) to the Presentation Layer (UI). User interactions in the UI trigger actions in the Logic Layer, which may fetch or update data through the Domain Layer.
+
+---
+
+## **Example Feature: User Profile**
+
+<FileTree>
+- features
+  - user_profile
+    - domain
+      - models
+        - user_model.dart
+      - providers
+        - user_api_provider.dart
+      - repository
+        - user_repository.dart
+    - logic
+      - cubits
+        - user_cubit.dart
+      - states
+        - user_state.dart
+    - presentation
+      - screens
+        - user_profile_screen.dart
+      - fragments
+        - profile_header_fragment.dart
+      - widgets
+        - user_avatar.dart
+</FileTree>
+
+---
+
+
+
+
+## **Layer Breakdown**
+
+### **Domain Layer**
+
+<Card title="Domain Layer">
+- **Models**: Define data structures (e.g., `UserModel`).  
+- **Providers**: Handle API/database communication.  
+- **Repositories**: Bridge between providers and business logic.  
+**Related**: [Clean Architecture in Flutter](https://resocoder.com/flutter-clean-architecture-tdd/)  
+</Card>
+
+#### **Domain Layer Code Examples**
+
+```dart
+// features/user_profile/domain/models/user_model.dart
+class UserModel {
+  final String id;
+  final String name;
+  final String email;
+  
+  UserModel({required this.id, required this.name, required this.email});
+  
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    return UserModel(
+      id: json['id'],
+      name: json['name'],
+      email: json['email'],
+    );
+  }
+}
+```
+
+```dart
+// features/user_profile/domain/repository/user_repository.dart
+class UserRepository {
+  final UserApiProvider apiProvider;
+
+  UserRepository(this.apiProvider);
+
+  Future<UserModel> getUser() async {
+    final userData = await apiProvider.fetchUserProfile();
+    return UserModel.fromJson(userData);
+  }
+}
+```
+
+### **Logic Layer**
+
+<Card title="Logic Layer">
+- **Cubits (ViewModel Layer)**: Manage state transitions efficiently.  
+- **States**: Immutable state classes (e.g., `UserLoaded`, `UserError`).  
+</Card>
+
+#### **Logic Layer Code Examples**
+
+```dart
+// features/user_profile/logic/states/user_state.dart
+abstract class UserState {}
+
+class UserInitial extends UserState {}
+class UserLoading extends UserState {}
+class UserLoaded extends UserState {
+  final UserModel user;
+  UserLoaded(this.user);
+}
+class UserError extends UserState {
+  final String message;
+  UserError(this.message);
+}
+```
+
+```dart
+// features/user_profile/logic/cubits/user_cubit.dart
+class UserCubit extends Cubit<UserState> {
+  final UserRepository repository;
+  UserCubit(this.repository) : super(UserInitial());
+
+  Future<void> fetchUserProfile() async {
+    emit(UserLoading());
+    try {
+      final user = await repository.getUser();
+      emit(UserLoaded(user));
+    } catch (e) {
+      emit(UserError(e.toString()));
+    }
+  }
+}
+```
+
+### **Presentation Layer**
+
+<Card title="Presentation Layer">
+- **Screens**: Full-page UIs (e.g., `UserProfileScreen`).  
+- **Fragments**: Reusable screen sections (e.g., `ProfileHeaderFragment`).  
+- **Widgets**: Atomic UI components (e.g., `UserAvatar`).  
+**Related**: [Flutter UI Best Practices](https://medium.com/@expertappdevs/performance-best-practices-in-flutter-4579a7a265da)  
+</Card>
+
+#### **Presentation Layer Code Examples**
+
+```dart
+// features/user_profile/presentation/screens/user_profile_screen.dart
+class UserProfileScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (_) => getIt<UserCubit>()..fetchUserProfile(),
+      child: Scaffold(
+        appBar: AppBar(title: Text('User Profile')),
+        body: BlocBuilder<UserCubit, UserState>(
+          builder: (context, state) {
+            if (state is UserLoading) {
+              return Center(child: CircularProgressIndicator());
+            } else if (state is UserLoaded) {
+              return ProfileContent(user: state.user);
+            }
+            return Center(child: Text('Select a user'));
+          },
+        ),
+      ),
+    );
+  }
+}
+```
+
+```dart
+// features/user_profile/presentation/widgets/user_avatar.dart
+class UserAvatar extends StatelessWidget {
+  final String avatarUrl;
+  
+  const UserAvatar({Key? key, required this.avatarUrl}) : super(key: key);
+  
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 80,
+      height: 80,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: Theme.of(context).primaryColor),
+      ),
+      child: ClipOval(
+        child: Image.network(
+          avatarUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Icon(Icons.person),
+        ),
+      ),
+    );
+  }
+}
+```
+
+---
+
+## **Applying the MVVM Pattern with Cubits**
+
+The **MVVM (Model-View-ViewModel)** pattern separates concerns, ensuring better maintainability and testability. **Cubits** (from the BLoC pattern) handle state management efficiently by maintaining immutable states.
+
+**Key Integration:**  
+- **ViewModel Layer**: Implemented via Cubits.  
+- **View Layer**: Widgets observe Cubit states and react accordingly.  
+
+---
+
+## **Performance Considerations**
+
+This architecture impacts performance in several ways:
+
+- **Memory Usage**: Feature separation prevents unnecessary loading of unused components.
+- **Build Time**: Cubits rebuild only the specific widgets that depend on changed states, avoiding full UI rebuilds.
+- **Tree Shaking**: Properly structured code allows the Dart compiler to optimize away unused code.
+- **Load Time**: Consider lazy-loading features that aren't needed during initial app startup.
+<Aside type="tip">
+**Optimization Tip**: Use `const` constructors for stateless widgets to leverage Flutter's widget tree optimization.
+</Aside>
+
+---
+
+## **Migrating Existing Projects**
+
+To migrate an existing Flutter project to this architecture:
+
+1. **Identify Features**: List distinct functionalities in your app.
+2. **Create Structure**: Set up the base folder structure alongside existing code.
+3. **Gradual Migration**: Move one feature at a time, starting with less complex ones.
+4. **Refactor State Management**: Gradually introduce Cubits for state management.
+5. **Update Imports**: Fix import paths throughout the codebase.
+6. **Test Thoroughly**: After each migration step, run tests to ensure functionality.
+<Aside type="note">
+**Migration Strategy**: Keep the app functional throughout the process by maintaining interoperability between old and new architecture components.
+</Aside>
+
+---
+
+## **Best Practices**
+
+<Aside type="tip">
+- **Dependency Injection**: Keep dependencies managed efficiently.
+  ```dart
+  // core/injection.dart
+  final getIt = GetIt.instance;
+  void setupDependencies() {
+  getIt.registerLazySingleton<UserRepository>(() => UserRepository());
+  getIt.registerFactory<UserCubit>(() => UserCubit(getIt<UserRepository>()));
+  }
+  ```
+- **Modularity**: Keep features self-contained and avoid unnecessary dependencies.  
+- **Testing**: Cover Cubits, Repositories, and critical widgets to ensure robustness.  
+
+### **Avoid These Common Mistakes**
+- **Placing business logic inside widgets** – Always separate concerns.
+- **Failing to emit distinct Cubit states** – Ensure states are immutable.
+- **Overusing singletons in dependency injection** – Use lazy singletons wisely.
+
+</Aside>
+
+---
+
+## **See Also**
+1. [State Management Fundamentals](../state-management) – Learn how to manage complex states effectively.  
+2. [Feature-Driven Development in Flutter](https://codewithandrea.com/articles/flutter-project-structure/) – Comprehensive guide to feature-first Flutter architecture.
+3. [Flutter Official Documentation](https://docs.flutter.dev) – Stay updated with the latest Flutter best practices.
+
 ---
