@@ -1,4 +1,859 @@
 ---
 title: "Databases"
-description: "Databases"
+description: "A comprehensive guide to database integration in Express applications, covering MongoDB and PostgreSQL setups, connection patterns, model structuring, migrations, and error handling best practices."
 ---
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+**Database integration** is fundamental to most modern web applications. This guide will help you choose and implement the right database solution for your Express projects.
+
+---
+
+## 1. Choosing the Right Database
+
+### MongoDB vs PostgreSQL
+
+| Feature | MongoDB | PostgreSQL |
+|---------|---------|------------|
+| **Data Model** | Document-oriented (JSON-like) | Relational (tables) |
+| **Schema** | Flexible, schema-optional | Rigid, schema-required |
+| **Scaling** | Horizontal scaling | Vertical scaling (with extensions) |
+| **Query Language** | MongoDB Query Language | SQL |
+| **Transactions** | Supported (since v4.0) | Fully ACID compliant |
+| **Best For** | Rapid development, document storage | Complex queries, data integrity |
+
+#### When to Choose MongoDB
+
+MongoDB is ideal when:
+
+- Your data structure is document-oriented and may evolve over time
+- You need high write throughput
+- You're building a content management system
+- You're prioritizing developer productivity and rapid iteration
+
+#### When to Choose PostgreSQL
+
+PostgreSQL is ideal when:
+
+- You need complex queries and joins
+- Your data has clear relationships between entities
+- You require ACID transactions and data integrity
+- You're working with time-series or geospatial data
+- Your application needs advanced indexing or full-text search
+
+<Aside type="note">
+  Your choice isn't permanent. Many applications use multiple databases depending on specific requirements - MongoDB for content and PostgreSQL for transactional data. Some projects also use Redis for caching or Elasticsearch for full-text search alongside a primary database.
+</Aside>
+
+---
+
+## 2. Database Connection Patterns
+
+### The Singleton Pattern
+
+Using a singleton pattern ensures that only one database connection is created and reused throughout your application:
+
+<Tabs>
+  <TabItem label="Sequelize">
+  ```javascript
+  // db/connection.js
+  const { Sequelize } = require('sequelize');
+  require('dotenv').config();
+
+  class SequelizeConnection {
+    constructor() {
+      this.sequelize = null;
+      this.config = {
+        database: process.env.DB_NAME,
+        username: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        host: process.env.DB_HOST,
+        port: process.env.DB_PORT,
+        dialect: 'postgres', // or 'mysql', 'sqlite', 'mariadb', 'mssql'
+        logging: process.env.NODE_ENV === 'development' ? console.log : false,
+        pool: {
+          max: 5,
+          min: 0,
+          acquire: 30000,
+          idle: 10000
+        }
+      };
+    }
+
+    connect() {
+      if (this.sequelize) {
+        console.log('Using existing Sequelize connection');
+        return this.sequelize;
+      }
+      
+      this.sequelize = new Sequelize(
+        this.config.database,
+        this.config.username,
+        this.config.password,
+        {
+          host: this.config.host,
+          port: this.config.port,
+          dialect: this.config.dialect,
+          logging: this.config.logging,
+          pool: this.config.pool
+        }
+      );
+      
+      // Test the connection
+      this.sequelize.authenticate()
+        .then(() => {
+          console.log('Sequelize connected successfully');
+        })
+        .catch(err => {
+          console.error('Sequelize connection error:', err);
+          process.exit(1);
+        });
+      
+      return this.sequelize;
+    }
+  }
+
+  // Export singleton instance
+  module.exports = new SequelizeConnection();
+  ```
+  </TabItem>
+  <TabItem label="Mongoose">
+  ```javascript
+  // db/connection.js
+  const mongoose = require('mongoose');
+  require('dotenv').config();
+
+  class MongoConnection {
+    constructor() {
+      this.mongoose = mongoose;
+      this.isConnected = false;
+      this.MONGO_URI = process.env.MONGO_URI;
+    }
+
+    async connect() {
+      if (this.isConnected) {
+        console.log('Using existing MongoDB connection');
+        return;
+      }
+      
+      try {
+        await this.mongoose.connect(this.MONGO_URI, {
+          useNewUrlParser: true,
+          useUnifiedTopology: true,
+        });
+        
+        this.isConnected = true;
+        console.log('MongoDB connected successfully');
+      } catch (error) {
+        console.error('MongoDB connection error:', error);
+        process.exit(1);
+      }
+    }
+  }
+
+  // Export singleton instance
+  module.exports = new MongoConnection();
+  ```
+  </TabItem>
+  <TabItem label="Prisma">
+  ```javascript
+  // db/connection.js
+  const { PrismaClient } = require('@prisma/client');
+  require('dotenv').config();
+
+  class PrismaConnection {
+    constructor() {
+      this.prisma = null;
+      this.options = process.env.NODE_ENV === 'development' 
+        ? { 
+            log: ['query', 'info', 'warn', 'error'],
+            errorFormat: 'pretty'
+          } 
+        : { 
+            log: ['warn', 'error'] 
+          };
+    }
+
+    connect() {
+      if (this.prisma) {
+        console.log('Using existing Prisma connection');
+        return this.prisma;
+      }
+      
+      try {
+        this.prisma = new PrismaClient(this.options);
+        console.log('Prisma connected successfully');
+        
+        // Optional: Register shutdown handlers
+        process.on('beforeExit', async () => {
+          await this.disconnect();
+        });
+        
+        return this.prisma;
+      } catch (error) {
+        console.error('Prisma connection error:', error);
+        process.exit(1);
+      }
+    }
+    
+    async disconnect() {
+      if (!this.prisma) {
+        return;
+      }
+      
+      await this.prisma.$disconnect();
+      this.prisma = null;
+      console.log('Prisma disconnected');
+    }
+  }
+
+  // Export singleton instance
+  module.exports = new PrismaConnection();
+  ```
+  </TabItem>
+</Tabs>
+
+### Using the Connection in Your Application
+
+<Tabs>
+  <TabItem label="Sequelize">
+  ```javascript
+  // app.js
+  const express = require('express');
+  const sequelizeConnection = require('./db/connection');
+
+  const app = express();
+
+  // Connect to database before starting server
+  function startServer() {
+    try {
+      // Get Sequelize connection
+      const sequelize = sequelizeConnection.connect();
+      
+      const PORT = process.env.PORT || 3000;
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+      });
+    } catch (error) {
+      console.error('Failed to start server:', error);
+      process.exit(1);
+    }
+  }
+
+  startServer();
+  ```
+  </TabItem>
+  <TabItem label="Mongoose">
+  ```javascript
+  // app.js
+  const express = require('express');
+  const mongoConnection = require('./db/connection');
+
+  const app = express();
+
+  // Connect to database before starting server
+  async function startServer() {
+    try {
+      // Connect to MongoDB
+      await mongoConnection.connect();
+      
+      const PORT = process.env.PORT || 3000;
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+      });
+    } catch (error) {
+      console.error('Failed to start server:', error);
+      process.exit(1);
+    }
+  }
+
+  startServer();
+  ```
+  </TabItem>
+  <TabItem label="Prisma">
+  ```javascript
+  // app.js
+  const express = require('express');
+  const prismaConnection = require('./db/connection');
+
+  const app = express();
+
+  // Connect to database before starting server
+  function startServer() {
+    try {
+      // Get Prisma connection
+      const prisma = prismaConnection.connect();
+      
+      // Make Prisma available in requests
+      app.use((req, res, next) => {
+        req.prisma = prisma;
+        next();
+      });
+      
+      const PORT = process.env.PORT || 3000;
+      app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+      });
+      
+      // Handle graceful shutdown
+      const shutdown = async () => {
+        console.log('Shutting down server...');
+        await prismaConnection.disconnect();
+        process.exit(0);
+      };
+      
+      process.on('SIGINT', shutdown);
+      process.on('SIGTERM', shutdown);
+      
+    } catch (error) {
+      console.error('Failed to start server:', error);
+      process.exit(1);
+    }
+  }
+
+  startServer();
+  ```
+  </TabItem>
+</Tabs>
+
+<Aside type="caution">
+  Never expose your database connection credentials in your code. Always use environment variables or a secure configuration management system.
+</Aside>
+
+---
+
+## 3. Structuring Database Models
+
+### Model Organization
+
+For most projects, a simple model organization is sufficient since you'll typically use a single database technology:
+```
+/db
+  /models
+      user.model.js
+      post.model.js
+  /connection.js
+```
+
+### MongoDB Models with Mongoose
+
+<Tabs>
+  <TabItem label="MongoDB">
+  ```javascript
+  // db/models/mongodb/user.model.js
+  const mongoose = require('mongoose');
+  const bcrypt = require('bcrypt');
+
+  const userSchema = new mongoose.Schema({
+    username: {
+      type: String,
+      required: [true, 'Username is required'],
+      unique: true,
+      trim: true,
+      minlength: 3
+    },
+    email: {
+      type: String,
+      required: [true, 'Email is required'],
+      unique: true,
+      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please provide a valid email']
+    },
+    password: {
+      type: String,
+      required: [true, 'Password is required'],
+      minlength: 6,
+      select: false // Don't return password by default
+    },
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user'
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }, {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+  });
+
+  // Virtual for user's full name
+  userSchema.virtual('fullName').get(function() {
+    return `${this.firstName} ${this.lastName}`;
+  });
+
+  // Pre-save hook to hash password
+  userSchema.pre('save', async function(next) {
+    if (!this.isModified('password')) {
+      return next();
+    }
+    
+    try {
+      const salt = await bcrypt.genSalt(10);
+      this.password = await bcrypt.hash(this.password, salt);
+      next();
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Method to check password
+  userSchema.methods.comparePassword = async function(candidatePassword) {
+    return await bcrypt.compare(candidatePassword, this.password);
+  };
+
+  const User = mongoose.model('User', userSchema);
+
+  module.exports = User;
+  ```
+  </TabItem>
+  <TabItem label="PostgreSQL">
+  ```javascript
+  // db/models/postgresql/user.model.js
+  const { DataTypes } = require('sequelize');
+  const bcrypt = require('bcrypt');
+  const sequelize = require('../../connection').postgresSequelize;
+
+  const User = sequelize.define('User', {
+    id: {
+      type: DataTypes.INTEGER,
+      autoIncrement: true,
+      primaryKey: true
+    },
+    username: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      unique: true,
+      validate: {
+        len: [3, 50]
+      }
+    },
+    email: {
+      type: DataTypes.STRING(100),
+      allowNull: false,
+      unique: true,
+      validate: {
+        isEmail: true
+      }
+    },
+    password: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      validate: {
+        len: [6, 100]
+      }
+    },
+    role: {
+      type: DataTypes.ENUM('user', 'admin'),
+      defaultValue: 'user'
+    }
+  }, {
+    timestamps: true,
+    hooks: {
+      beforeCreate: async (user) => {
+        const salt = await bcrypt.genSalt(10);
+        user.password = await bcrypt.hash(user.password, salt);
+      },
+      beforeUpdate: async (user) => {
+        if (user.changed('password')) {
+          const salt = await bcrypt.genSalt(10);
+          user.password = await bcrypt.hash(user.password, salt);
+        }
+      }
+    }
+  });
+
+  // Instance method to check password
+  User.prototype.comparePassword = async function(candidatePassword) {
+    return await bcrypt.compare(candidatePassword, this.password);
+  };
+
+  module.exports = User;
+  ```
+  </TabItem>
+  <TabItem label="Prisma">
+  ```javascript
+  // prisma/schema.prisma
+  generator client {
+    provider = "prisma-client-js"
+  }
+
+  datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+  }
+
+  model User {
+    id        Int      @id @default(autoincrement())
+    username  String   @unique @db.VarChar(50)
+    email     String   @unique @db.VarChar(100)
+    password  String
+    role      Role     @default(USER)
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+    posts     Post[]
+
+    @@map("users")
+  }
+
+  model Post {
+    id        Int      @id @default(autoincrement())
+    title     String   @db.VarChar(255)
+    content   String?
+    published Boolean  @default(false)
+    authorId  Int      @map("author_id")
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+    author    User     @relation(fields: [authorId], references: [id])
+
+    @@map("posts")
+  }
+
+  enum Role {
+    USER
+    ADMIN
+  }
+  ```
+  </TabItem>
+</Tabs>
+
+<Aside type="tip">
+  **Model Best Practices**:
+  - Keep business logic in models (mongoose) or services (Sequelize/Prisma)
+  - Use validations at the model level as the first line of defense
+  - Create explicit relationships between models
+  - Use indexes on fields that are frequently queried
+  - Consider implementing soft deletes for important data
+  - Plan for data migrations when schema changes
+  - Document model constraints and relationships
+</Aside>
+
+---
+
+## 4. Database Migrations
+
+Database migrations track changes to your database schema over time, making it easier to collaborate and deploy changes.
+
+### Sequelize Migrations
+
+```javascript
+// migrations/20231025120000-create-users.js
+'use strict';
+
+module.exports = {
+  up: async (queryInterface, Sequelize) => {
+    await queryInterface.createTable('users', {
+      id: {
+        allowNull: false,
+        autoIncrement: true,
+        primaryKey: true,
+        type: Sequelize.INTEGER
+      },
+      username: {
+        type: Sequelize.STRING(50),
+        allowNull: false,
+        unique: true
+      },
+      email: {
+        type: Sequelize.STRING(100),
+        allowNull: false,
+        unique: true
+      },
+      password: {
+        type: Sequelize.STRING,
+        allowNull: false
+      },
+      role: {
+        type: Sequelize.ENUM('user', 'admin'),
+        defaultValue: 'user'
+      },
+      created_at: {
+        allowNull: false,
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+      },
+      updated_at: {
+        allowNull: false,
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+      }
+    });
+  },
+
+  down: async (queryInterface, Sequelize) => {
+    await queryInterface.dropTable('users');
+  }
+};
+```
+
+#### Running Sequelize Migrations
+
+```bash
+npx sequelize-cli db:migrate           # Run pending migrations
+npx sequelize-cli db:migrate:undo      # Revert the most recent migration
+npx sequelize-cli db:migrate:undo:all  # Revert all migrations
+```
+
+### Prisma Migrations
+
+With Prisma, you define your schema in the `schema.prisma` file and use Prisma Migrate to create and manage migrations:
+
+```bash
+# Create a migration without applying it
+npx prisma migrate dev --create-only --name add_user_profile
+
+# Apply migrations to development database
+npx prisma migrate dev
+
+# Apply migrations to production database
+npx prisma migrate deploy
+```
+
+#### Handling Schema Changes with Prisma
+
+1. Update your `schema.prisma` file
+2. Run `npx prisma migrate dev --name descriptive_name`
+3. Prisma will generate SQL migration files in `prisma/migrations/`
+4. Review the generated SQL before applying to production
+
+### Migration Best Practices
+
+1. **Make migrations atomic**: Each migration should focus on a single change
+2. **Use descriptive names**: Name migrations clearly to understand their purpose
+3. **Version control**: Commit migration files to your repository
+4. **Test migrations**: Verify both `up` and `down` migrations work correctly
+5. **Document breaking changes**: Note any migrations that require application changes
+6. **Backup before production migrations**: Always create backups before applying migrations to production
+7. **Validate in staging**: Test migrations in a staging environment that mirrors production
+
+---
+
+## 5. Database Error Handling and Debugging
+
+### Comprehensive Error Handling Strategy
+
+Effective database error handling combines multiple approaches:
+
+<Tabs>
+  <TabItem label="Sequelize">
+  ```javascript
+  // middleware/error-handler.js
+  const { DatabaseError, UniqueConstraintError, ValidationError } = require('sequelize');
+
+  // Combine error logging and handling in one middleware
+  function databaseErrorHandler(err, req, res, next) {
+    // 1. Identify the error type
+    if (err instanceof DatabaseError) {
+      console.error('Sequelize Error:', {
+        message: err.message,
+        sql: err.sql,
+        parameters: err.parameters
+      });
+      
+      // Custom handling for specific Sequelize errors
+      if (err instanceof UniqueConstraintError) {
+        return res.status(409).json({
+          status: 'error',
+          message: 'A record with this information already exists',
+          details: err.errors.map(e => e.message)
+        });
+      }
+      
+      if (err instanceof ValidationError) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Validation failed',
+          details: err.errors.map(e => e.message)
+        });
+      }
+    }
+    
+    // Default error response
+    const statusCode = err.statusCode || 500;
+    res.status(statusCode).json({
+      status: 'error',
+      message: err.message || 'Internal server error',
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+  }
+
+  module.exports = databaseErrorHandler;
+  ```
+  </TabItem>
+  <TabItem label="Mongoose">
+  ```javascript
+  // middleware/error-handler.js
+  const mongoose = require('mongoose');
+
+  // Combine error logging and handling in one middleware
+  function databaseErrorHandler(err, req, res, next) {
+    // Handle Mongoose errors
+    if (err instanceof mongoose.Error) {
+      console.error('Mongoose Error:', {
+        name: err.name,
+        message: err.message,
+        path: err.path,
+        value: err.value
+      });
+      
+      if (err instanceof mongoose.Error.ValidationError) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Validation error',
+          details: Object.values(err.errors).map(e => e.message)
+        });
+      }
+      
+      if (err instanceof mongoose.Error.CastError) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'Invalid ID format',
+          details: `Cannot cast ${err.value} to ${err.kind}`
+        });
+      }
+      
+      if (err.code === 11000) { // Duplicate key error
+        return res.status(409).json({
+          status: 'error',
+          message: 'Duplicate value error',
+          details: `A record with this ${Object.keys(err.keyValue)} already exists`
+        });
+      }
+    }
+    
+    // Default error response
+    const statusCode = err.statusCode || 500;
+    res.status(statusCode).json({
+      status: 'error',
+      message: err.message || 'Internal server error',
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+  }
+
+  module.exports = databaseErrorHandler;
+  ```
+  </TabItem>
+  <TabItem label="Prisma">
+  ```javascript
+  // middleware/error-handler.js
+  const { PrismaClientKnownRequestError } = require('@prisma/client/runtime');
+
+  // Combine error logging and handling in one middleware
+  function databaseErrorHandler(err, req, res, next) {
+    // Handle Prisma errors
+    if (err instanceof PrismaClientKnownRequestError) {
+      console.error('Prisma Error:', {
+        code: err.code,
+        message: err.message,
+        meta: err.meta
+      });
+      
+      // Handle common Prisma error codes
+      switch (err.code) {
+        case 'P2002': // Unique constraint violation
+          return res.status(409).json({
+            status: 'error',
+            message: 'A record with this information already exists',
+            fields: err.meta?.target
+          });
+        case 'P2025': // Record not found
+          return res.status(404).json({
+            status: 'error',
+            message: 'Record not found'
+          });
+        default:
+          // Handle other Prisma errors
+      }
+    }
+    
+    // Default error response
+    const statusCode = err.statusCode || 500;
+    res.status(statusCode).json({
+      status: 'error',
+      message: err.message || 'Internal server error',
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    });
+  }
+
+  module.exports = databaseErrorHandler;
+  ```
+  </TabItem>
+</Tabs>
+
+### Logging Database Activity
+
+<Tabs>
+  <TabItem label="MongoDB">
+  ```javascript
+  // MongoDB query logging
+  if (process.env.NODE_ENV === 'development') {
+    mongoose.set('debug', { 
+      color: true,
+      filter: (query) => {
+        // Exclude health checks or specific queries
+        return !query.includes('system.version');
+      }
+    });
+  }
+  ```
+  </TabItem>
+  <TabItem label="Prisma">
+  ```javascript
+  // Prisma query logging
+  const prisma = new PrismaClient({
+    log: process.env.NODE_ENV === 'development' 
+      ? [
+          { emit: 'event', level: 'query' },
+          { emit: 'stdout', level: 'error' },
+          { emit: 'stdout', level: 'info' },
+          { emit: 'stdout', level: 'warn' },
+        ]
+      : ['error', 'warn'],
+  });
+
+  // Log slow queries in development
+  if (process.env.NODE_ENV === 'development') {
+    prisma.$on('query', (e) => {
+      if (e.duration > 100) { // Log queries taking longer than 100ms
+        console.warn(`Slow query (${e.duration}ms): ${e.query}`);
+      }
+    });
+  }
+  ```
+  </TabItem>
+</Tabs>
+
+### Error Handling Best Practices
+
+1. **Categorize errors**: Differentiate between operational errors (e.g., validation failures) and programming errors
+2. **Use domain-specific error classes**: Create custom error types for your application domains
+3. **Log detailed context**: Include relevant data for debugging without exposing sensitive information
+4. **Implement retry mechanisms**: Use exponential backoff for transient failures
+5. **Implement monitoring**: Set up alerts for database errors, slow queries, and connection issues
+6. **Create error response standards**: Maintain consistent error response formats across your API
+
+---
+
+## Conclusion
+
+### Database Selection Decision Tree
+
+1. **Do you need a relational model?**
+   - **Yes**: Consider PostgreSQL, especially if you need complex queries, joins, or transactions
+   - **No**: Consider MongoDB for document-oriented data or when schema flexibility is important
+
+2. **What's your application's read/write pattern?**
+   - **Heavy reads**: PostgreSQL with proper indexing
+   - **Heavy writes**: MongoDB or PostgreSQL with write optimization
+   - **Balanced**: Either option works well
+
+3. **Do you need advanced data integrity?**
+   - **Yes**: PostgreSQL with its constraints and transactions
+   - **No**: MongoDB might offer more flexibility
+
+4. **Is rapid development a priority?**
+   - **Yes**: MongoDB might allow faster iterations with its schema flexibility
+   - **No**: PostgreSQL's structure enforces better data discipline
+
+Remember that the right database choice depends on your specific application requirements, team expertise, and long-term maintenance considerations.
