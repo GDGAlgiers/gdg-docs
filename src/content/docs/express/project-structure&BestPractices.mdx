@@ -1,6 +1,6 @@
 ---
-title: "Project Structure"
-description: "Project Structure"
+title: "Project Structure & Best practices"
+description: "Project Structure & Best practices"
 ---
 
 
@@ -13,7 +13,6 @@ This structure follows best practices for organizing code in a modular, maintain
      <code>
        {`project-root/
        ├── app.js                  # Application entry point
-       ├── server.js               # Server initialization
        ├── package.json            # Project dependencies and scripts
        ├── .env                    # Environment variables (not committed to version control)
        ├── .gitignore              # Specifies files to ignore in version control
@@ -32,76 +31,63 @@ This structure follows best practices for organizing code in a modular, maintain
    </pre>
 
 ## Directory Purposes
-
 <p>
   <code>/app.js</code>
-</p>
+  --The application entry point that sets up the Express application, configures middleware, and connects routes.
+</p> 
 
-The application entry point that sets up the Express application, configures middleware, and connects routes.
 
-<p>
-  <code>/server.js</code>
-</p>
-
-Initializes the server and starts listening on a specified port. Separating this from `/app.js` makes testing easier.
 
 <p>
   <code>/config/</code>
+  --Contains configuration files for different environments (development, testing, production).
 </p>
 
-Contains configuration files for different environments (development, testing, production).
 <p>
   <code>/controllers/</code>
+  --Contains controller functions that handle requests and responses. Each controller typically corresponds to a specific resource.
 </p>
 
-Contains controller functions that handle requests and responses. Each controller typically corresponds to a specific resource.
 <p>
  <code>/db/</code>
+ --Contains database-related files such as connection setup, migrations, and seeds.
 </p>
-
-Contains database-related files such as connection setup, migrations, and seeds.
 
 <p>
  <code>/middlewares/</code>
+ --Contains custom middleware functions that process requests before they reach route handlers.
 </p>
-
-Contains custom middleware functions that process requests before they reach route handlers.
 
 <p>
  <code>/models/</code>
+ --Contains data models that define the structure of data in the database.
 </p>
-
-Contains data models that define the structure of data in the database.
 
 <p>
  <code>/public/</code>
+ --Contains static files that can be directly accessed by clients, such as images, CSS, and client-side JavaScript.
 </p>
-
-Contains static files that can be directly accessed by clients, such as images, CSS, and client-side JavaScript.
 
 <p>
  <code>/routes/</code>
+ --Contains route definitions that map HTTP methods and URLs to controller functions.
 </p>
-
-Contains route definitions that map HTTP methods and URLs to controller functions.
 
 <p>
  <code>/services/ </code>
+ --Contains business logic separated from controllers. Services handle data processing, interactions with models, and external API calls.
 </p>
-
-Contains business logic separated from controllers. Services handle data processing, interactions with models, and external API calls.
 
 <p>
  <code> /utils/ </code>
+ --Contains utility functions that can be used across the application.
 </p>
-
-Contains utility functions that can be used across the application.
 
 <p>
  <code>/views/</code>
+--Contains template files if your application uses server-side rendering.
 </p>
 
-Contains template files if your application uses server-side rendering.
 
 ## Here's a Complete File Tree Example
 
@@ -110,7 +96,6 @@ import { FileTree } from '@astrojs/starlight/components';
 <FileTree>
   - express-project/
     - **app.js**
-    - server.js
     - package.json
     - .env
     - .gitignore
@@ -245,10 +230,8 @@ export class AppModule {}
 
 #### **Step 4: Run the Application**
 ```sh
-npm run start
+npm run start:dev
 ```
-Your NestJS server will run on `http://localhost:3000/hello` and return the response `{ message: "Hello from NestJS!" }`.
-
 ---
 ## Conclusion: When to Make the Switch
 
@@ -284,45 +267,260 @@ DB_USER=admin
 DB_PASS=secretpassword
 ```
 
-## Loading Environment Variables in Node.js
-In your application entry file (e.g., `server.js` or `index.js`), add:
-```javascript
-require('dotenv').config();
+# Loading Environment Variables in Node.js
 
-console.log('Server running on port:', process.env.PORT);
-console.log('Database Host:', process.env.DB_HOST);
+Environment variables are essential for keeping sensitive information secure and configuring your application for different environments. Here's how to load them in Node.js:
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+<Tabs>
+  <TabItem value="commonjs" label="CommonJS" default>
+    ## CommonJS Approach
+
+    ### 1. Install dotenv
+
+    ```bash
+    npm install dotenv
+    ```
+
+    ### 2. Create a .env file in your project root
+
+    ```
+    PORT=3000
+    DB_HOST=localhost
+    DB_USER=root
+    DB_PASS=password
+    DB_NAME=myapp
+    ```
+
+    ### 3. In your application entry file (e.g., app.js)
+
+    ```javascript
+    // Load environment variables
+    require('dotenv').config();
+
+    // Access environment variables
+    const port = process.env.PORT || 3000;
+    const dbHost = process.env.DB_HOST;
+    const dbUser = process.env.DB_USER;
+    const dbPass = process.env.DB_PASS;
+    const dbName = process.env.DB_NAME;
+
+    console.log(`Server running on port: ${port}`);
+    console.log(`Database Host: ${dbHost}`);
+
+    // Example Express setup
+    const express = require('express');
+    const app = express();
+
+    app.listen(port, () => {
+      console.log(`Server is running on port ${port}`);
+    });
+    ```
+
+    > **Note:** Make sure to add `.env` to your `.gitignore` file to avoid exposing sensitive information in your repository.
+  </TabItem>
+  
+  <TabItem value="esmodules" label="ES Modules">
+    ## ES Modules Approach
+
+    ### 1. Install dotenv
+
+    ```bash
+    npm install dotenv
+    ```
+
+    ### 2. Create a .env file in your project root
+
+    ```
+    PORT=3000
+    DB_HOST=localhost
+    DB_USER=root
+    DB_PASS=password
+    DB_NAME=myapp
+    ```
+
+    ### 3. In your application entry file (e.g., index.js)
+
+    ```javascript
+    // Load environment variables
+    import * as dotenv from 'dotenv';
+    dotenv.config();
+
+    // Access environment variables
+    const port = process.env.PORT || 3000;
+    const dbHost = process.env.DB_HOST;
+    const dbUser = process.env.DB_USER;
+    const dbPass = process.env.DB_PASS;
+    const dbName = process.env.DB_NAME;
+
+    console.log(`Server running on port: ${port}`);
+    console.log(`Database Host: ${dbHost}`);
+
+    // Example Express setup
+    import express from 'express';
+    const app = express();
+
+    app.listen(port, () => {
+      console.log(`Server is running on port ${port}`);
+    });
+    ```
+
+    ### 4. Make sure your package.json has "type": "module" to use ES Modules
+
+    ```json
+    {
+      "name": "my-app",
+      "version": "1.0.0",
+      "type": "module",
+      "scripts": {
+        "start": "node index.js"
+      },
+      "dependencies": {
+        "dotenv": "^16.3.1",
+        "express": "^4.18.2"
+      }
+    }
+    ```
+
+    > **Note:** Make sure to add `.env` to your `.gitignore` file to avoid exposing sensitive information in your repository.
+  </TabItem>
+</Tabs>
+
+## Advanced Configuration
+
+For more complex applications, you might want to:
+
+1. **Use different environment files** for different environments:
+   - `.env.development`
+   - `.env.production`
+   - `.env.test`
+
+2. **Validate environment variables** to ensure all required variables are set:
+
+```javascript
+function validateEnv() {
+  const required = ['DB_HOST', 'DB_USER', 'DB_PASS'];
+  
+  for (const variable of required) {
+    if (!process.env[variable]) {
+      throw new Error(`Missing required environment variable: ${variable}`);
+    }
+  }
+  
+  console.log('Environment validation passed');
+}
+
+// Call after loading environment variables
+validateEnv();
 ```
+
+3. **Set defaults** for missing environment variables:
+
+```javascript
+const config = {
+  port: process.env.PORT || 3000,
+  dbHost: process.env.DB_HOST || 'localhost',
+  nodeEnv: process.env.NODE_ENV || 'development'
+};
+```
+
+This approach ensures your application is properly configured regardless of whether all environment variables are explicitly set.
 # Approach to Configuration Management
 
 To maintain a **structured and scalable** configuration management strategy, we use a dedicated `config` module instead of accessing `process.env` throughout the code.
 
+
+# Creating Configuration Files in Node.js
+
+A best practice in Node.js applications is to centralize your configuration settings. This makes your application more maintainable and allows for easier environment-specific configuration.
+
 ## Creating a Configuration File
-Create a `config.js` file:
-```javascript
-require('dotenv').config();
 
-const config = {
-  server: {
-    port: process.env.PORT || 3000,
-  },
-  database: {
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASS || '',
-  },
-};
+<Tabs>
+  <TabItem value="commonjs" label="CommonJS" default>
+    Create a `config.js` file:
 
-module.exports = config;
-```
+    ```javascript
+    require('dotenv').config();
+    const config = {
+      server: {
+        port: process.env.PORT || 3000,
+      },
+      database: {
+        host: process.env.DB_HOST || 'localhost',
+        user: process.env.DB_USER || 'root',
+        password: process.env.DB_PASS || '',
+      },
+    };
+    module.exports = config;
+    ```
+  </TabItem>
+  
+  <TabItem value="esmodules" label="ES Modules">
+    Create a `config.js` file:
+
+    ```javascript
+    import * as dotenv from 'dotenv';
+    dotenv.config();
+
+    const config = {
+      server: {
+        port: process.env.PORT || 3000,
+      },
+      database: {
+        host: process.env.DB_HOST || 'localhost',
+        user: process.env.DB_USER || 'root',
+        password: process.env.DB_PASS || '',
+      },
+    };
+
+    export default config;
+    ```
+  </TabItem>
+</Tabs>
 
 ## Using the Configuration Module
-Import and use the configuration in your application files:
-```javascript
-const config = require('./config');
 
-console.log(`Server will run on port: ${config.server.port}`);
-console.log(`Connecting to database at: ${config.database.host}`);
-```
+<Tabs>
+  <TabItem value="commonjs-usage" label="CommonJS" default>
+    Import and use the configuration in your application files:
+
+    ```javascript
+    const config = require('./config');
+    console.log(`Server will run on port: ${config.server.port}`);
+    console.log(`Connecting to database at: ${config.database.host}`);
+
+    // Example Express setup
+    const express = require('express');
+    const app = express();
+
+    app.listen(config.server.port, () => {
+      console.log(`Server is running on port ${config.server.port}`);
+    });
+    ```
+  </TabItem>
+  
+  <TabItem value="esmodules-usage" label="ES Modules">
+    Import and use the configuration in your application files:
+
+    ```javascript
+    import config from './config.js';
+    console.log(`Server will run on port: ${config.server.port}`);
+    console.log(`Connecting to database at: ${config.database.host}`);
+
+    // Example Express setup
+    import express from 'express';
+    const app = express();
+
+    app.listen(config.server.port, () => {
+      console.log(`Server is running on port ${config.server.port}`);
+    });
+    ```
+  </TabItem>
+</Tabs>
+
+
 ## **Benefits of Using `dotenv` and Configuration Management**
 
 **Security:** Keeps sensitive credentials (e.g., API keys, passwords) out of the source code. Prevents accidental exposure in version control (always add `.env` to `.gitignore`).
