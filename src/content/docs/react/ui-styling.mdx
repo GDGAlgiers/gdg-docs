@@ -1,4 +1,130 @@
 ---
-title: "UI Styling"
-description: "UI Styling"
+title: React UI & Styling Best Practices
+---
+
+# React UI & Styling Best Practices
+
+A well-structured UI improves user experience, maintainability, and scalability. This guide covers best practices for styling React applications with **Tailwind CSS**, focusing on global styles, dark mode implementation, and utility class organization.
+
+## 🎨 Why Use Tailwind CSS?
+
+Tailwind CSS is our **primary styling approach** due to its utility-first methodology, enabling rapid UI development while maintaining consistency.
+
+✅ **Benefits of Tailwind CSS:**
+- Reduces CSS file bloat by using utility classes.
+- Encourages a consistent design system.
+- Simplifies dark mode and theming.
+- Speeds up development with predefined styles.
+
+## 🌎 Global Styles with CSS Variables
+
+To ensure a scalable and maintainable design system, we use **CSS variables** within Tailwind’s configuration.
+
+### **Defining Global Styles**
+
+Modify the `tailwind.config.js` file to define global variables:
+
+```js
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        primary: "var(--color-primary)",
+        secondary: "var(--color-secondary)",
+      },
+    },
+  },
+};
+```
+
+Define the variables in the `globals.css` file:
+
+```css
+:root {
+  --color-primary: #6366f1; /* Indigo */
+  --color-secondary: #d946ef; /* Pink */
+}
+```
+
+### **Usage in Components**
+
+```jsx
+<button className="bg-primary text-white px-4 py-2 rounded-lg">
+  Click Me
+</button>
+```
+
+## 🌙 Implementing Dark Mode
+
+Tailwind makes it easy to implement **dark mode** using the `dark` variant.
+
+### **Enable Dark Mode**
+Modify `tailwind.config.js`:
+
+```js
+module.exports = {
+  darkMode: "class", // 'media' can be used for automatic detection
+};
+```
+
+### **Adding a Dark Mode Toggle**
+
+Create a theme switcher component:
+
+```jsx
+const toggleDarkMode = () => {
+  document.documentElement.classList.toggle("dark");
+};
+
+<button onClick={toggleDarkMode} className="p-2 bg-gray-200 dark:bg-gray-800">
+  Toggle Theme
+</button>;
+```
+
+### **Applying Dark Mode Styles**
+
+```jsx
+<div className="bg-white dark:bg-gray-900 text-black dark:text-white">
+  This adapts to dark mode!
+</div>
+```
+
+## 📌 Best Practices for Utility Class Organization
+
+### **1. Grouping Related Classes**
+Instead of:
+```jsx
+<div className="text-center text-lg text-gray-600 p-4 bg-gray-100 rounded-md shadow-md">
+```
+Use **logical grouping**:
+```jsx
+<div className="text-gray-600 text-lg text-center bg-gray-100 p-4 rounded-md shadow-md">
+```
+
+### **2. Using Tailwind’s `@apply` for Reusability**
+Instead of repeating styles in multiple places:
+```jsx
+<button className="bg-primary text-white px-4 py-2 rounded-lg">
+  Submit
+</button>
+```
+Extract common styles in `globals.css`:
+```css
+.btn {
+  @apply bg-primary text-white px-4 py-2 rounded-lg;
+}
+```
+And use it in JSX:
+```jsx
+<button className="btn">Submit</button>
+```
+
+## ✅ Best Practices Checklist
+
+✔ Use **Tailwind CSS** for efficient, scalable styling.
+✔ Define **global styles** using **CSS variables** in `tailwind.config.js`.
+✔ Implement **dark mode** with the `dark` variant.
+✔ Organize utility classes logically to improve readability.
+✔ Use **`@apply`** to reduce repetition in styles.
+
 ---
