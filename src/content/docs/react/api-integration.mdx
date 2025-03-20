@@ -1,4 +1,721 @@
 ---
 title: "API Integration"
-description: "API Integration"
+description: "A comprehensive guide to integrating APIs in React applications, focusing on TanStack Query, Axios setup, service structure, and JWT authentication patterns."
 ---
+import { Aside, Tabs, TabItem, FileTree } from '@astrojs/starlight/components';
+
+### API Integration & Data Fetching
+
+Modern React applications typically need to communicate with backend services. This guide covers our recommended patterns for API integration, data fetching, and authentication with a focus on TanStack Query (formerly React Query).
+
+### Configured Axios Instance
+
+[Axios](https://axios-http.com/) is our preferred HTTP client for API calls due to its simplicity, reliability, and feature-rich API. 
+Create a centralized Axios instance with interceptors that can be reused throughout your application:
+
+```javascript
+// src/services/api/axios.js
+import axios from 'axios';
+
+const baseURL = process.env.REACT_APP_API_URL || 'https://api.example.com';
+
+const api = axios.create({
+  baseURL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true,
+});
+
+// Request interceptor for API calls
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// Response interceptor for API calls
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // If the error is due to an expired token and we haven't tried to refresh yet
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        // Attempt to refresh the token
+        const response = await axios.post(`${baseURL}/auth/refresh`, {}, {
+          withCredentials: true, // Needed for cookies
+        });
+        
+        const { accessToken } = response.data;
+        localStorage.setItem('accessToken', accessToken);
+        
+        // Update the Authorization header with the new token
+        api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+        
+        // Retry the original request
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Handle refresh token failure (e.g., redirect to login)
+        localStorage.removeItem('accessToken');
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+```
+
+## Data Fetching with TanStack Query
+
+[TanStack Query](https://tanstack.com/query/latest) (formerly React Query) is our recommended library for data fetching and state management. It dramatically simplifies managing server state in React applications.
+
+### Why TanStack Query Over useEffect
+
+<Tabs>
+  <TabItem label="Traditional useEffect">
+  ```jsx
+  function UserProfile({ userId }) {
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    
+    useEffect(() => {
+      const fetchUser = async () => {
+        try {
+          setLoading(true);
+          setError(null);
+          const response = await userService.getUserProfile(userId);
+          setUser(response.data);
+        } catch (err) {
+          setError(err.message || 'Failed to fetch user');
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchUser();
+    }, [userId]);
+    
+    // Render logic for loading, error, and data states
+  }
+  ```
+
+  The above approach has several critical issues:
+  
+  1. **Race Conditions**: If the user ID changes rapidly, you'll get responses in an unpredictable order
+  2. **No Caching**: The same data is fetched repeatedly even if nothing changed
+  3. **No Background Updates**: Data doesn't automatically refresh
+  4. **Complex State Management**: Need to manually track loading, error, and data states
+  5. **No Retry Logic**: Failed requests aren't automatically retried
+  6. **Duplicate Request Logic**: Data-fetching code is duplicated across components
+
+  </TabItem>
+  <TabItem label="TanStack Query">
+  ```jsx
+  function UserProfile({ userId }) {
+    const { 
+      data: user, 
+      error, 
+      isLoading,
+      isError,
+      isFetching 
+    } = useQuery({
+      queryKey: ['user', userId],
+      queryFn: () => userService.getUserProfile(userId),
+      select: (response) => response.data,
+      staleTime: 5 * 60 * 1000, // Data considered fresh for 5 minutes
+      cacheTime: 10 * 60 * 1000, // Cache data for 10 minutes
+      refetchOnWindowFocus: true, // Auto-refetch when window is focused
+      retry: 3, // Retry failed requests 3 times
+      onError: (error) => {
+        console.error('Failed to fetch user:', error);
+      }
+    });
+    
+    // Now we can easily tell if we're loading for the first time
+    // or if we're refetching in the background
+    if (isLoading) return <div>Loading...</div>;
+    if (isError) return <div>Error: {error.message}</div>;
+    
+    return (
+      <div>
+        <h1>{user.name}</h1>
+        <p>{user.email}</p>
+        {isFetching && <div>Refreshing...</div>}
+      </div>
+    );
+  }
+  ```
+
+  TanStack Query solves all the issues mentioned:
+  - **Handles Race Conditions**: Automatically manages request cancellation and data synchronization
+  - **Built-in Caching**: Intelligently caches results to minimize network requests
+  - **Background Updates**: Automatically refreshes data when needed
+  - **Simplified State Management**: Provides clear states like `isLoading`, `isError`, and `isFetching`
+  - **Automatic Retries**: Configurable retry behavior for failed requests
+  - **Centralized Request Logic**: Request logic is defined once and reused everywhere
+  - **Deduplicated Requests**: Prevents duplicate requests for the same data
+  
+  It also offers additional powerful features:
+  - **Parallel Queries**: Easily manage multiple concurrent requests
+  - **Dependent Queries**: Chain queries so one depends on another's result
+  - **Pagination & Infinite Scroll**: Built-in support with minimal code
+  - **Optimistic Updates**: Update UI before server confirms changes
+  - **Query Invalidation**: Intelligently refresh queries when data changes
+  - **Prefetching**: Load data before it's needed
+  </TabItem>
+</Tabs>
+
+
+### Basic Query Example
+
+```jsx
+// src/components/UserProfile.jsx
+import { useQuery } from '@tanstack/react-query';
+import { getUserProfile } from '../services/userService';
+
+function UserProfile({ userId }) {
+  const { 
+    data: user, 
+    isLoading, 
+    isError, 
+    error 
+  } = useQuery({
+    queryKey: ['user', userId],
+    queryFn: () => getUserProfile(userId).then(res => res.data)
+  });
+
+  if (isLoading) return <div>Loading user details...</div>;
+  if (isError) return <div>Error: {error.message}</div>;
+
+  return (
+    <div>
+      <h1>{user.name}</h1>
+      <p>Email: {user.email}</p>
+      {/* Other user details */}
+    </div>
+  );
+}
+```
+
+### Setting Up TanStack Query
+
+Wrap your application with a `QueryClientProvider` to enable TanStack Query:
+
+```jsx
+// src/App.jsx
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes, set this up according to your application data and logic
+      refetchOnWindowFocus: true,
+    },
+  },
+});
+
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      {/* Your app components */}
+      <ReactQueryDevtools initialIsOpen={false} /> {/* Development tool */}
+    </QueryClientProvider>
+  );
+}
+```
+
+## Advanced TanStack Query Features
+
+### Data Mutations
+
+Use `useMutation` to update, create, or delete data:
+
+```jsx
+// src/components/UpdateUserForm.jsx
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { updateUserProfile } from '../services/userService';
+
+function UpdateUserForm({ userId, initialData }) {
+  const [formData, setFormData] = useState(initialData);
+  const queryClient = useQueryClient();
+  
+  const mutation = useMutation({
+    mutationFn: (data) => updateUserProfile(userId, data),
+    onSuccess: (data) => {
+      // Invalidate and refetch the user query
+      queryClient.invalidateQueries({ queryKey: ['user', userId] });
+      toast.success('Profile updated successfully!');
+    },
+    onError: (error) => {
+      toast.error(`Update failed: ${error.message}`);
+    }
+  });
+  
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    mutation.mutate(formData);
+  };
+  
+  // Form rendering logic
+}
+```
+
+### Optimistic Updates
+
+Optimistic updates provide a better user experience by immediately updating the UI as if the server request has already succeeded, then reconciling with the actual server response when it arrives. This approach creates a more responsive interface, especially when dealing with high-latency connections.
+One common example is toggling a todo item's status in a todo list, or liking a post on Instagram or Facebook, it always happens instantly, while it executes the appropriate request in the background.
+
+The key principles of optimistic updates are:
+- Update the UI immediately on user action
+- Send the API request in the background
+- Roll back changes if the request fails
+- Synchronize with the server response when it succeeds
+
+Here's a comprehensive example with a todo list:
+
+```jsx
+// src/components/TodoList.jsx
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toggleTodoStatus } from '../services/todoService';
+
+function TodoList() {
+  const queryClient = useQueryClient();
+  const { data: todos } = useQuery({
+    queryKey: ['todos'],
+    queryFn: () => getTodos().then(res => res.data)
+  });
+  
+  const mutation = useMutation({
+    mutationFn: toggleTodoStatus,
+    // Update the cache optimistically
+    onMutate: async (updatedTodo) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['todos'] });
+      
+      // Snapshot the previous value
+      const previousTodos = queryClient.getQueryData(['todos']);
+      
+      // Optimistically update the cache
+      queryClient.setQueryData(['todos'], old => 
+        old.map(todo => 
+          todo.id === updatedTodo.id ? updatedTodo : todo
+        )
+      );
+      
+      // Return the snapshot for rollback
+      return { previousTodos };
+    },
+    // If mutation fails, roll back
+    onError: (err, _, context) => {
+      queryClient.setQueryData(['todos'], context.previousTodos);
+      toast.error('Failed to update todo');
+    },
+    // Always refetch to ensure consistency
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['todos'] });
+    }
+  });
+  
+  const handleToggle = (todo) => {
+    mutation.mutate({...todo, completed: !todo.completed});
+  };
+  
+  // Rendering logic
+}
+```
+
+### Infinite Queries for Pagination
+
+Handle infinite scroll with TanStack Query:
+
+```jsx
+// src/components/PostFeed.jsx
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { getPosts } from '../services/postService';
+import IntersectionObserver from '../components/IntersectionObserver';
+
+function PostFeed() {
+  const {
+    data,
+    error,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    status,
+  } = useInfiniteQuery({
+    queryKey: ['posts'],
+    queryFn: ({ pageParam = 1 }) => 
+      getPosts({ page: pageParam, limit: 10 }).then(res => res.data),
+    getNextPageParam: (lastPage, pages) => {
+      return lastPage.hasMore ? pages.length + 1 : undefined;
+    },
+  });
+
+  return (
+    <div>
+      <h1>Post Feed</h1>
+      
+      {status === 'loading' ? (
+        <p>Loading posts...</p>
+      ) : status === 'error' ? (
+        <p>Error: {error.message}</p>
+      ) : (
+        <>
+          {data.pages.map((group, i) => (
+            <React.Fragment key={i}>
+              {group.posts.map(post => (
+                <PostCard key={post.id} post={post} />
+              ))}
+            </React.Fragment>
+          ))}
+          
+          <div ref={loadMoreRef}>
+            {isFetchingNextPage
+              ? 'Loading more...'
+              : hasNextPage
+              ? 'Load more'
+              : 'No more posts'}
+          </div>
+          
+          {/* Intersection Observer to trigger infinite loading */}
+          {hasNextPage && (
+            <IntersectionObserver onIntersect={() => fetchNextPage()} />
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+```
+
+## Structuring API Logic in Services
+
+To maintain clean separation of concerns, organize API calls into service modules within a dedicated `/services` directory.
+
+### Recommended Services Structure
+
+<FileTree>
+- src/
+  - services/
+    - api/
+      - axios.js    // Axios instance and interceptors
+    - userService.js  // User-related API calls
+    - authService.js  // Authentication API calls 
+    - postService.js  // Post-related API calls
+</FileTree>
+
+### Example Service Implementation
+
+```javascript
+// src/services/userService.js
+import api from './api/axios';
+
+export const getUserProfile = async (userId) => {
+  return await api.get(`/users/${userId}`);
+};
+
+export const updateUserProfile = async (userId, userData) => {
+  return await api.put(`/users/${userId}`, userData);
+};
+
+export const getUserPosts = async (userId) => {
+  return await api.get(`/users/${userId}/posts`);
+};
+```
+
+### Benefits of the Service Pattern
+
+1. **Reusability**: Services can be used across multiple components
+2. **Maintainability**: Easier to update API endpoints or add features
+3. **Testing**: Makes unit testing simpler with clear boundaries
+4. **Consistency**: Standardizes how API calls are made throughout the application
+
+## JWT Authentication
+
+For secure and stateless authentication, use JSON Web Tokens (JWT) with a combination of local storage (for access tokens) and HTTP-only cookies (for refresh tokens).
+
+### Authentication Flow
+
+<Tabs>
+  <TabItem label="Login">
+  ```javascript
+  // src/services/authService.js
+  import api from './api/axios';
+
+  export const login = async (email, password) => {
+    const response = await api.post('/auth/login', { email, password }, {
+      withCredentials: true, // Important for cookies
+    });
+    
+    // Save access token to localStorage
+    if (response.data.accessToken) {
+      localStorage.setItem('accessToken', response.data.accessToken);
+    }
+    
+    return response.data;
+  };
+  ```
+  </TabItem>
+  <TabItem label="Logout">
+  ```javascript
+  // src/services/authService.js
+  import api from './api/axios';
+
+  export const logout = async () => {
+    try {
+      // Call logout endpoint to invalidate the refresh token
+      await api.post('/auth/logout', {}, {
+        withCredentials: true,
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Remove the access token regardless of server response
+      localStorage.removeItem('accessToken');
+    }
+  };
+  ```
+  </TabItem>
+  <TabItem label="Token Refresh">
+  ```javascript
+  // src/services/authService.js
+  import api from './api/axios';
+
+  export const refreshToken = async () => {
+    const response = await api.post('/auth/refresh', {}, {
+      withCredentials: true,
+    });
+    
+    if (response.data.accessToken) {
+      localStorage.setItem('accessToken', response.data.accessToken);
+    }
+    
+    return response.data;
+  };
+  ```
+  </TabItem>
+</Tabs>
+
+### Authentication Context
+
+Create a context to manage authentication state throughout your application:
+
+```javascript
+// src/contexts/AuthContext.jsx
+import React, { createContext, useState, useContext, useEffect } from 'react';
+
+const AuthContext = createContext();
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+
+  // Load user from localStorage on initial render
+  useEffect(() => {
+    const savedUser = localStorage.getItem("user");
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
+    }
+  }, []);
+
+  // Clear user data and remove from localStorage
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem("user");
+  };
+
+  // Update user data and save to localStorage
+  const updateUser = (userData) => {
+    setUser(userData);
+    if (userData) {
+      localStorage.setItem("user", JSON.stringify(userData));
+    } else {
+      localStorage.removeItem("user");
+    }
+  };
+
+  return (
+    <AuthContext.Provider value={{ 
+      user, 
+      setUser: updateUser, 
+      logout,
+      isAuthenticated: !!user
+    }}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+// Custom hook for using the auth context
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
+```
+
+<Aside type="caution">
+  Never store sensitive information such as passwords or API keys in localStorage as it is accessible via JavaScript and vulnerable to XSS attacks. This is why we only store the access token (short-lived) in localStorage and keep the refresh token (long-lived) in an HttpOnly cookie.
+</Aside>
+
+## Best Practices for React API Integration
+
+### Security Best Practices
+
+1. **Protect Routes**: Create protected routes that check authentication state
+
+   ```jsx
+   import { useAuth } from '../contexts/AuthContext';
+   import { useNavigate, Route } from 'react-router-dom';
+   import { useEffect } from 'react';
+   
+   function ProtectedRoute({ children }) {
+     const { isAuthenticated } = useAuth();
+     const navigate = useNavigate();
+     
+     useEffect(() => {
+       if (!isAuthenticated) {
+         navigate('/login', { replace: true });
+       }
+     }, [isAuthenticated, navigate]);
+     
+     return isAuthenticated ? children : null;
+   }
+   
+   // In your router
+   <Route 
+     path="/dashboard" 
+     element={<ProtectedRoute><Dashboard /></ProtectedRoute>}
+   />
+   ```
+
+### Performance Best Practices
+
+1. **Debounce rapid API calls** for search inputs and other frequent updates
+   ```jsx
+   import { useDebouncedCallback } from 'use-debounce';
+   
+   function SearchComponent() {
+     const [query, setQuery] = useState('');
+     
+     const debouncedSearch = useDebouncedCallback((value) => {
+       // This will only execute 300ms after the user stops typing
+       performSearch(value);
+     }, 300);
+     
+     return (
+       <input 
+         type="text" 
+         value={query}
+         onChange={(e) => {
+           setQuery(e.target.value);
+           debouncedSearch(e.target.value);
+         }}
+       />
+     );
+   }
+   ```
+
+2. **Use Query Keys Strategically**: Organize query keys to enable selective invalidation
+   ```jsx
+   // User list query
+   useQuery({ queryKey: ['users', { status: 'active' }], ... });
+   
+   // User details query
+   useQuery({ queryKey: ['user', userId], ... });
+   
+   // Invalidate all user queries when something changes
+   queryClient.invalidateQueries({ queryKey: ['users'] });
+   
+   // Only invalidate active users
+   queryClient.invalidateQueries({ 
+     queryKey: ['users', { status: 'active' }] 
+   });
+   ```
+
+3. **Use Placeholder Data**: Improve perceived performance with immediate UI updates
+   ```jsx
+   useQuery({
+     queryKey: ['users'],
+     queryFn: getUsers,
+     placeholderData: previousData => previousData || [],
+     // Or provide static placeholder data
+     // placeholderData: [{ id: 1, name: 'Loading...' }],
+   });
+   ```
+
+### Component Design Best Practices
+
+1. **Separate Data Fetching from UI**: Create custom hooks for data fetching logic to keep components focused on rendering
+   ```jsx
+   // Bad: Mixing data fetching and UI
+   function UserList() {
+     const [users, setUsers] = useState([]);
+     
+     useEffect(() => {
+       fetchUsers().then(data => setUsers(data));
+     }, []);
+     
+     return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;
+   }
+   
+   // Good: Separating concerns
+   function useUsers() {
+     return useQuery({ queryKey: ['users'], queryFn: fetchUsers });
+   }
+   
+   function UserList() {
+     const { data: users, isLoading } = useUsers();
+     
+     if (isLoading) return <div>Loading...</div>;
+     return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;
+   }
+   ```
+
+### Error Handling Best Practices
+
+1. **Create Consistent Error UIs**: Use a standard pattern for error states
+   ```jsx
+   function QueryErrorMessage({ error, refetch }) {
+     return (
+       <div className="error-container">
+         <h3>Error Loading Data</h3>
+         <p>{error.message}</p>
+         <button onClick={() => refetch()}>Retry</button>
+       </div>
+     );
+   }
+   
+   // In components
+   function UserList() {
+     const { data, error, refetch } = useUsers();
+     
+     if (error) return <QueryErrorMessage error={error} refetch={refetch} />;
+     // Rest of component
+   }
+   ```
+
+## Further Reading
+
+- [TanStack Query Documentation](https://tanstack.com/query/latest/docs/react/overview) - Comprehensive guide to React Query features
+- [React Suspense for Data Fetching](https://react.dev/reference/react/Suspense) - Official documentation on React Suspense
+- [Inside React Query Blog Series](https://tkdodo.eu/blog/practical-react-query) - An excellent deep dive into React Query patterns
+- [TanStack Query Crash Course](https://www.youtube.com/watch?v=_EuPZrr3faU) - Hands-on tutorial covering React Query fundamentals and implementation
