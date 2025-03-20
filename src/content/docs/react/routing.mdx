@@ -1,4 +1,105 @@
 ---
-title: "Routing"
-description: "Routing"
+title: React Routing & Navigation
 ---
+
+# Introduction
+
+Routing is a crucial aspect of React applications, enabling navigation between different views while maintaining a seamless user experience. This guide covers best practices for implementing routing using React Router, handling private routes, managing dynamic routes, and working with query parameters.
+
+## 🚀 Using React Router for Navigation
+
+React Router is the de facto library for handling navigation in React applications. It provides a declarative way to define routes and navigate between different views.
+
+### **Installation**
+```sh
+npm install react-router-dom
+```
+
+### **Basic Setup**
+```jsx
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Home from './pages/Home';
+import About from './pages/About';
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;
+```
+
+✅ **Best Practice:** Use `<BrowserRouter>` for traditional web applications and `<MemoryRouter>` for testing or non-browser environments.
+
+## 🔒 Private Routes
+
+Private routes restrict access to authenticated users. There are multiple strategies to implement protected routes, including Higher-Order Components (HOCs), custom hooks, or React Context.
+
+### **Using a Custom Hook**
+```jsx
+import { Navigate, Outlet } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+
+const PrivateRoute = () => {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <Outlet /> : <Navigate to="/login" />;
+};
+
+export default PrivateRoute;
+```
+
+✅ **Best Practice:** Use `Outlet` for nested private routes and `Navigate` for redirection.
+
+## 🔄 Dynamic Routing
+
+Dynamic routing allows pages to adapt based on URL parameters, making it useful for user profiles, product pages, etc.
+
+### **Example: Product Page**
+```jsx
+import { useParams } from 'react-router-dom';
+
+const ProductPage = () => {
+  const { id } = useParams();
+  return <h1>Product ID: {id}</h1>;
+};
+
+export default ProductPage;
+```
+
+✅ **Best Practice:** Use `useParams` to extract parameters from the URL.
+
+## 🔍 Handling Query Parameters
+
+Query parameters enable passing optional values in the URL, such as search filters or pagination.
+
+### **Example: Search Page**
+```jsx
+import { useSearchParams } from 'react-router-dom';
+
+const SearchPage = () => {
+  const [searchParams] = useSearchParams();
+  const query = searchParams.get('query');
+  return <h1>Search Results for: {query}</h1>;
+};
+
+export default SearchPage;
+```
+
+✅ **Best Practice:** Use `useSearchParams` instead of manual URL parsing.
+
+## Best Practices Checklist
+
+✔ Use `react-router-dom` as the standard navigation approach.
+✔ Implement private routes using HOCs, hooks, or context.
+✔ Handle dynamic routing with `useParams`.
+✔ Manage query parameters efficiently with `useSearchParams`.
+✔ Ensure clear documentation with examples for maintainability.
+
+By following these best practices, you can build a well-structured, scalable React application with seamless navigation.
+
