@@ -1,4 +1,453 @@
 ---
 title: "Navigation & Routing"
-description: "Navigation & Routing"
+description: "Understanding different navigation approaches in Flutter and implementing effective routing strategies."
+---
+
+import { Aside, Code, FileTree, Card, CardGrid, Steps, Tabs } from '@astrojs/starlight/components';
+
+---
+
+Navigation and routing are fundamental aspects of any mobile application, defining how users move between screens and how the app maintains its navigation state. Flutter offers multiple approaches to handle navigation, each with its own strengths and use cases.
+
+<Aside type="tip">
+  **Pro tip:** A well-implemented navigation system improves user experience and makes your codebase more maintainable. Take time to plan your navigation strategy before implementing it.
+</Aside>
+
+---
+
+## Navigation Approaches in Flutter
+
+Flutter provides several ways to handle navigation and routing, from simple imperative APIs to more complex declarative approaches:
+
+<CardGrid>
+  <Card title="Navigator 1.0">
+    The original imperative navigation API. Simple to use but limited for complex navigation patterns.
+  </Card>
+  <Card title="Navigator 2.0">
+    Declarative API offering more control and better web support, but with a steeper learning curve.
+  </Card>
+  <Card title="GoRouter">
+    Third-party package that simplifies Navigator 2.0 while maintaining its power.
+  </Card>
+  <Card title="Auto Route">
+    Code generation package that reduces boilerplate for complex navigation scenarios.
+  </Card>
+</CardGrid>
+
+---
+
+## Navigator 1.0 vs Navigator 2.0
+
+<Tabs>
+  <Tabs label="Navigator 1.0">
+    ### Navigator 1.0 (Imperative)
+    - Push/pop-based navigation model
+    - Simple and intuitive for basic navigation
+    - Less boilerplate code for simple apps
+    - Limited support for deep linking
+
+    <Code code={`// Direct navigation
+Navigator.of(context).push(
+  MaterialPageRoute(builder: (context) => DetailsScreen(item: item))
+);
+
+// Named route navigation
+Navigator.of(context).pushNamed('/details', arguments: item);`} lang="dart" />
+  </Tabs>
+
+  <Tabs label="Navigator 2.0">
+    ### Navigator 2.0 (Declarative)
+    - Pages-based declarative approach
+    - Better deep linking and web URL support
+    - More complex to implement but more powerful
+    - Suitable for advanced navigation patterns
+
+    <Code code={`class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp.router(
+      routerDelegate: MyRouterDelegate(),
+      routeInformationParser: MyRouteInformationParser(),
+    );
+  }
+}`} lang="dart" />
+  </Tabs>
+</Tabs>
+
+---
+
+## Named Routes vs Direct Navigation
+
+<Card title="Named Routes">
+  <Code code={`// Define routes
+MaterialApp(
+  routes: {
+    '/': (context) => HomeScreen(),
+    '/details': (context) => DetailsScreen(),
+    '/settings': (context) => SettingsScreen(),
+  },
+)
+
+// Navigate to a named route
+Navigator.of(context).pushNamed('/details');`} lang="dart" />
+  
+  **When to Use:**
+  - For consistent navigation paths across the app
+  - When you need a centralized routing configuration
+  - For simple navigation between fixed screens
+</Card>
+
+<Card title="Direct Navigation">
+  <Code code={`// Direct navigation with MaterialPageRoute
+Navigator.of(context).push(
+  MaterialPageRoute(
+    builder: (context) => DetailsScreen(item: selectedItem),
+  ),
+);`} lang="dart" />
+  
+  **When to Use:**
+  - When passing complex data between screens
+  - For dynamic destination screens
+  - For custom transition animations
+  - For contextual navigation within a feature
+</Card>
+
+---
+
+## Recommended Approach: GoRouter
+
+For most Flutter applications, we recommend using **GoRouter**, which offers a balance between simplicity and power:
+
+<Aside type="note">
+  GoRouter simplifies the complexity of Navigator 2.0 while maintaining its powerful features like deep linking and declarative routing.
+</Aside>
+
+<Code code={`// Basic GoRouter setup
+final _router = GoRouter(
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (context, state) => HomeScreen(),
+    ),
+    GoRoute(
+      path: '/details/:id',
+      builder: (context, state) {
+        final id = state.params['id']!;
+        return DetailsScreen(id: id);
+      },
+    ),
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => SettingsScreen(),
+    ),
+  ],
+);
+
+// In MaterialApp
+MaterialApp.router(
+  routerConfig: _router,
+);`} lang="dart" title="GoRouter Setup" />
+
+---
+
+## State Management During Navigation
+
+Managing state during navigation can be challenging. Here are strategies for handling state across navigation boundaries:
+
+<Steps>
+  1. **Passing Parameters**
+     For simple data, pass parameters directly through the constructor or route arguments.
+  
+  2. **Using BLoC/Provider**
+     For complex state, use state management solutions that persist across navigation.
+  
+  3. **URL Parameters**
+     For deep linking scenarios, encode state in URL parameters and parse them when navigating.
+</Steps>
+
+<Tabs>
+  <Tabs label="Constructor Parameters">
+    <Code code={`// Passing data via constructor
+Navigator.of(context).push(
+  MaterialPageRoute(
+    builder: (context) => ProductDetailsScreen(
+      product: selectedProduct,
+    ),
+  ),
+);
+
+// In the destination screen
+class ProductDetailsScreen extends StatelessWidget {
+  final Product product;
+  
+  const ProductDetailsScreen({required this.product});
+  
+  @override
+  Widget build(BuildContext context) {
+    // Use product data here
+  }
+}`} lang="dart" />
+  </Tabs>
+
+  <Tabs label="BLoC Approach">
+    <Code code={`// Access BLoC across navigation boundaries
+void navigateToDetails() {
+  // BLoC is provided at a higher level in the widget tree
+  final productBloc = context.read<ProductBloc>();
+  productBloc.add(LoadProductDetails(id: selectedId));
+  
+  Navigator.of(context).pushNamed('/product-details');
+}
+
+// In details screen
+class ProductDetailsScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<ProductBloc, ProductState>(
+      builder: (context, state) {
+        if (state is ProductDetailsLoaded) {
+          return ProductDetails(product: state.product);
+        }
+        return LoadingIndicator();
+      },
+    );
+  }
+}`} lang="dart" />
+  </Tabs>
+
+  <Tabs label="GoRouter Parameters">
+    <Code code={`// GoRouter with parameters
+GoRoute(
+  path: '/product/:id',
+  builder: (context, state) {
+    // Extract parameters
+    final productId = state.params['id']!;
+    
+    // Optional query parameters
+    final showReviews = state.queryParams['reviews'] == 'true';
+    
+    // Access BLoC or Provider
+    context.read<ProductBloc>().add(LoadProductDetails(id: productId));
+    
+    return ProductDetailsScreen(showReviews: showReviews);
+  },
+),
+
+// Navigate with parameters
+context.go('/product/123?reviews=true');`} lang="dart" />
+  </Tabs>
+</Tabs>
+
+---
+
+## Deep Linking and When to Use It
+
+Deep linking allows users to navigate directly to specific content within your app from external sources.
+
+<CardGrid>
+  <Card title="Key Components">
+    - **URI Schemes**: Custom schemes like `myapp://` for app-specific links
+    - **Universal Links (iOS)/App Links (Android)**: Regular web URLs that open your app
+    - **Route Mapping**: Translating external URLs to internal navigation paths
+  </Card>
+  
+  <Card title="When to Implement">
+    - **Content Sharing**: When users need to share specific content from your app
+    - **Marketing Campaigns**: For directing users to specific features or promotions
+    - **Notifications**: To route users to the right screen from push notifications
+    - **Cross-App Integration**: When other apps need to link to your app content
+  </Card>
+</CardGrid>
+
+<Code code={`// Deep link configuration with GoRouter
+final _router = GoRouter(
+  initialLocation: '/',
+  routes: [
+    // Routes configuration
+  ],
+  redirect: (context, state) {
+    // Global redirects for auth, etc.
+    return null;
+  },
+);
+
+// In Android Manifest
+<activity
+    android:name=".MainActivity"
+    android:launchMode="singleTop">
+    <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="myapp" android:host="products" />
+    </intent-filter>
+</activity>
+
+// In iOS Info.plist
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleURLName</key>
+    <string>com.mycompany.myapp</string>
+    <key>CFBundleURLSchemes</key>
+    <array>
+      <string>myapp</string>
+    </array>
+  </dict>
+</array>`} lang="xml" title="Deep Linking Configuration" />
+
+---
+
+## Navigation Architecture
+
+For larger applications, we recommend structuring navigation in a feature-based manner:
+
+<FileTree>
+- lib
+  - core
+    - navigation
+      - app_router.dart      # Main router configuration
+      - route_constants.dart # Route name constants
+  - features
+    - feature_1
+      - navigation
+        - routes.dart        # Feature-specific routes
+      - presentation
+        - screens
+    - feature_2
+      - navigation
+        - routes.dart
+      - presentation
+        - screens
+</FileTree>
+
+<Code code={`// lib/core/navigation/app_router.dart
+class AppRouter {
+  static final GoRouter router = GoRouter(
+    routes: [
+      // Home routes
+      ...HomeRoutes.routes,
+      
+      // Auth routes
+      ...AuthRoutes.routes,
+      
+      // Product routes
+      ...ProductRoutes.routes,
+    ],
+    errorBuilder: (context, state) => NotFoundScreen(),
+  );
+}
+
+// lib/features/products/navigation/routes.dart
+class ProductRoutes {
+  static const String productList = '/products';
+  static const String productDetails = '/products/:id';
+  
+  static List<GoRoute> get routes => [
+    GoRoute(
+      path: productList,
+      builder: (context, state) => ProductListScreen(),
+    ),
+    GoRoute(
+      path: productDetails,
+      builder: (context, state) {
+        final id = state.params['id']!;
+        return ProductDetailsScreen(id: id);
+      },
+    ),
+  ];
+}`} lang="dart" title="Structured Navigation Code" />
+
+---
+
+## Best Practices
+
+<Aside type="tip">
+  ### Navigation Best Practices
+  
+  - ✅ **Define route constants** to avoid hard-coded strings
+  - ✅ **Pass minimum required data** between screens
+  - ✅ **Separate navigation logic** from UI components
+  - ✅ **Handle navigation errors** gracefully with error screens
+  - ✅ **Test navigation flows** thoroughly, including deep links
+</Aside>
+
+<Aside type="caution">
+  ### Common Mistakes to Avoid
+  
+  - ❌ **Passing entire object trees** between screens
+  - ❌ **Deeply nested navigation** that's hard to manage
+  - ❌ **Inconsistent navigation patterns** across the app
+  - ❌ **Ignoring the back stack** and creating confusing navigation paths
+</Aside>
+
+---
+
+## Navigation with State Management
+
+Integrating navigation with state management is crucial for a seamless user experience:
+
+<Tabs>
+  <Tabs label="BLoC Navigation">
+    <Code code={`// Navigation controlled by BLoC
+class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
+  NavigationBloc() : super(NavigationInitial()) {
+    on<NavigateToDetails>((event, emit) {
+      emit(NavigationDetails(id: event.id));
+    });
+    on<NavigateToHome>((event, emit) {
+      emit(NavigationHome());
+    });
+  }
+}
+
+// In your widget
+BlocListener<NavigationBloc, NavigationState>(
+  listener: (context, state) {
+    if (state is NavigationDetails) {
+      context.go('/details/\${state.id}');  // Escaped string template
+    } else if (state is NavigationHome) {
+      context.go('/');
+    }
+  },
+  child: YourWidget(),
+)`} lang="dart" />
+  </Tabs>
+
+  <Tabs label="Provider Navigation">
+    <Code code={`// Navigation service with Provider
+class NavigationService {
+  final GoRouter router;
+  
+  NavigationService(this.router);
+  
+  void navigateToDetails(String id) {
+    router.go('/details/$id');
+  }
+  
+  void navigateToHome() {
+    router.go('/');
+  }
+}
+
+// Register in provider
+Provider.value(
+  value: NavigationService(appRouter),
+),
+
+// Use in widgets
+final navService = context.read<NavigationService>();
+navService.navigateToDetails('123');`} lang="dart" />
+  </Tabs>
+</Tabs>
+
+---
+
+## See Also
+
+1. [GoRouter Package](https://pub.dev/packages/go_router) – A declarative routing package for Flutter
+2. [Navigator 2.0 Introduction](https://medium.com/flutter/learning-flutters-new-navigation-and-routing-system-7c9068155ade) – Deep dive into Flutter's declarative routing
+3. [State Management](../state-management) – How to manage state effectively in Flutter
+4. [Deep Linking in Flutter](https://docs.flutter.dev/development/ui/navigation/deep-linking) – Official Flutter documentation on deep linking
+
 ---
