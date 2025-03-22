@@ -39,24 +39,20 @@ When opening a PR:
 Each documentation page should follow this general structure:
 
 1. **Title and Description**
-
    - Clear, concise title
    - Brief description of what the document covers
 
 2. **Introduction/Overview**
-
    - The first section can be a general overview of the topic
    - You can directly start with an introduction that explains the basics
    - Explain why it's important and when to use the described patterns/techniques
 
 3. **Main Content**
-
    - Divide into logical sections with clear headings
    - Use code examples to illustrate concepts
    - Explain both the "how" and "why" of best practices
 
 4. **Best Practices & Common Pitfalls**
-
    - Do's and don'ts
    - Common mistakes and how to avoid them
 
@@ -81,6 +77,7 @@ Each documentation page should follow this general structure:
 - Show both good and bad examples where appropriate
 - Ensure syntax highlighting by specifying the language in code blocks
 
+
 ### Formatting with Starlight
 
 Our documentation is built using [Starlight](https://starlight.astro.build/), which means you should:
@@ -104,11 +101,12 @@ description: "A brief description of the document content"
 
 Example using Starlight components:
 
-````markdown
 ```mdx
-import { Aside, Card, CardGrid } from "@astrojs/starlight/components";
+import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
 
-<Aside type="tip">This is a helpful tip for React developers.</Aside>
+<Aside type="tip">
+  This is a helpful tip for React developers.
+</Aside>
 
 <CardGrid>
   <Card title="Getting Started" icon="rocket">
@@ -119,12 +117,10 @@ import { Aside, Card, CardGrid } from "@astrojs/starlight/components";
   </Card>
 </CardGrid>
 ```
-````
 
 ## 🔍 Review Process
 
 1. **Initial Review**: Co-managers will review your PR for:
-
    - Content quality and accuracy
    - Adherence to documentation structure
    - Code example quality
@@ -139,7 +135,7 @@ import { Aside, Card, CardGrid } from "@astrojs/starlight/components";
 
 ### New Framework/Tool Documentation
 
-````markdown
+```markdown
 ---
 title: "[Tool/Framework] Overview"
 description: "A comprehensive guide to [Tool/Framework] best practices, common patterns, and implementation tips"
@@ -152,7 +148,6 @@ import { Aside, Tabs, TabItem, FileTree } from '@astrojs/starlight/components';
 ### When to Use [Tool/Framework]
 
 [Tool/Framework] is particularly useful when:
-
 - Building applications that require [specific feature]
 - Working with [specific context or scenario]
 - Solving [specific problem]
@@ -165,14 +160,13 @@ Explanation of the first fundamental concept with examples.
 
 ```javascript
 // src/examples/example1.js
-import { something } from "[tool/framework]";
+import { something } from '[tool/framework]';
 
 function basicExample() {
   // Implementation details
   return result;
 }
-```
-````
+
 
 ### Core Principle 2
 
@@ -186,10 +180,10 @@ Detailed explanation of how to implement this pattern.
 
 ```js
 // src/patterns/pattern1.js
-import { feature } from "[tool/framework]";
+import { feature } from '[tool/framework]';
 
 // Implementation code
-```
+
 
 ### Pattern 2: [Alternative Implementation Pattern]
 
@@ -197,30 +191,28 @@ When and why you might choose this alternative approach.
 
 ## Comparing [Tool/Framework] Options
 
-| Feature           | Option A | Option B | Option C |
-| ----------------- | -------- | -------- | -------- |
-| Performance       | High     | Medium   | Low      |
-| Bundle Size       | 12KB     | 22KB     | 5KB      |
-| Learning Curve    | Steep    | Moderate | Easy     |
-| Community Support | Active   | Growing  | Limited  |
+| Feature | Option A | Option B | Option C |
+|---------|----------|----------|----------|
+| Performance | High | Medium | Low |
+| Bundle Size | 12KB | 22KB | 5KB |
+| Learning Curve | Steep | Moderate | Easy |
+| Community Support | Active | Growing | Limited |
 
 ## Best Practices
 
 ### Do's and Don'ts
 
 ✅ **DO** follow this recommended practice
-
 ```javascript
 // src/examples/good-practice.js
 // Good implementation example
-```
+
 
 ❌ **DON'T** make this common mistake
-
 ```javascript
 // src/examples/bad-practice.js
 // Problematic implementation
-```
+
 
 ### Common Pitfalls
 
@@ -237,7 +229,6 @@ Solutions for common errors and issues you might encounter.
 [Tool/Framework] provides powerful capabilities for [summary of main benefits]. By following the patterns and practices outlined in this guide, you can avoid common pitfalls and create maintainable, efficient implementations.
 
 When deciding whether to use [Tool/Framework] in your project, consider:
-
 1. Your application's specific requirements
 2. Your team's familiarity with the technology
 3. Long-term maintenance considerations
@@ -248,21 +239,18 @@ When deciding whether to use [Tool/Framework] in your project, consider:
 - [Helpful Tutorial](https://example.com/tutorial)
 - [GitHub Repository](https://github.com/example/repo)
 - [Community Forum](https://example.com/forum)
-
-````
+```
 
 ## 🚀 Getting Started with Starlight
 
 If you're new to Starlight:
 
 1. **Install dependencies**:
-
    ```bash
    npm install
-````
+   ```
 
 2. **Start the development server**:
-
    ```bash
    npm run dev
    ```
@@ -271,7 +259,7 @@ If you're new to Starlight:
 
 4. **Build the documentation** (optional):
    ```bash
-   npm run *build*
+   npm run build
    ```
 
 Happy contributing! 🎉

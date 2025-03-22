@@ -2,15 +2,13 @@
 
 ## Table of Contents
 
-- [GDG Docs Project](#gdg-docs-project)
-  - [Table of Contents](#table-of-contents)
-  - [Project Overview](#project-overview)
-  - [Goal](#goal)
-  - [Key Focus Areas](#key-focus-areas)
-  - [Content Scope](#content-scope)
-  - [Project Structure](#project-structure)
-  - [Contributing](#contributing)
-  - [Built With](#built-with)
+- [Project Overview](#project-overview)
+- [Goal](#goal)
+- [Key Focus Areas](#key-focus-areas)
+- [Content Scope](#content-scope)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [Built With](#built-with)
 
 ## Project Overview
 
