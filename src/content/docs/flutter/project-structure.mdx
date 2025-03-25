@@ -322,7 +322,7 @@ To migrate an existing Flutter project to this architecture:
 ## **Best Practices**
 
 <Aside type="tip">
-- **Dependency Injection**: Keep dependencies managed efficiently.
+- ✅ **Dependency Injection**: Keep dependencies managed efficiently.
   ```dart
   // core/injection.dart
   final getIt = GetIt.instance;
@@ -331,13 +331,13 @@ To migrate an existing Flutter project to this architecture:
   getIt.registerFactory<UserCubit>(() => UserCubit(getIt<UserRepository>()));
   }
   ```
-- **Modularity**: Keep features self-contained and avoid unnecessary dependencies.  
-- **Testing**: Cover Cubits, Repositories, and critical widgets to ensure robustness.  
+- ✅ **Modularity**: Keep features self-contained and avoid unnecessary dependencies.  
+- ✅ **Testing**: Cover Cubits, Repositories, and critical widgets to ensure robustness.  
 
 ### **Avoid These Common Mistakes**
-- **Placing business logic inside widgets** – Always separate concerns.
-- **Failing to emit distinct Cubit states** – Ensure states are immutable.
-- **Overusing singletons in dependency injection** – Use lazy singletons wisely.
+- ❌ **Placing business logic inside widgets** – Always separate concerns.
+- ❌ **Failing to emit distinct Cubit states** – Ensure states are immutable.
+- ❌ **Overusing singletons in dependency injection** – Use lazy singletons wisely.
 
 </Aside>
 
