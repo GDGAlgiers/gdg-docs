@@ -2,7 +2,7 @@
 title: "State Management"
 description: "A comprehensive guide to state management in React, covering built-in hooks, external libraries, performance optimization with TanStack Query and React Compiler, and form state handling."
 ---
-import { Aside } from '@astrojs/starlight/components';
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
 **State management** is a cornerstone of scalable and maintainable React applications. This practical guide will help you choose the right approach for your needs.
 
@@ -139,7 +139,7 @@ export function useAuth() {
 
 ## 2. State Management Best Practices
 
-### Naming Conventions
+#### Naming Conventions
 
 Use descriptive names that indicate the purpose and type of state:
 
@@ -158,7 +158,7 @@ const [isVisible, setIsVisible] = useState(false);
 const [hasError, setHasError] = useState(false);
 ```
 
-### Managing Multiple Related States
+#### Managing Multiple Related States
 
 **Problem**: Too many individual state variables make components harder to maintain.
 
@@ -203,7 +203,7 @@ function UserProfile() {
 }
 ```
 
-### Handling State Updates Correctly
+#### Handling State Updates Correctly
 
 **Avoid direct state mutation:**
 
@@ -226,7 +226,7 @@ const updateTask = (id, updates) => {
 };
 ```
 
-### Proper State Location and Lifting State Up
+#### Proper State Location and Lifting State Up
 
 A good practice is to keep the state as close to the components that need it as possible. This approach, known as "lifting state up," reduces complexity and makes your app easier to reason about.
 
@@ -308,7 +308,7 @@ function ProductList({ filterText }) {
   Only lift state as high as necessary. Over-centralizing state can lead to "prop drilling" - passing props through many intermediary components. When this becomes unwieldy, consider using Context API or a state management library instead.
 </Aside>
 
-### Using URL Search Parameters for UI State
+#### Using URL Search Parameters for UI State
 
 For filtering, sorting, pagination, and search functionality (especially in e-commerce sites, dashboards, or content browsing applications), prefer storing the state in URL search parameters rather than component state:
 
@@ -368,7 +368,7 @@ function ProductList() {
   For complex filters, consider encoding structured data as JSON in a single URL parameter, or use a library like [use-query-params](https://github.com/pbeshai/use-query-params) for more robust URL state management.
 </Aside>
 
-### When to Split State vs. Combine It
+#### When to Split State vs. Combine It
 
 **Split state when:**
 - Parts of the state update independently
@@ -532,12 +532,10 @@ TanStack Query v5 (formerly React Query) simplifies fetching, caching, and synch
 
 ```jsx
 // Todos.jsx
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import axios from 'axios';
 
-function TodoList() {
-  const queryClient = useQueryClient();
-  
+function TodoList() {  
   // Fetch todos
   const { 
     data: todos = [], 
@@ -548,40 +546,17 @@ function TodoList() {
     queryFn: () => axios.get('/api/todos').then(res => res.data),
   });
   
-  // Add new todo mutation
-  const addMutation = useMutation({
-    mutationFn: (newTodo) => axios.post('/api/todos', newTodo),
-    onSuccess: () => {
-      // Invalidate and refetch
-      queryClient.invalidateQueries({ queryKey: ['todos'] })
-    },
-  });
-  
   if (isPending) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
   
   return (
     <div>
-      <h2>My Todos ({todos.length})</h2>
-      
-      {/* Add todo form */}
-      <form onSubmit={(e) => {
-        e.preventDefault();
-        const title = e.target.elements.title.value;
-        addMutation.mutate({ title, completed: false });
-        e.target.reset();
-      }}>
-        <input name="title" required placeholder="Add new todo" />
-        <button type="submit" disabled={addMutation.isPending}>
-          {addMutation.isPending ? 'Adding...' : 'Add'}
-        </button>
-      </form>
-      
+      <h2>My Todos ({todos.length})</h2>  
       {/* Todo list */}
       <ul>
         {todos.map((todo) => (
           <li key={todo.id}>
-            {todo.title} {todo.completed ? '✅' : '⬜'}
+            {todo.title}
           </li>
         ))}
       </ul>
@@ -607,119 +582,70 @@ For more details on its benefits, see the [API Integration](/react/api-integrati
 
 Handling form state efficiently is vital for user experience and application performance.
 
-### React Hook Form
+<Tabs>
+  <TabItem label="React Hook Form">
+  ```jsx
+  import { useForm } from 'react-hook-form';
 
-Optimized for performance by using uncontrolled components and refs:
+  function SimpleForm() {
+    const { register, handleSubmit, formState: { errors } } = useForm();
+    
+    const onSubmit = data => console.log(data);
+    
+    return (
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <input {...register('name', { required: 'Name is required' })} />
+        {errors.name && <p>{errors.name.message}</p>}
+        
+        <input type="email" {...register('email', { required: true })} />
+        {errors.email && <p>Email is required</p>}
+        
+        <button type="submit">Submit</button>
+      </form>
+    );
+  }
+  ```
 
-```jsx
-// SignupForm.jsx
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+  React Hook Form uses uncontrolled components with refs for better performance.
+  </TabItem>
 
-// Define validation schema with zod
-const schema = z.object({
-  email: z.string().email('Invalid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-});
+  <TabItem label="Formik">
+  ```jsx
+  import { Formik, Form, Field, ErrorMessage } from 'formik';
 
-function SignupForm() {
-  const { 
-    register, 
-    handleSubmit, 
-    formState: { errors, isSubmitting } 
-  } = useForm({
-    resolver: zodResolver(schema),
-    defaultValues: {
-      email: '',
-      password: ''
-    }
-  });
-
-  const onSubmit = data => console.log('Form submitted:', data);
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <div>
-        <label htmlFor="email">Email</label>
-        <input id="email" type="email" {...register('email')} />
-        {errors.email && <p className="error">{errors.email.message}</p>}
-      </div>
-      
-      <div>
-        <label htmlFor="password">Password</label>
-        <input id="password" type="password" {...register('password')} />
-        {errors.password && <p className="error">{errors.password.message}</p>}
-      </div>
-      
-      <button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? 'Submitting...' : 'Submit'}
-      </button>
-    </form>
-  );
-}
-```
-
-### Formik
-
-A more declarative API that's beginner-friendly:
-
-```jsx
-// LoginForm.jsx
-import { Formik, Form, Field, ErrorMessage } from 'formik';
-import * as Yup from 'yup';
-
-// Define validation schema with Yup
-const LoginSchema = Yup.object().shape({
-  email: Yup.string().email('Invalid email').required('Required'),
-  password: Yup.string().required('Required')
-});
-
-function LoginForm({ onLogin }) {
-  return (
-    <Formik
-      initialValues={{ email: '', password: '' }}
-      validationSchema={LoginSchema}
-      onSubmit={(values, { setSubmitting }) => {
-        onLogin(values)
-          .finally(() => setSubmitting(false));
-      }}
-    >
-      {({ isSubmitting }) => (
+  function SimpleForm() {
+    return (
+      <Formik
+        initialValues={{ name: '', email: '' }}
+        validate={values => {
+          const errors = {};
+          if (!values.name) errors.name = 'Required';
+          if (!values.email) errors.email = 'Required';
+          return errors;
+        }}
+        onSubmit={(values) => console.log(values)}
+      >
         <Form>
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <Field type="email" id="email" name="email" />
-            <ErrorMessage name="email" component="div" className="error" />
-          </div>
+          <Field name="name" />
+          <ErrorMessage name="name" component="p" />
           
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <Field type="password" id="password" name="password" />
-            <ErrorMessage name="password" component="div" className="error" />
-          </div>
+          <Field type="email" name="email" />
+          <ErrorMessage name="email" component="p" />
           
-          <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Logging in...' : 'Log In'}
-          </button>
+          <button type="submit">Submit</button>
         </Form>
-      )}
-    </Formik>
-  );
-}
-```
+      </Formik>
+    );
+  }
+  ```
 
-### Which Form Library to Choose?
+  Formik provides a more declarative API with built-in helpers for form state management.
+  </TabItem>
+</Tabs>
 
-| Feature | React Hook Form | Formik |
-|---------|----------------|--------|
-| **Performance** | Better (fewer re-renders) | Good |
-| **Bundle Size** | Smaller | Larger |
-| **Validation** | External (zod, yup, etc.) | External or built-in |
-| **Learning Curve** | Moderate | Easy |
-| **Best For** | Complex or large forms | Simple to medium forms |
-
-For detailed comparisons and additional best practices, refer to the [Forms Page](/react/forms-validation) of our documentation.
+<Aside type="tip">
+  For detailed implementations including validation, complex forms, and best practices, see our [Forms & Validation](/react/forms-validation) guide.
+</Aside>
 
 ---
 
