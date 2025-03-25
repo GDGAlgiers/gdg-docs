@@ -4,9 +4,9 @@ title: React Routing & Navigation
 
 # Introduction
 
-Routing is a crucial aspect of React applications, enabling navigation between different views while maintaining a seamless user experience. This guide covers best practices for implementing routing using React Router, handling private routes, managing dynamic routes, and working with query parameters.
+Routing is a crucial aspect of React applications, enabling navigation between different views while maintaining a seamless user experience. This guide covers best practices for implementing routing using React Router, handling private routes, managing dynamic routes, working with query parameters, and optimizing route structure.
 
-## 🚀 Using React Router for Navigation
+## Using React Router for Navigation
 
 React Router is the de facto library for handling navigation in React applications. It provides a declarative way to define routes and navigate between different views.
 
@@ -37,7 +37,48 @@ export default App;
 
 ✅ **Best Practice:** Use `<BrowserRouter>` for traditional web applications and `<MemoryRouter>` for testing or non-browser environments.
 
-## 🔒 Private Routes
+## Nested Routes & Layout Components
+
+Using nested routes allows better structuring of your application. Layout components help in rendering shared UI elements like headers, sidebars, or footers.
+
+### **Example: Nested Routing with Layouts**
+```jsx
+import { Outlet } from 'react-router-dom';
+
+const DashboardLayout = () => (
+  <div>
+    <header>Dashboard Header</header>
+    <Outlet />
+  </div>
+);
+
+export default DashboardLayout;
+```
+
+```jsx
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import DashboardLayout from './layouts/DashboardLayout';
+import DashboardHome from './pages/DashboardHome';
+import DashboardSettings from './pages/DashboardSettings';
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route path="/dashboard" element={<DashboardLayout />}>
+          <Route index element={<DashboardHome />} />
+          <Route path="settings" element={<DashboardSettings />} />
+        </Route>
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;
+```
+✅ **Best Practice:** Use `Outlet` for nested routes to share UI components efficiently.
+
+## Private Routes
 
 Private routes restrict access to authenticated users. There are multiple strategies to implement protected routes, including Higher-Order Components (HOCs), custom hooks, or React Context.
 
@@ -56,7 +97,36 @@ export default PrivateRoute;
 
 ✅ **Best Practice:** Use `Outlet` for nested private routes and `Navigate` for redirection.
 
-## 🔄 Dynamic Routing
+## Lazy Loading Routes
+
+Lazy loading improves performance by dynamically loading components only when they are needed.
+
+### **Example: Lazy Loading with React Router**
+```jsx
+import { lazy, Suspense } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+
+const Home = lazy(() => import('./pages/Home'));
+const About = lazy(() => import('./pages/About'));
+
+function App() {
+  return (
+    <Router>
+      <Suspense fallback={<div>Loading...</div>}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+        </Routes>
+      </Suspense>
+    </Router>
+  );
+}
+
+export default App;
+```
+✅ **Best Practice:** Use `React.lazy` and `Suspense` to optimize initial page load speed.
+
+## Dynamic Routing
 
 Dynamic routing allows pages to adapt based on URL parameters, making it useful for user profiles, product pages, etc.
 
@@ -74,7 +144,7 @@ export default ProductPage;
 
 ✅ **Best Practice:** Use `useParams` to extract parameters from the URL.
 
-## 🔍 Handling Query Parameters
+## Handling Query Parameters
 
 Query parameters enable passing optional values in the URL, such as search filters or pagination.
 
@@ -93,13 +163,14 @@ export default SearchPage;
 
 ✅ **Best Practice:** Use `useSearchParams` instead of manual URL parsing.
 
-## Best Practices Checklist
+## ✅ Best Practices Checklist
 
 ✔ Use `react-router-dom` as the standard navigation approach.
 ✔ Implement private routes using HOCs, hooks, or context.
 ✔ Handle dynamic routing with `useParams`.
 ✔ Manage query parameters efficiently with `useSearchParams`.
+✔ Use lazy loading (`React.lazy`, `Suspense`) for better performance.
+✔ Organize routes with nested layouts and `Outlet` components.
 ✔ Ensure clear documentation with examples for maintainability.
 
 By following these best practices, you can build a well-structured, scalable React application with seamless navigation.
-
