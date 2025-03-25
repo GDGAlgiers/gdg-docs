@@ -2,7 +2,7 @@
 title: "Databases"
 description: "A comprehensive guide to database integration in Express applications, covering MongoDB and PostgreSQL setups, connection patterns, model structuring, migrations, and error handling best practices."
 ---
-import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+import { Aside, Tabs, TabItem, FileTree } from '@astrojs/starlight/components';
 
 **Database integration** is fundamental to most modern web applications. This guide will help you choose and implement the right database solution for your Express projects.
 
@@ -292,13 +292,7 @@ Using a singleton pattern ensures that only one database connection is created a
     try {
       // Get Prisma connection
       const prisma = prismaConnection.connect();
-      
-      // Make Prisma available in requests
-      app.use((req, res, next) => {
-        req.prisma = prisma;
-        next();
-      });
-      
+  
       const PORT = process.env.PORT || 3000;
       app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
@@ -325,6 +319,35 @@ Using a singleton pattern ensures that only one database connection is created a
   </TabItem>
 </Tabs>
 
+### Example: Using Prisma in a Service Layer
+  
+  ```javascript
+  // services/userService.js
+  const prismaConnection = require('../db/connection');
+
+  // Get Prisma client
+  const prisma = prismaConnection.connect();
+
+  // Get user by ID with their posts
+  const getUserWithPosts = async (userId) => {
+    return await prisma.user.findUnique({
+      where: { id: Number(userId) },
+      include: { 
+        posts: {
+          select: {
+            id: true,
+            title: true,
+            published: true
+          }
+        } 
+      }
+    });
+  }
+
+  module.exports = getUserWithPosts;
+  
+  ```
+
 <Aside type="caution">
   Never expose your database connection credentials in your code. Always use environment variables or a secure configuration management system.
 </Aside>
@@ -335,14 +358,22 @@ Using a singleton pattern ensures that only one database connection is created a
 
 ### Model Organization
 
-For most projects, a simple model organization is sufficient since you'll typically use a single database technology:
-```
-/db
-  /models
-      user.model.js
-      post.model.js
-  /connection.js
-```
+For most projects, a structured organization of database-related files is essential:
+
+<FileTree>
+- src/
+  - db/
+    - connection.js
+    - models/
+      - userModel.js
+      - postModel.js
+      - commentModel.js
+  - app.js
+</FileTree>
+
+<Aside type="note">
+  Prisma uses a different approach where all models are defined in a single `schema.prisma` file instead of separate model files. This schema file is used to generate the Prisma client with strongly-typed queries.
+</Aside>
 
 ### MongoDB Models with Mongoose
 
