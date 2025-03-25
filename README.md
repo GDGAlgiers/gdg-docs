@@ -1,24 +1,42 @@
 # GDG Docs Project
 
-## 📌 Project Overview
+## Table of Contents
+
+- [Project Overview](#project-overview)
+- [Goal](#goal)
+- [Key Focus Areas](#key-focus-areas)
+- [Content Scope](#content-scope)
+- [Project Structure](#project-structure)
+- [Contributing](#contributing)
+- [Built With](#built-with)
+
+## Project Overview
 
 GDG Docs is an initiative by GDG Algiers aimed at providing high-quality documentation to help members in their development journey. It serves as a structured knowledge base covering best practices, common pitfalls, and essential workflows for the tools and frameworks we frequently use.
 
-## 🚀 Table of Contents
+## Goal
 
-- [Overview](#-overview)
-- [Project Structure](#-project-structure)
-- [How to Contribute](#-how-to-contribute)
-- [Pull Request Guidelines](#-pull-request-guidelines)
-- [Issues & Project Management](#-issues--project-management)
+The primary goal of GDG Docs is to fill the existing documentation with valuable content that helps GDG Algiers members in their development journey. The documentation serves as a comprehensive knowledge base for best practices, common mistakes to avoid, and workflow tools that we frequently use in our projects.
 
----
+## Key Focus Areas
 
-## 📖 Overview
+We're focusing on documenting the tools and frameworks commonly used in our projects:
 
-This repository contains documentation for best practices and standards in **React, Express, and Flutter** development. It is structured to ensure consistency, maintainability, and scalability across all projects.
+- **Frontend**: ReactJS, NextJS
+- **Backend**: Express JS, Nest JS
+- **Mobile Development**: Flutter
+- **Development Workflow**: GitHub Projects, GitHub Issues, GitHub Pull Requests
 
-## 📂 Project Structure
+## Content Scope
+
+Our documentation primarily covers:
+
+- **Best Practices**: How to use each tool efficiently
+- **Common Mistakes & Pitfalls**: Issues developers frequently encounter and how to avoid them
+- **Development Workflow**: A guide on using GitHub Projects, managing issues, and reviewing pull requests
+- **Contributions from Members**: Members are encouraged to suggest topics and contribute content they find useful
+
+## Project Structure
 
 ```
 /docs
@@ -28,35 +46,16 @@ This repository contains documentation for best practices and standards in **Rea
    ├── flutter
 ```
 
-- `code-guidelines/` - General principles for code spacing, linting, etc.
-- `react/` - Documentation for React best practices.
-- `express/` - Documentation for Express.js best practices.
-- `flutter/` - Documentation for Flutter best practices.
+- `code-guidelines/` - General principles for code formatting, linting, documentation, etc.
+- `react/` - Documentation for React best practices and patterns
+- `express/` - Documentation for Express.js best practices and implementation
+- `flutter/` - Documentation for Flutter best practices and development
 
-## 🤝 How to Contribute
+## Contributing
 
-1. **Fork the repository** & clone it to your local machine.
-2. **Create an issue** or check existing issues to pick a task.
-3. **Create a branch** using the naming convention:
-   ```
-   <your-name>/<framework>/<task>
-   ```
-   Example: `khalil/react/state-management`
-4. Work on your branch and commit regularly.
-5. **Open a Pull Request (PR)** once your task is completed.
-6. A **co-manager** will review your PR and suggest any necessary changes.
-7. After approval, the PR will be merged!
+We welcome contributions from all members! See our [CONTRIBUTING.md](./CONTRIBUTING.md) guide for details on how to get started, our pull request process, and documentation standards.
 
-## 🔄 Pull Request Guidelines
+## Built With
 
-When opening a PR:
-✅ Ensure the PR title follows: `[Framework] - Task Description` (e.g., `[React] - State Management Docs`)
-✅ Provide a clear description of changes.
-✅ Reference the issue number (if applicable).
-✅ Keep PRs focused (avoid including unrelated changes).
-
-## 📌 Issues & Project Management
-
-- Issues will be created for each major documentation task.
-- Tasks are managed via **GitHub Projects**, where progress will be tracked.
-- Assignments will be clearly defined in the issue descriptions.
+- [Starlight](https://starlight.astro.build/) - The documentation framework
+- [Astro](https://astro.build/) - The web framework for content-driven websites
