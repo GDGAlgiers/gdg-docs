@@ -59,8 +59,11 @@ export default defineConfig({
           label: "Express",
           items: [
             { label: "Project Structure", link: "express/project-structure" },
+            {
+              label: "API Design Principles",
+              link: "express/api-design-principles",
+            },
             { label: "Middleware", link: "express/middleware" },
-            { label: "API Design", link: "express/api-design" },
             {
               label: "Authentication & Security",
               link: "express/authentication-security",
