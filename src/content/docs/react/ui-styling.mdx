@@ -1,12 +1,12 @@
 ---
-title: React UI & Styling Best Practices
+title: UI & Styling
 ---
 
 # React UI & Styling Best Practices
 
-A well-structured UI improves user experience, maintainability, and scalability. This guide covers best practices for styling React applications with **Tailwind CSS**, focusing on global styles, dark mode implementation, and utility class organization.
+A well-structured UI improves user experience, maintainability, and scalability. This guide covers best practices for styling React applications with **Tailwind CSS**, focusing on global styles, dark mode implementation, utility class organization, and component-based styling.
 
-## 🎨 Why Use Tailwind CSS?
+## Why Use Tailwind CSS?
 
 Tailwind CSS is our **primary styling approach** due to its utility-first methodology, enabling rapid UI development while maintaining consistency.
 
@@ -16,7 +16,7 @@ Tailwind CSS is our **primary styling approach** due to its utility-first method
 - Simplifies dark mode and theming.
 - Speeds up development with predefined styles.
 
-## 🌎 Global Styles with CSS Variables
+## Global Styles with CSS Variables
 
 To ensure a scalable and maintainable design system, we use **CSS variables** within Tailwind’s configuration.
 
@@ -54,7 +54,7 @@ Define the variables in the `globals.css` file:
 </button>
 ```
 
-## 🌙 Implementing Dark Mode
+## Implementing Dark Mode
 
 Tailwind makes it easy to implement **dark mode** using the `dark` variant.
 
@@ -89,7 +89,7 @@ const toggleDarkMode = () => {
 </div>
 ```
 
-## 📌 Best Practices for Utility Class Organization
+## Best Practices for Utility Class Organization
 
 ### **1. Grouping Related Classes**
 Instead of:
@@ -119,6 +119,39 @@ And use it in JSX:
 <button className="btn">Submit</button>
 ```
 
+## Component-Based Styling
+
+### **Using Styled Components with Tailwind**
+For enhanced modularity, we can create reusable **styled components** with Tailwind classes.
+
+```jsx
+const Card = ({ title, description }) => {
+  return (
+    <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{title}</h2>
+      <p className="text-gray-600 dark:text-gray-300">{description}</p>
+    </div>
+  );
+};
+```
+
+### **Reusable Button Component**
+
+```jsx
+const Button = ({ children, onClick }) => {
+  return (
+    <button onClick={onClick} className="btn">
+      {children}
+    </button>
+  );
+};
+```
+
+Usage:
+```jsx
+<Button onClick={() => alert("Clicked!")}>Click Me</Button>
+```
+
 ## ✅ Best Practices Checklist
 
 ✔ Use **Tailwind CSS** for efficient, scalable styling.
@@ -126,5 +159,6 @@ And use it in JSX:
 ✔ Implement **dark mode** with the `dark` variant.
 ✔ Organize utility classes logically to improve readability.
 ✔ Use **`@apply`** to reduce repetition in styles.
+✔ Leverage **component-based styling** for reusability.
 
 ---
