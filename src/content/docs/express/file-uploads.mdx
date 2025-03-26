@@ -1,4 +1,107 @@
 ---
-title: "File Uploads"
-description: "File Uploads"
+title: Express File Uploads
 ---
+
+# Introduction
+
+Handling file uploads in an Express backend requires secure storage, validation, and proper error handling. This guide covers best practices for implementing file uploads using `multer` and `express-fileupload`, integrating Cloudinary for file storage, and ensuring proper validation and error handling.
+
+## Upload Options: `multer` vs. `express-fileupload`
+
+Two popular middleware options for handling file uploads in Express are `multer` and `express-fileupload`. Here’s how they compare:
+
+| Feature            | multer                          | express-fileupload            |
+|--------------------|--------------------------------|--------------------------------|
+| Parsing Method    | Uses `multipart/form-data`    | Uses `req.files` object       |
+| Storage Options   | Disk & Memory Storage         | Temporary memory storage      |
+| File Validation   | Supports file filters         | Basic validation             |
+| Cloud Integration | Requires manual integration   | Requires manual integration   |
+
+✅ **Best Practice:** Use `multer` when dealing with form-data-based uploads and `express-fileupload` for simpler file handling without form-data parsing.
+
+## Cloudinary Integration: Storing & Serving Files
+
+Cloudinary is a cloud-based storage solution that allows for easy file management. Follow these steps to integrate Cloudinary with Express:
+
+### **Installation**
+```sh
+npm install cloudinary multer multer-storage-cloudinary
+```
+
+### **Configuration**
+```js
+import cloudinary from 'cloudinary';
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+```
+
+✅ **Best Practice:** Store credentials in environment variables to enhance security.
+
+## Validation & Limits: Ensuring Secure Uploads
+
+To prevent malicious uploads, set validation rules for allowed file types and size limits.
+
+### **Setting File Type Restrictions**
+```js
+const fileFilter = (req, file, cb) => {
+  const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+  if (allowedTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Invalid file type. Only JPEG, PNG, and GIF are allowed.'), false);
+  }
+};
+```
+
+### **Setting File Size Limit**
+```js
+const upload = multer({
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter,
+});
+```
+
+✅ **Best Practice:** Always validate file types and enforce size limits to prevent abuse.
+
+## Error Handling: Managing Upload Failures
+
+Proper error handling ensures a seamless user experience.
+
+### **Middleware for Handling Errors**
+```js
+app.use((err, req, res, next) => {
+  res.status(400).json({ error: err.message });
+});
+```
+
+✅ **Best Practice:** Return meaningful error messages to guide users on resolving upload issues.
+
+## Utility Function: Cloudinary Upload Helper
+
+Create a reusable function for uploading files to Cloudinary:
+```js
+export const uploadToCloudinary = async (filePath) => {
+  try {
+    const result = await cloudinary.v2.uploader.upload(filePath, {
+      folder: 'uploads',
+    });
+    return result.secure_url;
+  } catch (error) {
+    throw new Error('Failed to upload to Cloudinary');
+  }
+};
+```
+
+✅ **Best Practice:** Centralize upload logic in a helper function to maintain clean code.
+
+## ✅ Best Practices Checklist
+
+✔ Choose the right upload middleware (`multer` or `express-fileupload`)
+✔ Use Cloudinary for secure and scalable file storage
+✔ Validate file types and enforce size restrictions
+✔ Implement structured error handling
+✔ Create reusable utility functions for uploading files
