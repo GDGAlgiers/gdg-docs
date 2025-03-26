@@ -1,4 +1,93 @@
 ---
-title: "Debugging"
-description: "Debugging"
+title: React Common Issues & Debugging
 ---
+
+# Introduction
+
+Debugging is an essential skill for any React developer. This guide covers common issues encountered in React applications and provides effective troubleshooting strategies. From hydration errors in Next.js to CORS problems, understanding these issues will improve development efficiency and application stability.
+
+## Next.js Hydration Errors
+
+Hydration errors occur when the server-rendered HTML does not match the React-generated virtual DOM. These issues commonly arise due to differences in initial state or non-SSR-compatible code.
+
+### **Common Causes & Solutions**
+1. **Mismatched Content:** Ensure consistent state initialization on both server and client.
+   ```jsx
+   const [count, setCount] = useState(0); // Avoid initializing from `window`
+   ```
+2. **Client-Side Effects:** Use `useEffect` for browser-dependent logic.
+   ```jsx
+   useEffect(() => {
+     setCount(window.innerWidth);
+   }, []);
+   ```
+3. **Strict Mode Issues:** Next.js `React.StrictMode` can cause double rendering in development. Be mindful when debugging.
+
+✅ **Best Practice:** Always verify SSR-safe state initialization and wrap client-side logic in `useEffect`.
+
+## Stale State Issues
+
+Stale state issues occur when components do not re-render as expected, leading to outdated UI data.
+
+### **Debugging with React DevTools**
+- Use **React DevTools** to inspect component props and state changes.
+- Check **re-render triggers** using console logs inside components.
+- Avoid **direct state mutation**.
+  ```jsx
+  setData((prev) => [...prev, newItem]);
+  ```
+
+✅ **Best Practice:** Use functional updates in `useState` and memoization (`useMemo`, `useCallback`) to optimize re-renders.
+
+## React Compiler Optimizations
+
+Unnecessary re-renders can degrade performance. React Compiler helps optimize rendering.
+
+### **Optimization Techniques**
+- **Use `useMemo` and `useCallback`** to avoid unnecessary recalculations.
+- **Wrap components with `React.memo`** for performance boosts.
+  ```jsx
+  const MemoizedComponent = React.memo(({ data }) => <div>{data}</div>);
+  ```
+
+✅ **Best Practice:** Profile component renders using React DevTools and optimize where necessary.
+
+## CORS Issues & Fixes
+
+Cross-Origin Resource Sharing (CORS) errors occur when frontend requests are blocked due to security policies.
+
+### **Common Fixes**
+- **Server-Side Headers:** Allow specific origins in backend response headers.
+  ```js
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  ```
+- **Proxy Middleware (Next.js API Routes)**
+  ```js
+  export default function handler(req, res) {
+    res.setHeader("Access-Control-Allow-Origin", "http://localhost:3000");
+    res.json({ message: "Success" });
+  }
+  ```
+
+✅ **Best Practice:** Use server-side solutions rather than modifying frontend requests.
+
+## Debugging Workflow
+
+A structured debugging approach ensures faster issue resolution.
+
+### **Step-by-Step Debugging Process**
+1. **Reproduce the issue** consistently.
+2. **Check console errors & network requests** in DevTools.
+3. **Use breakpoints & logs** to track execution.
+4. **Leverage React DevTools** to inspect component states.
+5. **Isolate the problem** by simplifying the component tree.
+6. **Review recent changes** to identify potential regressions.
+
+✅ **Best Practice:** Document resolved issues for future reference and team collaboration.
+
+## ✅ Best Practices Checklist
+✔ Identify and resolve Next.js hydration errors efficiently.
+✔ Use React DevTools to debug stale state issues.
+✔ Optimize rendering with `useMemo`, `useCallback`, and `React.memo`.
+✔ Address CORS issues using proper server-side configurations.
+✔ Follow a structured debugging workflow to streamline issue resolution.
