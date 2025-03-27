@@ -1,5 +1,6 @@
 ---
 title: React Common Issues & Debugging
+description: A guide to debugging common React issues, including hydration errors, stale state problems, performance optimizations, and CORS fixes.
 ---
 
 # Introduction
@@ -39,9 +40,9 @@ Stale state issues occur when components do not re-render as expected, leading t
 
 ✅ **Best Practice:** Use functional updates in `useState` and memoization (`useMemo`, `useCallback`) to optimize re-renders.
 
-## React Compiler Optimizations
+## React Performance Optimizations
 
-Unnecessary re-renders can degrade performance. React Compiler helps optimize rendering.
+Unnecessary re-renders can degrade performance. Optimizing rendering helps improve efficiency.
 
 ### **Optimization Techniques**
 - **Use `useMemo` and `useCallback`** to avoid unnecessary recalculations.
@@ -49,6 +50,7 @@ Unnecessary re-renders can degrade performance. React Compiler helps optimize re
   ```jsx
   const MemoizedComponent = React.memo(({ data }) => <div>{data}</div>);
   ```
+- **Use lazy loading (`React.lazy`)** for better initial load times.
 
 ✅ **Best Practice:** Profile component renders using React DevTools and optimize where necessary.
 
