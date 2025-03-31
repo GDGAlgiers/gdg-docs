@@ -69,7 +69,10 @@ export default defineConfig({
               link: "express/authentication-security",
             },
             { label: "Databases", link: "express/databases" },
-            { label: "Error Handling", link: "express/error-handling" },
+            {
+              label: "Error Handling & Logging",
+              link: "express/error-handling",
+            },
             { label: "File Uploads", link: "express/file-uploads" },
             { label: "Testing", link: "express/testing" },
             { label: "Performance", link: "express/performance" },
@@ -104,7 +107,7 @@ export default defineConfig({
         {
           label: "Workflows",
           items: [
-            { label: "Frontend", link: "workflows/fronend" },
+            { label: "Frontend", link: "workflows/frontend" },
             { label: "Backend", link: "workflows/backend" },
           ],
           collapsed: true,
