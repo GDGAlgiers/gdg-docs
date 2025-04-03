@@ -1,4 +1,117 @@
 ---
-title: "Deployment"
-description: "Deployment"
+title: React Deployment
+description: Best practices for deploying React applications, covering hosting platforms, environment variables, and build optimization.
 ---
+
+# Introduction
+
+Deploying a React application requires choosing the right hosting platform, managing environment variables, and optimizing builds for production. This guide explores best practices for deploying React apps to **Vercel, Netlify, and Azure**, along with techniques for optimizing performance.
+
+## Hosting Options: Vercel, Netlify, and Azure
+
+### **Deploying to Vercel**
+Vercel is a popular hosting platform for React apps, especially Next.js projects.
+
+#### **Steps:**
+1. Install the Vercel CLI:
+   ```sh
+   npm install -g vercel
+   ```
+2. Link your project:
+   ```sh
+   vercel login
+   vercel
+   ```
+3. Follow the CLI prompts to deploy your app.
+4. For continuous deployment, connect your GitHub repository to Vercel and push updates to trigger automatic deployments.
+
+✅ **Best Practice:** Enable Vercel’s caching and image optimization features for better performance.
+
+### **Deploying to Netlify**
+Netlify provides an easy-to-use interface and supports automatic deployments from GitHub.
+
+#### **Steps:**
+1. Install the Netlify CLI:
+   ```sh
+   npm install -g netlify-cli
+   ```
+2. Link your project:
+   ```sh
+   netlify login
+   netlify init
+   ```
+3. Deploy your app:
+   ```sh
+   netlify deploy --prod
+   ```
+4. Alternatively, connect your GitHub repository in the Netlify dashboard for automatic deployments.
+
+✅ **Best Practice:** Use Netlify Functions for serverless API endpoints.
+
+### **Deploying to Azure**
+Azure offers various deployment options, including **Azure App Service** and **Azure Static Web Apps**.
+
+#### **Deploying with Azure Static Web Apps:**
+1. Install the Azure CLI:
+   ```sh
+   npm install -g azure-functions-core-tools
+   ```
+2. Create an Azure Static Web App from the Azure portal.
+3. Link your GitHub repository for automatic deployment.
+
+✅ **Best Practice:** Use Azure’s **Application Insights** for monitoring and performance tracking.
+
+## Environment Variables Management
+
+Environment variables are essential for managing sensitive information like API keys.
+
+### **Setting Up Environment Variables in Vercel**
+1. Go to **Project Settings** → **Environment Variables**.
+2. Add your variables and redeploy your app.
+3. Use them in React:
+   ```js
+   const apiKey = process.env.REACT_APP_API_KEY;
+   ```
+
+### **Setting Up Environment Variables in Netlify**
+1. Navigate to **Site Settings** → **Environment Variables**.
+2. Add variables and deploy your app.
+
+### **Setting Up Environment Variables in Azure**
+1. Go to **Configuration** in Azure App Service.
+2. Add environment variables under **Application Settings**.
+
+✅ **Best Practice:** Never expose sensitive environment variables in frontend code; use server-side rendering when necessary.
+
+## Build Optimization for Production
+
+Optimizing the React build improves performance and load time.
+
+### **Optimizations to Apply**
+- **Minify JavaScript & CSS:** Webpack automatically does this in production builds.
+- **Code Splitting:** Load only the necessary code per page using `React.lazy`.
+- **Gzip Compression:** Enable Gzip or Brotli compression on the hosting platform.
+- **Lazy Loading:** Load images and components only when needed.
+
+### **Generating an Optimized Build**
+```sh
+npm run build
+```
+This creates a `build/` folder with optimized production-ready files.
+
+✅ **Best Practice:** Use Lighthouse or PageSpeed Insights to test performance after deployment.
+
+## ✅ Best Practices Checklist
+✔ Choose the right hosting platform for your needs
+✔ Properly configure environment variables
+✔ Optimize builds with code splitting and compression
+✔ Use serverless functions for backend logic when needed
+✔ Monitor performance with tools like Lighthouse and Azure Insights
+
+## Conclusion & Further Reading
+Deploying a React application efficiently requires the right hosting platform, optimized builds, and secure environment variable management. Following these best practices ensures a smooth deployment process.
+
+🔗 **Further Reading:**
+- [Vercel Docs](https://vercel.com/docs)
+- [Netlify Docs](https://docs.netlify.com/)
+- [Azure Static Web Apps](https://learn.microsoft.com/en-us/azure/static-web-apps/)
