@@ -75,7 +75,7 @@ export default defineConfig({
             },
             { label: "File Uploads", link: "express/file-uploads" },
             { label: "Testing", link: "express/testing" },
-            { label: "Performance", link: "express/performance-optimization" },
+            { label: "Performance", link: "express/performance" },
             { label: "Deployment", link: "express/deployment" },
           ],
           collapsed: true,
