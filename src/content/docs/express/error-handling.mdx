@@ -1,4 +1,482 @@
 ---
-title: "Error Handling"
-description: "Error Handling"
+title: "Error Handling & Logging"
+description: "Best practices for handling and logging errors in Express.js applications"
 ---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Proper error handling is crucial for building robust, maintainable, and user-friendly Express.js applications. This guide covers best practices for implementing error handling, logging strategies, and creating standardized error responses.
+
+## Centralized Error Handling
+
+Express.js provides a powerful mechanism for centralized error handling through specialized middleware. This approach keeps your code DRY and ensures consistent error handling across your application.
+
+### Custom Error Utility
+
+For better organization, the custom error class should be placed in a separate utility file:
+
+```js
+// utils/errorUtils.js
+class CustomError extends Error {
+  constructor(statusCode, message, isOperational = true, stack = '') {
+    super(message);
+    this.statusCode = statusCode;
+    this.isOperational = isOperational; // Indicates if this is an expected error
+    
+    if (stack) {
+      this.stack = stack;
+    } else {
+      Error.captureStackTrace(this, this.constructor);
+    }
+  }
+}
+
+module.exports = { CustomError };
+```
+
+### Error Handling Middleware
+
+```js
+// middlewares/errorMiddleware.js
+const logger = require('../utils/logger');
+
+// Central error handling middleware
+const errorHandler = (err, req, res, next) => {
+  // Set default values
+  err.statusCode = err.statusCode || 500;
+  err.message = err.message || 'Internal Server Error';
+  
+  // Log the error
+  logger.error({
+    id: req.id,
+    path: req.originalUrl,
+    method: req.method,
+    statusCode: err.statusCode,
+    message: err.message,
+    stack: err.stack,
+    body: req.body,
+    params: req.params,
+    query: req.query,
+    isOperational: err.isOperational || false
+  });
+  
+  // Return standardized error response
+  return res.status(err.statusCode).json({
+    statusCode: err.statusCode,
+    message: err.message,
+    path: req.originalUrl,
+    timestamp: new Date().toISOString(),
+    // Only include stack trace in development
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+  });
+};
+
+module.exports = {
+  errorHandler
+};
+```
+
+<Aside type="tip">
+  Always register the error handling middleware after all other middleware and routes to ensure it catches all errors.
+</Aside>
+
+## Error Logging Strategies
+
+Effective error logging is essential for debugging and monitoring your application. A good logging strategy should:
+
+1. Log errors to both console and file
+2. Include contextual information
+3. Have different log levels
+4. Be configurable based on environment
+
+### Setting Up a Logger
+
+We use Winston for logging due to its flexibility, multiple transport options, and log level support:
+
+```js
+// utils/logger.js
+const winston = require('winston');
+const { format, createLogger, transports } = winston;
+const path = require('path');
+
+// Define log format
+const logFormat = format.combine(
+  format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+  format.errors({ stack: true }),
+  format.json()
+);
+
+// Create the logger
+const logger = createLogger({
+  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+  format: logFormat,
+  defaultMeta: { service: 'api-service' },
+  transports: [
+    // Console transport
+    new transports.Console({
+      format: format.combine(
+        format.colorize(),
+        format.printf(({ timestamp, level, message, ...meta }) => {
+          const metaString = Object.keys(meta).length ? 
+            `\n${JSON.stringify(meta, null, 2)}` : '';
+          return `${timestamp} ${level}: ${message}${metaString}`;
+        })
+      )
+    }),
+    
+    // File transport - for errors
+    new transports.File({ 
+      filename: path.join('logs', 'error.log'),
+      level: 'error',
+      maxsize: 10485760, // 10MB
+      maxFiles: 5,
+    }),
+    
+    // File transport - for all logs
+    new transports.File({ 
+      filename: path.join('logs', 'combined.log'),
+      maxsize: 10485760, // 10MB
+      maxFiles: 5,
+    })
+  ]
+});
+
+// Add stream for Morgan
+logger.stream = {
+  write: (message) => logger.info(message.trim())
+};
+
+module.exports = logger;
+```
+### Logger Middleware
+
+```js
+// middlewares/loggerMiddleware.js
+const { v4: uuidv4 } = require('uuid');
+const logger = require('../utils/logger');
+
+// Request ID middleware - should be registered early
+const requestIdMiddleware = (req, res, next) => {
+  // Generate a unique ID for this request
+  req.id = uuidv4();
+  next();
+};
+
+// Logger middleware - uses the ID but can be registered later
+const loggerMiddleware = (req, res, next) => {
+  // Log the incoming request
+  logger.info({
+    id: req.id,
+    method: req.method,
+    path: req.originalUrl,
+    ip: req.ip,
+    userAgent: req.headers['user-agent'],
+    body: req.method !== 'GET' ? req.body : undefined
+  });
+  
+  // Track response time
+  const start = Date.now();
+  
+  // Override the end method to log the response
+  const originalEnd = res.end;
+  res.end = function() {
+    const responseTime = Date.now() - start;
+    
+    logger.info({
+      id: req.id,
+      statusCode: res.statusCode,
+      responseTime: `${responseTime}ms`
+    });
+    
+    // Call the original end method
+    return originalEnd.apply(res, arguments);
+  };
+  
+  next();
+};
+
+module.exports = { 
+  requestIdMiddleware,
+  loggerMiddleware 
+};
+```
+
+## Registering Middleware in the Correct Order
+
+```js
+// app.js
+const express = require('express');
+const cors = require('cors');
+const { requestIdMiddleware, loggerMiddleware } = require('./middlewares/loggerMiddleware');
+
+const app = express();
+
+// Basic middleware
+app.use(cors());
+app.use(express.json());
+
+// Add request ID as early as possible in the chain
+app.use(requestIdMiddleware);
+
+// Other middleware
+app.use(loggerMiddleware);
+```
+
+<Aside type="caution">
+  Request ID generation should happen as early as possible in the middleware chain to ensure all logs (including errors from subsequent middleware) can reference the same ID. This is crucial for request traceability through all logs.
+</Aside>
+
+## Logging Strategy: Middleware vs. Direct Usage
+
+When implementing logging in an Express application, it's important to understand when to use the logging middleware versus directly calling the logger utility.
+
+### When to Use Logging Middleware
+
+The logging middleware should be used for:
+
+- **Automatic HTTP Request/Response Logging**: Captures all incoming requests and their responses
+- **Request Lifecycle Tracking**: Tracks the full lifecycle of requests with timing information
+- **Request ID Generation**: Creates and attaches unique IDs to each request for traceability
+- **Consistent Format**: Ensures all HTTP traffic is logged in a consistent format
+
+```js
+// Register once at the application level
+app.use(loggerMiddleware);
+```
+
+### When to Use Logger Utility Directly
+
+The logger utility should be used directly for:
+
+- **Business Logic Events**: Log important application events or state changes
+- **Custom Messages**: When you need to log specific information with custom context
+- **Different Log Levels**: When you need to specifically use info, warn, error, or debug levels
+- **Application Startup/Shutdown**: Log application lifecycle events
+
+```js
+// Example of direct logger usage in service code
+const logger = require('../utils/logger');
+
+function processPayment(order) {
+  logger.info(`Processing payment for order ${order.id}`, { 
+    orderId: order.id,
+    amount: order.total,
+    customer: order.customerId
+  });
+  
+  try {
+    // Payment processing logic
+    logger.info(`Payment successful for order ${order.id}`);
+    return true;
+  } catch (error) {
+    logger.error(`Payment failed for order ${order.id}`, { 
+      error: error.message,
+      orderId: order.id
+    });
+    throw error;
+  }
+}
+```
+
+<Aside type="tip">
+  The ideal approach is to use both: logging middleware for all HTTP traffic and direct logger calls for important business events and custom scenarios. This provides comprehensive visibility into your application's behavior.
+</Aside>
+
+## Handling Errors in Async Functions
+
+Express.js doesn't handle errors in async functions by default. The best way to handle this is using the `express-async-errors` package, which is simpler than other approaches:
+
+<Tabs>
+  <TabItem label="Express Async Errors (Recommended)">
+  ```js
+  // app.js 
+  // Just add this line at the top:
+  require('express-async-errors');
+
+  // That's it! Now you can write async route handlers without try/catch or wrappers:
+  
+  ```
+  
+  **Why express-async-errors is preferred:**
+  - Simplest possible implementation - just one require statement
+  - No function wrapping needed - write clean async code
+  - No additional imports in each controller file
+  - Automatically catches all promise rejections in async route handlers
+  - Zero configuration required beyond the initial import
+  </TabItem>
+
+  <TabItem label="Manual try/catch">
+  ```js
+  // Manually catching async errors
+  exports.getAllProducts = async (req, res, next) => {
+    try {
+      const products = await Product.find();
+      
+      res.status(200).json({
+        statusCode: 200,
+        data: products,
+        message: 'Products retrieved successfully'
+      });
+    } catch (error) {
+      next(error); // Pass error to Express error handler
+    }
+  };
+  ```
+  
+  **Drawbacks:**
+  - Repetitive try/catch blocks in every controller
+  - Verbose and clutters business logic
+  - Easy to forget adding try/catch in new controllers
+  - Harder to maintain as the application grows
+  </TabItem>
+</Tabs>
+
+<Aside type="tip">
+  Express Async Errors is the recommended approach for handling async errors. Simply import it once in your main application file, and all your async route handlers will automatically have their errors caught and passed to your Express error handler.
+</Aside>
+
+## Error Handling Flow
+
+The complete error flow in our architecture works like this:
+
+1. **Service Layer**: Throws appropriate `CustomError` instances with status code, message, and operational flag
+2. **Controller Layer**: Remains clean, focusing only on successful responses 
+3. **express-async-errors**: Automatically catches any thrown errors in async route handlers
+4. **Error Middleware**: Formats and returns a consistent error response to the client
+
+This approach ensures:
+- Separation of concerns (services handle business logic, controllers handle HTTP)
+- Consistent error responses
+- Appropriate error status codes
+- Clear distinction between operational and programming errors
+
+```js
+// services/userService.js
+const { CustomError } = require('../utils/errorUtils');
+const User = require('../models/User');
+
+exports.createUser = async (userData) => {
+  // Check if user already exists
+  const existingUser = await User.findOne({ email: userData.email });
+  if (existingUser) {
+    // Service directly throws a CustomError
+    throw new CustomError(409, 'User with this email already exists', true);
+  }
+  
+  // Proceed with user creation if no errors
+  const user = await User.create(userData);
+  return user;
+};
+```
+
+```js
+// controllers/userController.js
+const userService = require('../services/userService');
+
+// Simple controller with no error handling logic
+exports.createUser = async (req, res) => {
+  // No try/catch needed due to express-async-errors
+  const user = await userService.createUser(req.body);
+  
+  res.status(201).json({
+    statusCode: 201,
+    data: user,
+    message: 'User created successfully'
+  });
+};
+```
+
+```js
+// app.js
+// This must be near the top of your main file, before routes
+require('express-async-errors');
+
+// ...middleware and routes...
+
+// Error handler must be last
+app.use(errorHandler);
+```
+
+<Aside type="tip">
+  With this pattern and express-async-errors, your controllers remain clean and focused on HTTP concerns, while your services handle business logic and appropriate error throwing. The central error handler takes care of formatting all errors consistently.
+</Aside>
+
+## Standardized API Error Responses
+
+Consistent error responses make it easier for clients to handle errors appropriately. Here's our standard error response structure:
+
+```js
+{
+  "statusCode": 400,          // HTTP status code
+  "message": "Clear error message for the client",   // User-friendly error message
+  "path": "/api/users",       // URL path that caused the error
+  "timestamp": "2023-07-25T15:30:45.123Z", // When the error occurred
+  "errors": [                 // Optional array for validation errors
+    {
+      "field": "email",
+      "message": "Invalid email format"
+    }
+  ]
+}
+```
+
+<Aside type="tip">
+  For known error conditions like "not found", you can return a direct response. For unexpected errors, use the centralized error handler via the `next(error)` pattern.
+</Aside>
+
+## Best Practices & Common Pitfalls
+
+### Best Practices
+
+1. **Use a centralized error handler**
+   - Keep error handling consistent throughout your application
+   - Avoid duplicating error handling logic
+
+2. **Create a custom error class**
+   - Distinguish between operational errors and programming errors
+   - Attach relevant information to errors (status code, operational flag)
+
+3. **Log errors properly**
+   - Include contextual information (request ID, URL, method)
+   - Use different log levels (error, warn, info)
+   - Ensure sensitive data is not logged
+
+4. **Handle async errors**
+   - Use express-async-errors for simplicity and reliability
+   - No need to wrap handlers or use try/catch in every controller
+
+5. **Provide clear error messages**
+   - Return user-friendly messages for client errors
+   - Hide technical details in production
+
+### Common Pitfalls
+
+❌ **Inconsistent error responses**
+- Sending different formats for different errors confuses API consumers
+- Solution: Use a centralized error handler with a consistent response format
+
+❌ **Exposing sensitive information**
+- Stack traces, database details, environment variables in production
+- Solution: Sanitize error responses based on environment
+
+❌ **Not distinguishing error types**
+- Treating all errors the same way (e.g., always returning 500)
+- Solution: Categorize errors and use appropriate status codes
+
+
+## Conclusion
+
+Proper error handling is a critical aspect of developing robust Express.js applications. By implementing consistent error handling, appropriate logging, and clear client responses, you can:
+
+- Improve debugging efficiency
+- Enhance the user experience
+- Prevent application crashes
+- Facilitate easier maintenance
+
+Remember to distinguish between different types of errors, handle async operations correctly, and adjust your error responses based on the environment. With the strategies outlined in this guide, you'll be well-equipped to build reliable and user-friendly Express applications.
+
+## Further Reading
+
+- [Express.js Error Handling Guide](https://expressjs.com/en/guide/error-handling.html)
+- [Winston Logger Documentation](https://github.com/winstonjs/winston)
+- [HTTP Status Codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Status)
