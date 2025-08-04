@@ -1,4 +1,760 @@
 ---
 title: "Authentication & Security"
-description: "Authentication & Security"
+description: "Implementing secure authentication and authorization in Express.js APIs"
 ---
+
+import { Aside, Tabs, TabItem, Steps } from '@astrojs/starlight/components';
+
+Securing your API is critical for protecting user data and preventing unauthorized access. This guide covers essential authentication and security practices for Express.js APIs, including JWT authentication, token storage strategies, role-based access control, and other security measures.
+
+## JWT Authentication
+
+### What is JWT?
+
+JSON Web Tokens (JWT) provide a compact, self-contained way to securely transmit information between parties as a JSON object. A JWT consists of three parts:
+
+1. **Header**: Contains the token type and signing algorithm used
+2. **Payload**: Contains the claims (user data and metadata)
+3. **Signature**: Ensures the token hasn't been altered
+
+JWTs are commonly used for:
+- **Authentication**: Verifying the identity of users
+- **Authorization**: Determining what resources a user can access
+- **Information Exchange**: Securely transmitting data between parties
+
+<Aside type="tip">
+  JWTs are stateless, meaning the server doesn't need to store session information. This makes them ideal for distributed systems and microservices architectures.
+</Aside>
+
+### JWT Flow in Express.js Applications
+
+1. User logs in with credentials
+2. Server validates credentials and generates JWT
+3. JWT is sent to client
+4. Client stores JWT and sends it with subsequent requests
+5. Server validates JWT signature and grants access to protected resources
+
+### Implementing JWT Authentication
+
+#### Authentication Architecture
+
+For a clean architecture, separate your authentication logic into:
+
+1. **Controllers**: Handle HTTP requests and responses
+2. **Services**: Contain business logic
+3. **Utilities**: Helper functions like JWT generation and verification
+
+#### 1. Set Up Required Packages
+
+```javascript
+npm install jsonwebtoken bcryptjs
+```
+
+#### 2. Create JWT Utilities
+
+```javascript
+// utils/jwt.js
+const jwt = require('jsonwebtoken');
+
+// Generate access token
+exports.generateAccessToken = (user) => {
+  return jwt.sign(
+    { 
+      id: user.id,
+      email: user.email,
+      role: user.role 
+    },
+    process.env.JWT_ACCESS_SECRET,
+    { expiresIn: '15m' } // Short-lived access token
+  );
+};
+
+// Generate refresh token
+exports.generateRefreshToken = (user) => {
+  return jwt.sign(
+    { id: user.id },
+    process.env.JWT_REFRESH_SECRET,
+    { expiresIn: '7d' } // Longer-lived refresh token
+  );
+};
+
+// Verify access token
+exports.verifyAccessToken = (token) => {
+  return jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+};
+
+// Verify refresh token
+exports.verifyRefreshToken = (token) => {
+  return jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+};
+```
+
+#### 3. Authentication Middleware
+
+```javascript
+// middleware/auth.js
+const { verifyAccessToken } = require('../utils/jwt');
+
+exports.authenticate = async (req, res, next) => {
+  try {
+    // Get token from Authorization header
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
+        statusCode: 401,
+        message: 'Authentication required',
+        error: 'missing_token',
+        path: req.originalUrl
+      });
+    }
+    
+    // Extract the token
+    const token = authHeader.split(' ')[1];
+    
+    try {
+      // Verify token
+      const decoded = verifyAccessToken(token);
+      
+      // Attach user to request
+      req.user = decoded;
+      
+      next();
+    } catch (tokenError) {
+      // Specifically identify token expiration errors
+      if (tokenError.name === 'TokenExpiredError') {
+        return res.status(401).json({
+          statusCode: 401,
+          message: 'Token has expired',
+          error: 'token_expired',
+          path: req.originalUrl
+        });
+      }
+      
+      // Other token verification errors
+      return res.status(401).json({
+        statusCode: 401,
+        message: 'Invalid token',
+        error: 'invalid_token',
+        path: req.originalUrl
+      });
+    }
+  } catch (error) {
+    return res.status(500).json({
+      statusCode: 500,
+      message: 'Internal server error',
+      path: req.originalUrl
+    });
+  }
+};
+```
+
+#### 4. Authentication Implementation
+
+For a clean architecture, separate your authentication logic into controllers and services:
+
+##### Authentication Service
+
+The service layer contains the business logic related to authentication:
+
+<Tabs>
+  <TabItem label="Register">
+  ```javascript
+  // services/authService.js
+  exports.registerUser = async (userData) => {
+    const { email, password, name } = userData;
+    
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      // Throw a proper error object instead of a plain object
+      throw new CustomError('User already exists', 409);
+    }
+    
+    // Hash password and create user
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    
+    const user = await User.create({
+      email,
+      password: hashedPassword,
+      name,
+      role: 'user' // Default role
+    });
+    
+    // Generate tokens
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+    
+    return { user, accessToken, refreshToken };
+  };
+  ```
+  </TabItem>
+
+  <TabItem label="Login">
+  ```javascript
+  // services/authService.js
+  exports.loginUser = async (credentials) => {
+    const { email, password } = credentials;
+    
+    // Find user and validate password
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new CustomError('Invalid credentials', 401);
+    }
+    
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      throw new CustomError('Invalid credentials', 401);
+    }
+    
+    // Generate tokens
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+    
+    return { user, accessToken, refreshToken };
+  };
+  ```
+  </TabItem>
+
+  <TabItem label="Refresh Token">
+  ```javascript
+  // services/authService.js
+  exports.refreshUserToken = async (userId) => {
+    // Find user by ID
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new CustomError('Invalid refresh token', 401);
+    }
+    
+    // Generate new access token
+    const accessToken = generateAccessToken(user);
+    
+    return { accessToken };
+  };
+  ```
+  </TabItem>
+
+  <TabItem label="Logout">
+  ```javascript
+  // services/authService.js
+  exports.logoutUser = async (userId) => {
+    // You might implement token blacklisting here
+    // For a stateless approach, the client simply discards the token
+    
+    return true;
+  };
+  ```
+  </TabItem>
+</Tabs>
+
+##### Authentication Controller
+
+The controller layer handles HTTP requests and responses:
+
+<Tabs>
+  <TabItem label="Register">
+  ```javascript
+  // controllers/authController.js
+  exports.register = async (req, res) => {
+    try {
+      const authData = await authService.registerUser(req.body);
+      
+      // Store refresh token in HttpOnly cookie
+      res.cookie('refreshToken', authData.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
+      
+      // Return access token in response
+      return res.status(201).json({
+        statusCode: 201,
+        data: {
+          user: {
+            id: authData.user.id,
+            email: authData.user.email,
+            name: authData.user.name,
+            role: authData.user.role
+          },
+          accessToken: authData.accessToken
+        },
+        message: 'User registered successfully'
+      });
+    } catch (error) {
+      // Using a custom error class allows for better error handling
+      return res.status(error.statusCode || 500).json({
+        statusCode: error.statusCode || 500,
+        message: error.message || 'Error registering user',
+        path: req.originalUrl
+      });
+    }
+  };
+  ```
+  </TabItem>
+
+  <TabItem label="Login">
+  ```javascript
+  // controllers/authController.js
+  exports.login = async (req, res) => {
+    try {
+      const authData = await authService.loginUser(req.body);
+      
+      // Store refresh token in HttpOnly cookie
+      res.cookie('refreshToken', authData.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 7 * 24 * 60 * 60 * 1000
+      });
+      
+      // Return access token in response
+      return res.status(200).json({
+        statusCode: 200,
+        data: {
+          user: {
+            id: authData.user.id,
+            email: authData.user.email,
+            name: authData.user.name,
+            role: authData.user.role
+          },
+          accessToken: authData.accessToken
+        },
+        message: 'Login successful'
+      });
+    } catch (error) {
+      return res.status(error.status || 500).json({
+        statusCode: error.status || 500,
+        message: error.message || 'Error logging in',
+        path: req.originalUrl
+      });
+    }
+  };
+  ```
+  </TabItem>
+
+  <TabItem label="Refresh Token">
+  ```javascript
+  // controllers/authController.js
+  exports.refreshToken = async (req, res) => {
+    try {
+      // Get refresh token from cookie
+      const refreshToken = req.cookies.refreshToken;
+      
+      if (!refreshToken) {
+        return res.status(401).json({
+          statusCode: 401,
+          message: 'Refresh token not found',
+          error: 'missing_refresh_token',
+          path: req.originalUrl
+        });
+      }
+      
+      try {
+        // Verify the refresh token
+        const decoded = verifyRefreshToken(refreshToken);
+        
+        // Generate new access token
+        const { accessToken } = await authService.refreshUserToken(decoded.id);
+        
+        // Return new access token
+        return res.status(200).json({
+          statusCode: 200,
+          data: { accessToken },
+          message: 'Token refreshed successfully'
+        });
+      } catch (tokenError) {
+        // Handle specific refresh token errors
+        if (tokenError.name === 'TokenExpiredError') {
+          // Clear the expired refresh token
+          res.clearCookie('refreshToken');
+          
+          return res.status(401).json({
+            statusCode: 401,
+            message: 'Refresh token has expired, please login again',
+            error: 'refresh_token_expired',
+            path: req.originalUrl
+          });
+        }
+        
+        return res.status(401).json({
+          statusCode: 401,
+          message: 'Invalid refresh token',
+          error: 'invalid_refresh_token',
+          path: req.originalUrl
+        });
+      }
+    } catch (error) {
+      return res.status(error.statusCode || 500).json({
+        statusCode: error.statusCode || 500,
+        message: error.message || 'Error refreshing token',
+        path: req.originalUrl
+      });
+    }
+  };
+  ```
+  </TabItem>
+
+  <TabItem label="Logout">
+  ```javascript
+  // controllers/authController.js
+  exports.logout = (req, res) => {
+    // Clear refresh token cookie
+    res.clearCookie('refreshToken');
+    
+    return res.status(200).json({
+      statusCode: 200,
+      message: 'Logged out successfully'
+    });
+  };
+  ```
+  </TabItem>
+</Tabs>
+
+##### Token Refresh Flow
+
+The token refresh mechanism allows clients to obtain a new access token when the current one expires:
+
+<Steps>
+  1. **Client makes a request with the access token**
+     
+     The client includes the access token in the Authorization header for a protected resource.
+
+  2. **Server detects an expired token**
+     
+     If the token is expired, the server responds with:
+     ```json
+     {
+       "statusCode": 401,
+       "message": "Token has expired",
+       "error": "token_expired"
+     }
+     ```
+
+  3. **Client requests a new access token**
+     
+     When the client receives the `token_expired` error, it makes a request to `/api/auth/refresh-token`. The refresh token is automatically included in the request cookies.
+
+  4. **Server validates the refresh token**
+     
+     The server verifies the refresh token's signature and expiration date.
+
+  5. **Server generates a new access token**
+     
+     If the refresh token is valid, the server identifies the user and generates a new access token.
+
+  6. **Client receives the new access token**
+     
+     The server returns the new access token in the response.
+
+  7. **Client retries the original request**
+     
+     The client updates its stored access token and retries the original request that failed.
+</Steps>
+
+## Token Storage Strategy
+
+### Understanding Access and Refresh Tokens
+
+In a secure JWT implementation, two types of tokens are typically used:
+
+1. **Access Tokens**:
+   - Short-lived (15-30 minutes)
+   - Used to access protected resources
+   - Contains user identity and permissions
+   - Sent with every API request
+
+2. **Refresh Tokens**:
+   - Long-lived (days or weeks)
+   - Used only to obtain new access tokens
+   - Should be stored more securely
+   - Contains minimal information (usually just user ID)
+
+### Access Tokens in localStorage
+
+Access tokens are commonly stored in the browser's localStorage or memory:
+
+<Aside type="caution">
+  localStorage is vulnerable to XSS (Cross-Site Scripting) attacks. If your application is at high risk for XSS, consider memory storage with a JavaScript closure or secure cookie alternatives.
+</Aside>
+
+**Benefits of localStorage for access tokens:**
+- Persists across page refreshes
+- Easy to implement
+- Available on all routes
+- Not sent automatically with every request (unlike cookies)
+
+**When to use localStorage:**
+- For SPAs (Single Page Applications)
+- In low to medium security requirements
+- When implementing proper XSS protections
+- For short-lived access tokens
+
+### Refresh Tokens in HttpOnly Cookies
+
+Refresh tokens are more sensitive and should be stored in HttpOnly cookies:
+
+```javascript
+// Server sets the HttpOnly cookie
+res.cookie('refreshToken', refreshToken, {
+  httpOnly: true,      // Cannot be accessed by JavaScript
+  secure: true,        // Only sent over HTTPS
+  sameSite: 'strict',  // Protection against CSRF
+  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+});
+```
+
+**Benefits of HttpOnly cookies for refresh tokens:**
+- Cannot be accessed by JavaScript (protects against XSS)
+- Automatically sent with requests to the same domain
+- Can be secured with additional flags (secure, sameSite)
+- Browser handles cookie management
+
+## Role-Based Access Control (RBAC)
+
+### Role-Based Authorization Middleware
+
+```javascript
+// middleware/rbac.js
+exports.authorize = (...allowedRoles) => {
+  return (req, res, next) => {
+    // Check if user exists and has a role
+    if (!req.user || !req.user.role) {
+      return res.status(403).json({
+        statusCode: 403,
+        message: 'Forbidden: Access denied',
+        path: req.originalUrl
+      });
+    }
+    
+    // Check if user's role is allowed
+    if (!allowedRoles.includes(req.user.role)) {
+      return res.status(403).json({
+        statusCode: 403,
+        message: 'Forbidden: Insufficient permissions',
+        path: req.originalUrl
+      });
+    }
+    
+    // User has required role, proceed
+    next();
+  };
+};
+```
+
+### Permission-Based Authorization
+
+For more granular control, you can implement permission-based authorization instead of or in addition to role-based control.
+
+**How permissions differ from roles:**
+- Roles are broad categories (admin, user, editor)
+- Permissions are specific actions (create:post, delete:user, read:report)
+- A role typically encompasses multiple permissions
+- Permissions allow for more granular access control
+
+**Implementing permissions:**
+1. Define a set of permission strings (e.g., 'read:users', 'create:posts')
+2. Assign permissions to users (either directly or via roles)
+3. Check for specific permissions in your middleware
+
+<Aside type="tip">
+  For complex applications, consider implementing a combination of roles and permissions. Roles make it easy to assign common sets of permissions, while individual permissions allow for fine-tuning access control.
+</Aside>
+
+### Using RBAC in Routes
+
+```javascript
+// routes/userRoutes.js
+const express = require('express');
+const router = express.Router();
+const userController = require('../controllers/userController');
+const { authenticate } = require('../middleware/auth');
+const { authorize } = require('../middleware/rbac');
+
+// Public route
+router.get('/public-data', userController.getPublicData);
+
+// Protected route - Any authenticated user
+router.get('/profile', authenticate, userController.getProfile);
+
+// Role-based routes
+router.get('/users', authenticate, authorize('admin'), userController.getAllUsers);
+router.delete('/users/:id', authenticate, authorize('admin'), userController.deleteUser);
+router.put('/users/:id', authenticate, authorize('admin', 'moderator'), userController.updateUser);
+
+module.exports = router;
+```
+
+## Security Best Practices
+
+### Rate Limiting and Brute Force Prevention
+
+Rate limiting is essential to prevent abuse, brute force attacks, and to ensure fair API usage.
+
+```javascript
+// Basic rate limiting implementation
+const rateLimit = require('express-rate-limit');
+
+// Create rate limiter middleware
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per IP in the windowMs timeframe
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: {
+    statusCode: 429,
+    message: 'Too many requests, please try again later'
+  }
+});
+
+// Apply to all routes
+app.use(apiLimiter);
+
+// Or apply to specific routes
+app.use('/api/auth/', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5, // 5 requests per IP in 15 minutes
+  message: {
+    statusCode: 429,
+    message: 'Too many login attempts, please try again later'
+  }
+}));
+```
+
+<Aside type="tip">
+  For more advanced rate limiting options, see our [Express Performance Guide](/express/performance).
+</Aside>
+
+### CORS Configuration
+
+Cross-Origin Resource Sharing (CORS) is a security feature implemented by browsers to restrict requests from different origins.
+
+```javascript
+// app.js
+const express = require('express');
+const cors = require('cors');
+const app = express();
+
+// CORS options
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'https://yourdomain.com',
+      'https://app.yourdomain.com'
+    ];
+    
+    // Allow requests with no origin (like mobile apps, curl, postman)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true, // To allow cookies and authentication headers
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+// Apply CORS middleware
+app.use(cors(corsOptions));
+```
+
+<Aside type="caution">
+  In development, you might want to use a more permissive CORS configuration, but ensure you tighten it in production to only allow trusted domains.
+</Aside>
+
+### Security Headers with Helmet
+
+Helmet helps secure Express apps by setting various HTTP headers to protect against common web vulnerabilities.
+
+```javascript
+// Basic helmet setup
+const helmet = require('helmet');
+
+// Apply helmet middleware with default settings
+app.use(helmet());
+```
+
+### CSRF Protection
+
+For APIs that use cookies for authentication, CSRF protection is essential:
+
+```javascript
+// Basic CSRF protection setup
+const { doubleCsrf } = require('csrf-csrf');
+
+// Configure CSRF protection
+const {
+  invalidCsrfTokenError, // Error factory for invalid tokens
+  generateToken, // Function to generate tokens
+  validateRequest, // Function to validate requests
+  doubleCsrfProtection, // Express middleware
+} = doubleCsrf({
+  getSecret: () => 'your-csrf-secret',
+  cookieName: 'x-csrf-token',
+  cookieOptions: {
+    httpOnly: true,
+    sameSite: 'strict',
+    secure: process.env.NODE_ENV === 'production'
+  },
+  size: 64, // token size
+  ignoredMethods: ['GET', 'HEAD', 'OPTIONS']
+});
+
+// Apply CSRF protection middleware
+app.use(doubleCsrfProtection);
+```
+
+<Aside type="tip">
+  Clients must include the CSRF token in a header (typically 'X-CSRF-TOKEN') for all non-GET requests to endpoints protected by the CSRF middleware.
+</Aside>
+
+## Common Pitfalls & Best Practices
+
+### Best Practices
+
+1. **Never store sensitive data in tokens**
+   - Keep tokens lightweight with minimal claims
+
+2. **Implement proper error handling**
+   - Don't expose sensitive information in error messages
+
+3. **Audit and log authentication events**
+   - Track login attempts, password changes, and permission changes
+
+4. **Rotate JWT secrets periodically**
+   - Use a secret management solution for production
+
+5. **Consider using multi-factor authentication**
+    - For high-security applications
+
+### Common Pitfalls
+
+❌ **Storing JWTs in localStorage only**
+- Vulnerable to XSS attacks
+- Better: Use HttpOnly cookies for refresh tokens
+
+❌ **Using the same secret for access and refresh tokens**
+- Compromised secret affects all tokens
+- Better: Use separate secrets for different token types
+
+❌ **Setting very long token expiration**
+- Increases security risk if token is compromised
+- Better: Short-lived access tokens with refresh capability
+
+❌ **Not validating token contents**
+- Always verify all claims in the token
+- Check for expiration, issuer, audience, etc.
+
+❌ **Storing sensitive data in tokens**
+- Tokens can be decoded even if they're signed
+- Better: Store only identification information in tokens
+
+## Further Reading
+
+- [OWASP API Security Best Practices](https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html)
+- [JWT.io Introduction](https://jwt.io/introduction)
+- [Express Security Best Practices](https://expressjs.com/en/advanced/best-practice-security.html)
