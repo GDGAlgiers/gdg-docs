@@ -1,0 +1,331 @@
+---
+title: "API Design Principles"
+description: "Best practices for designing consistent, intuitive, and maintainable RESTful APIs with Express.js"
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Designing a well-structured API is crucial for creating maintainable, scalable, and developer-friendly backend services. This guide covers essential principles and best practices for designing RESTful APIs with Express.js.
+
+## RESTful API Naming Conventions
+
+#### Use kebab-case for URLs
+
+When creating endpoints with multiple words, use kebab-case (lowercase with hyphens):
+
+✅ **DO** use kebab-case for multi-word resources:
+```javascript
+GET /user-profiles
+GET /product-categories
+GET /order-items
+```
+
+❌ **DON'T** use camelCase or snake_case in URLs:
+```javascript
+GET /userProfiles    // Avoid camelCase
+GET /product_categories    // Avoid snake_case
+```
+
+<Aside type="tip">
+  Kebab-case is more readable in URLs and avoids encoding issues that can occur with camelCase or other formats.
+</Aside>
+
+#### Resource-Based URLs
+
+Structure your endpoints around resources (nouns) rather than actions (verbs):
+
+✅ **DO** use resource-based naming:
+```javascript
+// Resource collections
+GET /users
+POST /users
+
+// Specific resource
+GET /users/:id
+PUT /users/:id
+DELETE /users/:id
+```
+
+❌ **DON'T** use action-based naming:
+```javascript
+// Avoid these patterns
+GET /getUsers
+POST /createUser
+PUT /updateUser/:id
+```
+
+#### Use Verbs for Non-Resource URL
+
+While most endpoints should use nouns, there are exceptions for operation-based actions that don't fit the standard CRUD model:
+
+```javascript
+// Operation-based endpoints should use verbs
+POST /users/:id/reset-password
+POST /emails/send
+GET /export-data
+```
+
+These are appropriate for actions that:
+- Trigger a process or calculation
+- Don't directly map to a single resource
+- Represent a state transition
+
+<Aside type="caution">
+  Use non-resource endpoints sparingly. When possible, try to model your API around resources and standard HTTP methods first.
+</Aside>
+
+#### Hierarchical Relationships
+
+Express nested resources through URL paths:
+
+```javascript
+// Get all posts by a specific user
+GET /users/:userId/posts
+
+// Get a specific post from a specific user
+GET /users/:userId/posts/:postId
+```
+
+<Aside type="tip">
+  Keep your URL hierarchy to a maximum of 2-3 levels to maintain readability and prevent complexity.
+</Aside>
+
+#### Pluralization
+
+Use consistent pluralization for resource collections:
+
+✅ **DO**:
+```
+GET /users        // List of users
+GET /users/:id    // Specific user
+GET /categories   // List of categories
+```
+
+❌ **DON'T** mix singular and plural:
+```
+GET /user         // Inconsistent with other endpoints
+GET /categories/:categoryId/post   // Should be /posts
+```
+
+## HTTP Methods
+
+Use appropriate HTTP methods for different operations:
+
+| Method | Purpose | Example |
+|--------|---------|---------|
+| `GET` | Read/retrieve data | `GET /products` - Retrieve all products |
+| `POST` | Create new resources | `POST /products` - Create a new product |
+| `PUT` | Update existing resources (complete replacement) | `PUT /products/:id` - Replace entire product |
+| `PATCH` | Partial update | `PATCH /products/:id` - Update specific fields |
+| `DELETE` | Remove resources | `DELETE /products/:id` - Delete a product |
+
+## Query Parameters
+
+### Use camelCase for Parameters
+
+When defining query parameters and dynamic URL parameters, use camelCase for consistency:
+
+```javascript
+// Correct query parameter naming with camelCase
+GET /products?minPrice=10&maxPrice=100
+GET /users?firstName=John&lastName=Doe
+GET /orders?createdAfter=2023-01-01
+
+// For dynamic URL parameters, also use camelCase
+GET /users/:userId/posts/:postId
+GET /orders/:orderId/items/:itemId
+```
+
+This maintains consistency with JavaScript naming conventions and makes frontend development smoother when parsing API responses and constructing requests.
+
+### Filtering, Sorting and Pagination
+
+#### Filtering
+
+Allow clients to filter collections:
+
+```
+GET /users?role=admin
+GET /products?category=electronics&inStock=true
+```
+
+#### Sorting
+
+Enable sorting by specific fields:
+
+```
+GET /users?sort=lastName
+GET /products?sort=-price  // Descending order with - prefix
+```
+
+#### Pagination
+
+Implement pagination to handle large result sets:
+
+```
+GET /products?page=2&limit=10
+```
+
+
+## Response Structure
+
+### Use camelCase for JSON Properties
+
+Consistently use camelCase for all JSON properties in your responses:
+
+```javascript
+// Correct JSON property naming
+{
+  "userId": 123,
+  "firstName": "John",
+  "lastName": "Doe",
+  "orderItems": [
+    { "productId": 456, "quantityOrdered": 2 }
+  ],
+}
+```
+
+### Include the Total Number of Resources in Your Response
+
+When returning collections, especially paginated ones, always include metadata about the total count:
+
+```javascript
+// Response with metadata including total count
+{
+  "statusCode": 200,
+  "data": [
+    // Array of resources
+  ],
+  "meta": {
+    "totalCount": 1357,
+    "page": 2,
+    "limit": 25,
+    "totalPages": 55
+  }
+}
+```
+
+This helps clients to:
+- Build proper pagination controls
+- Show accurate counts to users
+- Determine when they've reached the end of the collection
+
+### JSON Best Practices
+
+1. **Be consistent with property naming**
+   - Stick to camelCase throughout your entire API
+  
+2. **Use string format for complex identifiers**
+   - UUIDs, large numbers should be strings to avoid precision issues
+  
+3. **Avoid nested objects deeper than 3 levels**
+   - Deeply nested objects become hard to parse and understand
+
+### Standardized Response Format
+
+Define a consistent response structure for all endpoints:
+
+```javascript
+// Success response
+{
+  "statusCode": 200,
+  "data": {
+    // Resource data here
+  },
+  "message": "Users retrieved successfully",
+  "meta": {
+    // Pagination, count, etc. (when needed)
+    "totalCount": 150,
+    "page": 2,
+    "limit": 20
+  }
+}
+
+// Error response
+{
+  "statusCode": 400,
+  "message": "Invalid user data provided",
+  "path": "/api/v1/users"
+}
+```
+
+## HTTP Status Codes
+
+Use appropriate HTTP status codes to indicate the outcome of requests:
+
+| Status Code | Description | When to Use |
+|-------------|-------------|------------|
+| 200 OK | Request succeeded | Successful GET, PUT, PATCH, or DELETE |
+| 201 Created | Resource created | Successful POST that created a resource |
+| 204 No Content | Success with no content to return | Successful DELETE or PUT with no response body |
+| 400 Bad Request | Invalid request | Malformed request syntax, invalid parameters |
+| 401 Unauthorized | Authentication required | Missing or invalid authentication |
+| 403 Forbidden | Authenticated but not authorized | User lacks permission |
+| 404 Not Found | Resource not found | Requested resource doesn't exist |
+| 409 Conflict | Request conflicts with current state | Duplicate resource, version conflicts, concurrent updates |
+| 429 Too Many Requests | Rate limit exceeded | Client has sent too many requests in a given time period |
+| 500 Internal Server Error | Server error | Exception occurred on the server |
+
+<Aside type="caution">
+  Always return appropriate HTTP status codes with your responses. This helps clients properly interpret the result of their request.
+</Aside>
+
+## API Versioning
+
+Versioning allows you to evolve your API without breaking existing clients.
+
+### URL-Based Versioning
+
+Include the version in the base path:
+
+```
+/api/v1/users
+/api/v2/users
+```
+
+<Aside type="tip">
+  URL-based versioning is more explicit and easier to test, but header-based versioning keeps URLs cleaner.
+</Aside>
+
+## Common Pitfalls
+
+❌ **Inconsistent naming patterns**
+- Mixing plural and singular resources
+- Using different naming conventions across endpoints
+
+❌ **Exposing database details**
+- Returning internal error details to clients
+- Exposing database IDs or structure directly
+
+❌ **Not using HTTP methods appropriately**
+- Using GET requests for data modification
+- Using POST for everything
+
+❌ **Returning inappropriate status codes**
+- Returning 200 for errors
+- Using 500 for client errors
+
+❌ **No rate limiting**
+- Leaving your API open to abuse
+
+❌ **Inconsistent data format**
+- Mixing date formats (use ISO 8601: YYYY-MM-DDTHH:MM:SSZ)
+- Inconsistent number formatting
+
+
+## Conclusion
+
+Designing a well-structured API is essential for building scalable, maintainable applications. By following these principles, you can create APIs that are intuitive for developers to use, perform well, and can evolve over time.
+
+When designing your API, remember these key points:
+1. Use resource-based URL naming with appropriate HTTP methods
+2. Implement consistent response structures and status codes
+3. Version your API to allow for evolution
+4. Include proper filtering, sorting, and pagination
+5. Implement security best practices from the beginning
+
+## Further Reading
+
+- [REST API Design Best Practices](https://restfulapi.net/rest-api-best-practices/)
+- [22 Best Practices to Take Your API Design Skills to the Next Level
+](https://readmedium.com/en/22-best-practices-to-take-your-api-design-skills-to-the-next-level-65569b200b9)
