@@ -1,0 +1,456 @@
+---
+title: "API Performance Optimization"
+description: "Comprehensive guide to optimizing Express API performance through rate limiting, pagination strategies, caching, and background processing techniques"
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+**API performance optimization** is critical for ensuring your Express application remains responsive, scalable, and resilient under load. This guide covers essential techniques for improving API performance and handling large-scale operations efficiently.
+
+## Rate Limiting
+
+Rate limiting restricts how many requests a client can make to your API within a specific time window. This prevents abuse, protects against DoS attacks, and ensures fair resource distribution among clients.
+
+### Implementing Rate Limiting
+
+The most common approach uses the `express-rate-limit` middleware:
+
+```javascript
+// src/middleware/rateLimiter.js
+const rateLimit = require('express-rate-limit');
+
+// Basic rate limiter - applies to all requests
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: {
+    status: 429,
+    message: 'Too many requests, please try again later.'
+  }
+});
+
+// More restrictive limiter for authentication endpoints
+const authLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // limit each IP to 5 login attempts per hour
+  message: {
+    status: 429,
+    message: 'Too many login attempts, please try again after an hour'
+  }
+});
+
+module.exports = {
+  globalLimiter,
+  authLimiter
+};
+```
+
+### Advanced Rate Limiting Strategies
+
+<Tabs>
+  <TabItem label="Per-Route Limiting">
+  ```javascript
+  // Different limits for different routes
+  app.get('/api/public', 
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 200 // More generous for public routes
+    }),
+    publicController.getData
+  );
+  
+  app.get('/api/premium', 
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 600 // More generous for premium users
+    }),
+    premiumController.getData
+  );
+  ```
+  </TabItem>
+  
+  <TabItem label="Dynamic Limits">
+  ```javascript
+  // Dynamic rate limiting based on user roles
+  const dynamicRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: (req, res) => {
+      if (req.user?.role === 'premium') return 300;
+      if (req.user?.role === 'admin') return 1000;
+      return 100; // default limit
+    },
+    keyGenerator: (req) => {
+      return req.user ? req.user.id : req.ip; // Use user ID or IP
+    }
+  });
+  
+  app.use('/api/resources', authenticate, dynamicRateLimit, resourceController.getResources);
+  ```
+  </TabItem>
+  
+  <TabItem label="Redis Store">
+  ```javascript
+  // Using Redis to store rate limit data (for distributed systems)
+  const RedisStore = require('rate-limit-redis');
+  const Redis = require('ioredis');
+  
+  const redisClient = new Redis({
+    host: process.env.REDIS_HOST,
+    port: process.env.REDIS_PORT,
+    password: process.env.REDIS_PASSWORD
+  });
+  
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    store: new RedisStore({
+      sendCommand: (...args) => redisClient.call(...args)
+    })
+  });
+  ```
+  </TabItem>
+</Tabs>
+
+<Aside type="tip">
+  Consider using different rate limits based on authentication status, user roles, or subscription levels to provide better service to legitimate users while still protecting against abuse.
+</Aside>
+
+## Pagination Strategies
+
+Pagination is essential when dealing with large datasets to avoid performance issues and excessive resource consumption.
+
+### Pagination with Prisma
+
+```javascript
+// src/services/productService.js
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+exports.getProducts = async (page = 1, limit = 10) => {
+  try {
+    const skip = (page - 1) * limit;
+    
+    // Execute queries in parallel
+    const [products, totalCount] = await Promise.all([
+      prisma.product.findMany({
+        skip,
+        take: Number(limit),
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.product.count()
+    ]);
+    
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(totalCount / limit);
+    
+    return {
+      data: products,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        totalItems: totalCount,
+        totalPages,
+      }
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+```
+
+### Alternative Pagination Approaches
+
+While the example above demonstrates offset-based pagination, cursor-based pagination is often more efficient for large datasets. Instead of using `skip` and `take`, cursor-based pagination uses a reference point (usually an ID or unique timestamp) and retrieves records after that point. Both SQL and NoSQL databases support this pattern with slightly different implementations.
+
+## Caching Strategies
+
+Caching dramatically improves API performance by serving previously computed results without repeating expensive operations.
+
+### Redis Caching
+
+Redis is an in-memory data store perfect for caching in distributed systems:
+
+```javascript
+// middleware/cacheMiddleware.js
+const redisClient = require("../config/redis");
+
+const checkCache = (keyFn) => {
+  return async (req, res, next) => {
+    const key = keyFn(req);
+    const cachedData = await redisClient.get(key);
+
+    if (cachedData) {
+      const parsedData = JSON.parse(cachedData);
+
+      return res.status(200).json({
+        message: parsedData.message,
+        data: parsedData.data,
+        statusCode: parsedData.statusCode,
+      });
+    }
+    next();
+  };
+};
+
+module.exports = checkCache;
+```
+
+### Redis Configuration
+
+```javascript
+// config/redis.js
+const { createClient } = require('redis');
+
+const redisClient = createClient({
+  url: process.env.REDIS_URL || 'redis://localhost:6379'
+});
+
+redisClient.on('error', (err) => console.log('Redis Client Error', err));
+
+// Connect to Redis
+(async () => {
+  try {
+    await redisClient.connect();
+    console.log('Connected to Redis successfully');
+  } catch (error) {
+    console.error('Redis connection error:', error);
+    // Application can continue without Redis
+  }
+})();
+
+module.exports = redisClient;
+```
+
+### Using the Cache Middleware
+
+```javascript
+// routes/productRoutes.js
+const express = require('express');
+const router = express.Router();
+const productController = require('../controllers/productController');
+const checkCache = require('../middleware/cacheMiddleware');
+
+// Cache product list by category
+router.get('/products/category/:categoryId', 
+  checkCache((req) => `products:category:${req.params.categoryId}`),
+  productController.getProductsByCategory
+);
+
+// Cache individual product lookups
+router.get('/products/:id', 
+  checkCache((req) => `products:${req.params.id}`),
+  productController.getProductById
+);
+
+module.exports = router;
+```
+
+<Aside type="caution">
+  Cache invalidation is one of the hardest problems in computer science. Be careful not to serve stale data, especially for critical features like user account information or financial transactions.
+</Aside>
+
+### Caching Recommendations
+
+1. **Cache read-heavy resources** that don't change frequently
+2. **Don't cache user-specific data** that changes frequently
+3. **Use short TTLs** for data that changes moderately often
+4. **Monitor cache hit ratios** to ensure your caching strategy is effective
+
+## Background Task Processing
+
+Not all operations need to be performed synchronously within the request-response cycle. Moving time-consuming tasks to background processes improves API responsiveness.
+
+### Using Job Queues
+
+<Tabs>
+  <TabItem label="Setting Up Bull">
+  ```javascript
+  // src/queues/index.js
+  const Queue = require('bull');
+
+  // Create queues with configuration
+  const createQueue = (name) => {
+    return new Queue(name, {
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: process.env.REDIS_PORT || 6379,
+        password: process.env.REDIS_PASSWORD || undefined
+      },
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000
+        },
+        removeOnComplete: true
+      }
+    });
+  };
+
+  // Initialize queue instances
+  const emailQueue = createQueue('email-processing');
+  const pdfQueue = createQueue('pdf-generation');
+  const imageQueue = createQueue('image-processing');
+
+  // Set up event handlers for all queues
+  const setupQueueEvents = (queue) => {
+    queue.on('completed', job => {
+      console.log(`${queue.name} job ${job.id} completed successfully`);
+    });
+
+    queue.on('failed', (job, err) => {
+      console.error(`${queue.name} job ${job.id} failed:`, err);
+    });
+
+    queue.on('error', (error) => {
+      console.error(`${queue.name} queue error:`, error);
+    });
+  };
+
+  // Register events for all queues
+  [emailQueue, pdfQueue, imageQueue].forEach(setupQueueEvents);
+
+  module.exports = {
+    emailQueue,
+    pdfQueue,
+    imageQueue
+  };
+  ```
+  </TabItem>
+  
+  <TabItem label="Email Processor">
+  ```javascript
+  // src/queues/processors/emailProcessor.js
+  const emailTransporter = require('../../config/emailTransporter');
+
+  async function processEmail(job) {
+    const { recipient, subject, template, context, text, html } = job.data;
+    
+    try {
+      // Prepare email content - either use provided html/text or render from template
+      let emailContent = { text, html };
+      
+      // Send the email using the configured transporter
+      const info = await emailTransporter.sendMail({
+        from: process.env.EMAIL_FROM,
+        to: recipient,
+        subject,
+        html: emailContent.html,
+        text: emailContent.text
+      });
+      
+      // Return success result for logging
+      return {
+        success: true,
+        messageId: info.messageId,
+        recipient
+      };
+    } catch (error) {
+      console.error('Email sending failed:', error);
+      // Re-throw so Bull marks the job as failed
+      throw error;
+    }
+  }
+
+  module.exports = processEmail;
+  ```
+  </TabItem>
+  
+  <TabItem label="Using In Controllers">
+  ```javascript
+  // src/controllers/userController.js
+  const { emailQueue } = require('../queues');
+
+  exports.register = async (req, res, next) => {
+    try {
+      // Create user
+      const user = await User.create(req.body);
+      
+      // Add job to email queue directly
+      await emailQueue.add({
+        recipient: user.email,
+        subject: 'Welcome to our platform!',
+        template: 'welcome',
+        context: { 
+          name: user.name,
+          verificationUrl: `https://example.com/verify/${user.verificationToken}`
+        }
+      });
+      
+      // Respond immediately without waiting for email
+      res.status(201).json({
+        statusCode: 201,
+        data: {
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email
+          },
+          message: 'User created successfully. Verification email has been sent.'
+        }
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+  ```
+  </TabItem>
+</Tabs>
+
+<Aside type="tip">
+  For production systems, consider more robust task processing frameworks like [Agenda](https://github.com/agenda/agenda) or [Bullmq](https://github.com/taskforcesh/bullmq) which offer more advanced features.
+</Aside>
+
+## Best Practices & Performance Tips
+
+### General Best Practices
+
+1. **Use compression** for response payloads
+   ```javascript
+   const compression = require('compression');
+   app.use(compression());
+   ```
+
+2. **Implement connection pooling** for databases
+
+3. **Use streams** for large files
+   ```javascript
+   app.get('/api/reports/large-csv', (req, res) => {
+     const fileStream = fs.createReadStream('path/to/large-report.csv');
+     fileStream.pipe(res);
+   });
+   ```
+
+5. **Implement proper error handling** to prevent resource leaks
+
+### Common Performance Pitfalls
+
+❌ **N+1 Query Problem**
+- Problem: Executing a database query for each item in a collection
+- Solution: Use eager loading or batch queries
+
+❌ **Memory Leaks**
+- Problem: Objects that aren't garbage collected
+- Solution: Use proper cleanup in event listeners and timers
+
+❌ **Blocking the Event Loop**
+- Problem: Long-running synchronous operations
+- Solution: Use asynchronous APIs and background processing
+
+❌ **Excessive Logging**
+- Problem: Logging everything, including sensitive info
+- Solution: Use appropriate log levels and sampling
+
+<Aside type="tip">
+  Remember that premature optimization is the root of all evil. Focus on writing clean, maintainable code first, then optimize when you have specific performance issues identified through monitoring and testing.
+</Aside>
+
+## Further Reading
+
+- [Express.js Performance Best Practices](https://expressjs.com/en/advanced/best-practice-performance.html)
+- [Node.js Performance and Scalability](https://nodejs.org/en/docs/guides/dont-block-the-event-loop/)
+- [Bull Documentation](https://github.com/OptimalBits/bull/blob/master/REFERENCE.md)
+- [Redis Caching Patterns](https://redis.io/documentation)
