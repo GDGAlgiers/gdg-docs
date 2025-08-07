@@ -21,24 +21,24 @@ Feature-Driven Architecture (FDA) structures Flutter projects around self-contai
 ## Why Feature-Driven Architecture?
 
 <CardGrid>
-  <Card title="✅ Modularity">
+  <Card title="Modularity">
     Features are self-contained and reusable.
   </Card>
-  <Card title="✅ Scalability">
+  <Card title="Scalability">
     New features can be added without disrupting existing ones.
   </Card>
-  <Card title="✅ Separation of Concerns">
+  <Card title="Separation of Concerns">
     Clear division between UI, logic, and data layers.
   </Card>
-  <Card title="✅ Improved Collaboration">
+  <Card title="Improved Collaboration">
     Teams can work on features independently.
   </Card>
-  <Card title="✅ Easier Testing & Maintenance">
+  <Card title="Easier Testing & Maintenance">
     Isolated features simplify debugging and testing.
   </Card>
-  <Card title="✅ Faster Onboarding for New Developers"> 
-  Features are self-contained, making it easier for new developers to understand and contribute.
-    </Card>
+  <Card title="Faster Onboarding for New Developers">
+    Features are self-contained, making it easier for new developers to understand and contribute.
+  </Card>
 </CardGrid>
 
 This structure helps developers build maintainable and efficient Flutter apps.
@@ -166,6 +166,13 @@ class UserModel {
       email: json['email'],
     );
   }
+  Map<String, dynamic> toJson() {
+       return {
+          'id': id,
+          'name': name,
+          'email': email,
+       };
+     }
 }`} lang="dart" title="User Model" />
 
     <Code code={`// features/user_profile/domain/repository/user_repository.dart
