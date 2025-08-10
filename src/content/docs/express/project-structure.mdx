@@ -1,0 +1,373 @@
+---
+title: "Project Structure"
+description: "Standard Express.js project organization, configuration management, and guidelines for scaling to NestJS when needed."
+---
+
+import { Aside, Tabs, TabItem, FileTree } from '@astrojs/starlight/components';
+
+A well-organized project structure is crucial for maintainability, scalability, and team collaboration. This guide covers the standard Express.js project structure used in our projects and best practices for configuration management.
+
+## Standard Express.js Project Structure
+
+### Directory Organization
+
+Our standard Express.js project follows a modular structure that separates concerns and promotes code reusability:
+
+<FileTree>
+- project-root/
+  - app.js
+  - server.js
+  - package.json
+  - .env
+  - .env.example
+  - .gitignore
+  - README.md
+  - config/
+    - database.js
+    - cloudinary.js
+    - multer.js
+    - redis.js
+  - controllers/
+    - userController.js
+    - authController.js
+    - postController.js
+  - services/
+    - userService.js
+    - authService.js
+    - postService.js
+  - models/
+    - User.js
+    - Post.js
+    - index.js
+  - routes/
+    - index.js
+    - userRoutes.js
+    - authRoutes.js
+    - postRoutes.js
+  - middleware/
+    - auth.js
+    - validation.js
+    - errorHandler.js
+    - logger.js
+  - utils/
+    - validators.js
+    - helpers.js
+    - constants.js
+  - tests/
+    - unit/
+    - integration/
+    - helpers/
+</FileTree>
+
+## Core Files Explanation
+
+### Application Entry Point
+
+<Tabs>
+  <TabItem label="app.js">
+  ```javascript
+  // app.js - Application configuration
+  const express = require('express');
+  const cors = require('cors');
+  const morgan = require('morgan');
+  const helmet = require('helmet');
+  const rateLimit = require('express-rate-limit');
+  const compression = require('compression');
+  require('express-async-errors');
+
+  // Import routes
+  const routes = require('./routes');
+  const { errorHandler, notFound } = require('./middleware/errorHandler');
+
+  const app = express();
+
+  // Security middleware
+  app.use(helmet());
+  app.use(cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true
+  }));
+
+  // Rate limiting
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100 // limit each IP to 100 requests per windowMs
+  });
+  app.use(limiter);
+
+  // Compression and parsing
+  app.use(compression());
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true }));
+
+  // Logging
+  if (process.env.NODE_ENV !== 'test') {
+    app.use(morgan('combined'));
+  }
+
+  // Routes
+  app.use('/api/v1', routes);
+
+  // Error handling
+  app.use(notFound);
+  app.use(errorHandler);
+
+  module.exports = app;
+  ```
+  </TabItem>
+
+  <TabItem label="server.js">
+  ```javascript
+  // server.js - Server startup
+  const app = require('./app');
+  const connectDB = require('./db/connection');
+
+  const PORT = process.env.PORT || 5000;
+
+  const startServer = async () => {
+    try {
+      // Connect to database
+      await connectDB();
+      console.log('Database connected successfully');
+
+      // Start server
+      const server = app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+        console.log(`Environment: ${process.env.NODE_ENV}`);
+      });
+
+      // Graceful shutdown
+      process.on('SIGTERM', () => {
+        console.log('SIGTERM received, shutting down gracefully');
+        server.close(() => {
+          console.log('Process terminated');
+        });
+      });
+
+    } catch (error) {
+      console.error('Failed to start server:', error);
+      process.exit(1);
+    }
+  };
+
+  startServer();
+  ```
+  </TabItem>
+</Tabs>
+
+## Application Architecture
+
+### Request Flow Workflow
+
+Understanding how a request flows through our Express.js application:
+
+1. **Route Layer**: Receives the HTTP request and determines which controller to call
+2. **Middleware Layer**: Applies authentication, validation, file uploads, etc.
+3. **Controller Layer**: Handles the request/response cycle, delegates business logic to services
+4. **Service Layer**: Contains business logic, interacts with models and external services
+5. **Model Layer**: Handles database operations and data structure definitions
+
+### Layer Responsibilities
+
+#### Controllers Layer
+Controllers are thin layers that:
+- Extract data from HTTP requests (body, params, query, files)
+- Call appropriate service methods with the extracted data
+- Format and send HTTP responses
+- Handle HTTP-specific concerns (status codes, headers)
+- **Never contain business logic** - this belongs in services
+
+#### Services Layer
+Services contain the core business logic:
+- Validate business rules and constraints
+- Orchestrate multiple model operations
+- Handle external API integrations
+- Manage file uploads and processing
+- Throw meaningful errors for business logic violations
+- **Independent of HTTP concerns** - can be reused in different contexts
+
+#### Routes Layer
+Routes define the API structure and apply middleware:
+- Map HTTP methods and paths to controller methods
+- Apply middleware in the correct order
+- Group related endpoints together
+- Define parameter validation and authentication requirements
+
+### Routes Organization
+
+The main router aggregates all route modules:
+
+```javascript
+// routes/index.js
+const express = require('express');
+const userRoutes = require('./userRoutes');
+const authRoutes = require('./authRoutes');
+const postRoutes = require('./postRoutes');
+
+const router = express.Router();
+
+// API routes
+router.use('/auth', authRoutes);
+router.use('/users', userRoutes);
+router.use('/posts', postRoutes);
+
+module.exports = router;
+```
+
+## Configuration Management
+
+### Environment Variables
+
+<Tabs>
+  <TabItem label=".env.example">
+  ```bash
+  # .env.example - Template for environment variables
+  
+  # Server Configuration
+  NODE_ENV=development
+  PORT=5000
+  
+  # Database
+  MONGODB_URI=mongodb://localhost:27017/your-app-name
+  
+  # JWT Configuration
+  JWT_SECRET=your-super-secret-jwt-key
+  JWT_EXPIRES_IN=7d
+  
+  # Cloudinary Configuration
+  CLOUDINARY_CLOUD_NAME=your-cloud-name
+  CLOUDINARY_API_KEY=your-api-key
+  CLOUDINARY_API_SECRET=your-api-secret
+  
+  # Email Configuration
+  EMAIL_FROM=noreply@yourapp.com
+  SENDGRID_API_KEY=your-sendgrid-key
+  
+  # Redis Configuration (optional)
+  REDIS_URL=redis://localhost:6379
+  
+  # Frontend URL
+  FRONTEND_URL=http://localhost:3000
+  ```
+  </TabItem>
+
+  <TabItem label="config/index.js">
+  ```javascript
+  // config/index.js - Centralized configuration
+  require('dotenv').config();
+
+  const config = {
+    env: process.env.NODE_ENV || 'development',
+    port: process.env.PORT || 5000,
+    
+    database: {
+      uri: process.env.MONGODB_URI,
+    },
+    
+    jwt: {
+      secret: process.env.JWT_SECRET,
+      expiresIn: process.env.JWT_EXPIRES_IN || '7d'
+    },
+    
+    cloudinary: {
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      apiKey: process.env.CLOUDINARY_API_KEY,
+      apiSecret: process.env.CLOUDINARY_API_SECRET
+    },
+    
+    email: {
+      from: process.env.EMAIL_FROM,
+      sendgridApiKey: process.env.SENDGRID_API_KEY
+    },
+    
+    redis: {
+      url: process.env.REDIS_URL
+    },
+  };
+
+  // Validate required environment variables
+  const requiredEnvVars = ['JWT_SECRET', 'MONGODB_URI'];
+  
+  requiredEnvVars.forEach(envVar => {
+    if (!process.env[envVar]) {
+      throw new Error(`Missing required environment variable: ${envVar}`);
+    }
+  });
+
+  module.exports = config;
+  ```
+  </TabItem>
+</Tabs>
+
+
+## When to Transition to NestJS
+
+### Project Scale Indicators
+
+Consider migrating to NestJS when your Express.js project reaches these indicators:
+
+<Tabs>
+  <TabItem label="Team & Complexity">
+  **Team Size & Skills:**
+  - Team has 5+ developers
+  - Team is comfortable with TypeScript
+  - Need for standardized architecture patterns
+  - Multiple junior developers requiring structure
+
+  **Project Complexity:**
+  - Complex business logic with multiple services
+  - Need for advanced dependency injection
+  - Microservices architecture requirements
+  - GraphQL integration needs
+  </TabItem>
+
+  <TabItem label="Technical Requirements">
+  **Technical Needs:**
+  - Strong typing requirements (TypeScript-first)
+  - Advanced testing frameworks and mocking
+  - Built-in validation and transformation pipes
+  - Decorator-based programming preferred
+  - WebSocket or GraphQL subscriptions
+  - Complex authentication strategies
+
+  **Maintenance Concerns:**
+  - Difficulty maintaining code consistency
+  - Repeated boilerplate code across modules
+  - Need for better code organization
+  - Testing complexity growing significantly
+  </TabItem>
+</Tabs>
+
+<Aside type="note">
+  For small to medium projects, Express.js with good structure is often more appropriate than NestJS.
+</Aside>
+
+## Best Practices
+
+### Code Organization
+
+1. **Single Responsibility**: Each file should have one clear purpose
+2. **Dependency Direction**: Controllers → Services → Models
+3. **Error Handling**: Use express-async-errors for cleaner async error handling
+4. **Validation**: Validate input at route level, not in controllers
+5. **Configuration**: Centralize all environment-dependent configuration
+
+### Security Practices
+
+1. **Environment Variables**: Never commit .env files
+2. **Input Validation**: Validate and sanitize all inputs
+3. **Rate Limiting**: Implement appropriate rate limiting
+4. **CORS**: Configure CORS properly for your frontend
+5. **Helmet**: Use helmet for security headers
+
+### Performance Optimization
+
+1. **Database Indexing**: Index frequently queried fields
+2. **Caching**: Implement Redis for frequently accessed data
+3. **Compression**: Use compression middleware
+4. **File Uploads**: Use cloud storage instead of local storage
+5. **Connection Pooling**: Configure appropriate database connection pools
+
+<Aside type="caution">
+  Always validate your folder structure aligns with your team's preferences and project requirements. This structure works well for most Express.js applications but can be adapted as needed.
+</Aside>
