@@ -1,176 +1,383 @@
 ---
-title: React Routing & Navigation
+title: "Routing & Navigation"
+description: "Essential React Router patterns for navigation, private routes, dynamic routing, and query parameter handling."
 ---
 
-# Introduction
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
 
-Routing is a crucial aspect of React applications, enabling navigation between different views while maintaining a seamless user experience. This guide covers best practices for implementing routing using React Router, handling private routes, managing dynamic routes, working with query parameters, and optimizing route structure.
+Routing is essential for creating navigable React applications. This guide covers React Router fundamentals, private route protection, and navigation patterns.
 
-## Using React Router for Navigation
+## React Router Setup
 
-React Router is the de facto library for handling navigation in React applications. It provides a declarative way to define routes and navigate between different views.
+### Installation
 
-### **Installation**
-```sh
+```bash
 npm install react-router-dom
 ```
 
-### **Basic Setup**
+### Basic Configuration
+
 ```jsx
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Home from './pages/Home';
-import About from './pages/About';
+// App.js
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import HomePage from './pages/HomePage';
+import AboutPage from './pages/AboutPage';
+import ProductPage from './pages/ProductPage';
+import NotFoundPage from './pages/NotFoundPage';
 
 function App() {
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/products/:id" element={<ProductPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
 }
 
 export default App;
 ```
 
-✅ **Best Practice:** Use `<BrowserRouter>` for traditional web applications and `<MemoryRouter>` for testing or non-browser environments.
+## Navigation Components
 
-## Nested Routes & Layout Components
+### Basic Navigation
 
-Using nested routes allows better structuring of your application. Layout components help in rendering shared UI elements like headers, sidebars, or footers.
-
-### **Example: Nested Routing with Layouts**
-```jsx
-import { Outlet } from 'react-router-dom';
-
-const DashboardLayout = () => (
-  <div>
-    <header>Dashboard Header</header>
-    <Outlet />
-  </div>
-);
-
-export default DashboardLayout;
-```
+Navigation in React Router uses special components that prevent full page reloads and provide better user experience.
 
 ```jsx
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import DashboardLayout from './layouts/DashboardLayout';
-import DashboardHome from './pages/DashboardHome';
-import DashboardSettings from './pages/DashboardSettings';
+// components/Navigation.jsx
+import { Link, NavLink } from 'react-router-dom';
 
-function App() {
+const Navigation = () => {
   return (
-    <Router>
-      <Routes>
-        <Route path="/dashboard" element={<DashboardLayout />}>
-          <Route index element={<DashboardHome />} />
-          <Route path="settings" element={<DashboardSettings />} />
-        </Route>
-      </Routes>
-    </Router>
+    <nav>
+      {/* Link: Basic navigation without active state */}
+      <Link to="/">Home</Link>
+      
+      {/* NavLink: Automatically adds 'active' class when current */}
+      <NavLink 
+        to="/about" 
+        className={({ isActive }) => isActive ? 'active' : ''}
+      >
+        About
+      </NavLink>
+      
+      <NavLink to="/products">Products</NavLink>
+    </nav>
   );
-}
-
-export default App;
+};
 ```
-✅ **Best Practice:** Use `Outlet` for nested routes to share UI components efficiently.
+
+**Key Differences:**
+- `Link`: Basic navigation, no active state indication
+- `NavLink`: Automatically knows when it's the current page, useful for navigation menus
+
+### Programmatic Navigation
+
+Sometimes you need to navigate based on user actions like form submissions or button clicks.
+
+```jsx
+// components/LoginForm.jsx
+import { useNavigate } from 'react-router-dom';
+
+const LoginForm = () => {
+  const navigate = useNavigate();
+
+  const handleLogin = async (credentials) => {
+    try {
+      await authService.login(credentials);
+      navigate('/dashboard'); // Redirect after successful login
+    } catch (error) {
+      console.error('Login failed:', error);
+    }
+  };
+
+  const goBack = () => {
+    navigate(-1); // Go back one page in browser history
+  };
+
+  return (
+    <form onSubmit={handleLogin}>
+      {/* form content */}
+      <button type="button" onClick={goBack}>
+        Back
+      </button>
+    </form>
+  );
+};
+```
+
+**Key Points:**
+- `useNavigate()` returns a function for programmatic navigation
+- `navigate('/path')` goes to a specific route
+- `navigate(-1)` goes back in history
+- `navigate(1)` goes forward in history
 
 ## Private Routes
 
-Private routes restrict access to authenticated users. There are multiple strategies to implement protected routes, including Higher-Order Components (HOCs), custom hooks, or React Context.
+Private routes protect pages that require authentication. We'll use React Context to share authentication state across the app.
 
-### **Using a Custom Hook**
+### Context-Based Approach (Recommended)
+
+This approach provides a clean, reusable pattern for protecting routes throughout your application.
+
+#### Private Route Component
+
 ```jsx
-import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+// components/PrivateRoute.jsx
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@contexts/AuthContext';
 
-const PrivateRoute = () => {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" />;
+const PrivateRoute = ({ children }) => {
+  const { user, loading } = useAuth(); // Get auth state from context
+  const location = useLocation(); // Current page location
+
+  // Show loading while checking authentication
+  if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  // If not logged in, redirect to login with return URL
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // User is authenticated, show the protected content
+  return children;
 };
 
 export default PrivateRoute;
 ```
 
-✅ **Best Practice:** Use `Outlet` for nested private routes and `Navigate` for redirection.
+**How it works:**
+- Checks if user is authenticated via context
+- Shows loading state while checking
+- Redirects to login if not authenticated, saving the current location
+- Renders protected content if authenticated
 
-## Lazy Loading Routes
+### Using Private Routes
 
-Lazy loading improves performance by dynamically loading components only when they are needed.
+Here's how to integrate private routes into your application structure:
 
-### **Example: Lazy Loading with React Router**
 ```jsx
-import { lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-
-const Home = lazy(() => import('./pages/Home'));
-const About = lazy(() => import('./pages/About'));
+// App.js
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './contexts/AuthContext';
+import PrivateRoute from './components/PrivateRoute';
+import HomePage from './pages/HomePage';
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
+import ProfilePage from './pages/ProfilePage';
 
 function App() {
   return (
-    <Router>
-      <Suspense fallback={<div>Loading...</div>}>
+    <AuthProvider> {/* Wrap entire app with auth context */}
+      <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
+          {/* Public routes - anyone can access */}
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          
+          {/* Protected routes - require authentication */}
+          <Route path="/dashboard" element={
+            <PrivateRoute>
+              <DashboardPage />
+            </PrivateRoute>
+          } />
+          
+          <Route path="/profile" element={
+            <PrivateRoute>
+              <ProfilePage />
+            </PrivateRoute>
+          } />
         </Routes>
-      </Suspense>
-    </Router>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
-
-export default App;
 ```
-✅ **Best Practice:** Use `React.lazy` and `Suspense` to optimize initial page load speed.
+**Key Points:**
+- Wrap your app with `AuthProvider` to share authentication state
+- Public routes don't need `PrivateRoute` wrapper
+- Protected routes are wrapped with `PrivateRoute` component
+- Users will be redirected to login if they try to access protected routes while unauthenticated
 
-## Dynamic Routing
+## Dynamic Routing & Parameters
 
-Dynamic routing allows pages to adapt based on URL parameters, making it useful for user profiles, product pages, etc.
+### URL Parameters with useParams
 
-### **Example: Product Page**
+Dynamic routes allow you to create flexible URLs that can handle variable segments. The `useParams` hook extracts these parameters from the URL.
+
 ```jsx
-import { useParams } from 'react-router-dom';
+// pages/ProductPage.jsx
+import { useParams, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 
 const ProductPage = () => {
-  const { id } = useParams();
-  return <h1>Product ID: {id}</h1>;
-};
+  const { id } = useParams(); // Extract 'id' from /products/:id
+  const navigate = useNavigate();
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-export default ProductPage;
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        const data = await productService.getById(id);
+        setProduct(data);
+      } catch (error) {
+        console.error('Product not found:', error);
+        navigate('/products'); // Redirect if not found
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProduct();
+  }, [id, navigate]); // Re-run when ID changes
+
+  if (loading) return <div>Loading...</div>;
+  if (!product) return <div>Product not found</div>;
+
+  return (
+    <div>
+      <h1>{product.name}</h1>
+      <p>{product.description}</p>
+      <p>Price: ${product.price}</p>
+    </div>
+  );
+};
 ```
 
-✅ **Best Practice:** Use `useParams` to extract parameters from the URL.
+**Key Points:**
+- `:id` in the route becomes accessible via `useParams()`
+- Always handle loading and error states
+- Use `useEffect` with the parameter as a dependency
 
-## Handling Query Parameters
+### Query Parameters with useSearchParams
 
-Query parameters enable passing optional values in the URL, such as search filters or pagination.
+Query parameters handle optional data like filters, search terms, and pagination. For complex state management with search parameters, see our [State Management guide](./state-management).
 
-### **Example: Search Page**
+### Nested Routes
+
 ```jsx
-import { useSearchParams } from 'react-router-dom';
+// App.js - Nested route structure
+<Routes>
+  <Route path="/products" element={<ProductLayout />}>
+    <Route index element={<ProductList />} />
+    <Route path=":id" element={<ProductDetail />} />
+    <Route path=":id/edit" element={<ProductEdit />} />
+  </Route>
+</Routes>
 
-const SearchPage = () => {
-  const [searchParams] = useSearchParams();
-  const query = searchParams.get('query');
-  return <h1>Search Results for: {query}</h1>;
+// components/ProductLayout.jsx
+import { Outlet } from 'react-router-dom';
+
+const ProductLayout = () => {
+  return (
+    <div>
+      <h1>Products</h1>
+      <nav>
+        <Link to="/products">All Products</Link>
+      </nav>
+      <main>
+        <Outlet /> {/* Child routes render here */}
+      </main>
+    </div>
+  );
 };
-
-export default SearchPage;
 ```
 
-✅ **Best Practice:** Use `useSearchParams` instead of manual URL parsing.
+## Route Guards & Permissions
 
-## ✅ Best Practices Checklist
+For applications with different user roles, you might need more granular access control beyond simple authentication.
 
-✔ Use `react-router-dom` as the standard navigation approach.
-✔ Implement private routes using HOCs, hooks, or context.
-✔ Handle dynamic routing with `useParams`.
-✔ Manage query parameters efficiently with `useSearchParams`.
-✔ Use lazy loading (`React.lazy`, `Suspense`) for better performance.
-✔ Organize routes with nested layouts and `Outlet` components.
-✔ Ensure clear documentation with examples for maintainability.
+### Role-Based Route Protection
 
-By following these best practices, you can build a well-structured, scalable React application with seamless navigation.
+```jsx
+// hooks/usePermissions.js
+import { useAuth } from '@contexts/AuthContext';
+
+export const usePermissions = () => {
+  const { user } = useAuth();
+
+  const hasRole = (role) => {
+    return user?.roles?.includes(role);
+  };
+
+  const hasPermission = (permission) => {
+    return user?.permissions?.includes(permission);
+  };
+
+  return { hasRole, hasPermission };
+};
+```
+
+```jsx
+// components/RoleRoute.jsx
+import { Navigate } from 'react-router-dom';
+import { usePermissions } from '@hooks/usePermissions';
+
+const RoleRoute = ({ children, requiredRole }) => {
+  const { hasRole } = usePermissions();
+
+  // Check if user has the required role
+  if (!hasRole(requiredRole)) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  return children;
+};
+
+// Usage - Protect admin routes
+<Route path="/admin" element={
+  <PrivateRoute>
+    <RoleRoute requiredRole="admin">
+      <AdminDashboard />
+    </RoleRoute>
+  </PrivateRoute>
+} />
+```
+
+**How it works:**
+- `usePermissions` hook checks user roles/permissions
+- `RoleRoute` component validates required role before rendering
+- Users without proper permissions are redirected to unauthorized page
+- Can be combined with `PrivateRoute` for double protection
+
+## Best Practices
+
+### Route Organization
+
+1. **Keep Routes Flat**: Avoid deeply nested route structures
+2. **Use Layout Components**: Share common UI with Outlet
+3. **Lazy Loading**: Use React.lazy for code splitting
+4. **Error Handling**: Always handle route errors gracefully
+
+### Navigation Patterns
+
+1. **Use NavLink for Active States**: Better UX with visual feedback
+2. **Preserve Query Parameters**: Maintain filters and pagination
+3. **Handle Loading States**: Show loading indicators during navigation
+4. **Breadcrumbs**: Help users understand their location
+
+### Security
+
+1. **Client-Side Only**: Remember that React Router is client-side
+2. **Server Validation**: Always validate permissions on the server
+3. **Redirect Safely**: Avoid open redirects with user input
+4. **Clean URLs**: Use meaningful, SEO-friendly routes
+
+<Aside type="tip">
+  For most React applications, use context-based authentication with private route components. This provides a clean, reusable pattern for protecting routes.
+</Aside>
+
+<Aside type="note">
+  Consider Next.js for projects requiring server-side rendering, SEO optimization, or file-based routing. React Router is perfect for client-side SPAs.
+</Aside>
+
+## Further Reading
+
+- [React Router Documentation](https://reactrouter.com/docs/en/v6)
