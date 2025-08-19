@@ -55,6 +55,20 @@ Our documentation primarily covers:
 
 We welcome contributions from all members! See our [CONTRIBUTING.md](./CONTRIBUTING.md) guide for details on how to get started, our pull request process, and documentation standards.
 
+### Code Quality
+
+This project includes automated dead code detection to maintain code quality:
+
+```bash
+# Check for unused files and broken links
+npm run check:dead-code
+
+# Run all quality checks
+npm run check:all
+```
+
+See [docs/DEAD_CODE_DETECTION.md](./docs/DEAD_CODE_DETECTION.md) for more details.
+
 ## Built With
 
 - [Starlight](https://starlight.astro.build/) - The documentation framework

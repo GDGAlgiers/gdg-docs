@@ -7,7 +7,9 @@
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "check:dead-code": "node scripts/detect-dead-code.mjs",
+    "check:all": "npm run check:dead-code"
   },
   "dependencies": {
     "@astrojs/starlight": "^0.28.6",
