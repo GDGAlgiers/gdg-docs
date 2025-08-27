@@ -90,6 +90,7 @@ Implementing a structured API client is essential for maintainable code. We reco
 <Code code={`// lib/core/api/api_client.dart
 import 'package:dio/dio.dart';
 import '../../core/api/api_interceptors.dart';
+import '../config/app_config.dart';
 
 class ApiClient {
   late Dio _dio;
@@ -102,9 +103,10 @@ class ApiClient {
   ApiClient._internal() {
     _dio = Dio(
       BaseOptions(
-        baseUrl: 'https://api.example.com/v1',
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 10),
+        baseUrl: AppConfig.apiBaseUrl,
+        connectTimeout: Duration(seconds: AppConfig.apiTimeoutSeconds),
+        receiveTimeout: Duration(seconds: AppConfig.apiTimeoutSeconds),
+        sendTimeout: Duration(seconds: AppConfig.apiTimeoutSeconds),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -175,12 +177,12 @@ class ApiClient {
     }
   }
   
-  // Implement other methods: put, delete, patch...
-  
   // Error handling
   Exception _handleError(dynamic error) {
-    // We'll implement this in the Error Handling section
-    return Exception('API Error');
+    if (error is DioException) {
+      return ApiFailure.fromDioException(error);
+    }
+    return ApiFailure.unexpected(error.toString());
   }
 }`} lang="dart" title="API Client Implementation" />
 
@@ -215,55 +217,63 @@ class ApiEndpoints {
 
 <Code code={`// lib/features/products/data/repositories/product_repository.dart
 import 'package:dio/dio.dart';
+import '../../../../core/api/api_service.dart';
 import '../../../../core/api/api_client.dart';
-import '../../../../core/api/api_endpoints.dart';
 import '../models/product_model.dart';
 
 class ProductRepository {
-  final ApiClient _apiClient = ApiClient();
+  late final ApiService _apiService;
   
+  ProductRepository() {
+    final apiClient = ApiClient();
+    _apiService = ApiService(apiClient.dio);
+  }
+  
+  // Clean, readable API calls with automatic parameter injection
   Future<List<Product>> getProducts({
     int page = 1,
     int pageSize = 20,
     String? category,
-    CancelToken? cancelToken,
   }) async {
-    final response = await _apiClient.get(
-      ApiEndpoints.getProducts,
-      queryParameters: {
-        'page': page,
-        'pageSize': pageSize,
-        if (category != null) 'category': category,
-      },
-      cancelToken: cancelToken,
-      parser: (data) {
-        final List<dynamic> productList = data['data'];
-        return productList.map((json) => Product.fromJson(json)).toList();
-      },
-    );
-    
-    return response;
+    try {
+      return await _apiService.getProducts(page, pageSize, category);
+    } catch (e) {
+      throw ApiFailure.fromException(e);
+    }
   }
   
-  Future<Product> getProductDetails(String productId, {CancelToken? cancelToken}) async {
-    final endpoint = ApiEndpoints.replacePathParameters(
-      ApiEndpoints.getProductDetails,
-      {'id': productId},
-    );
-    
-    final response = await _apiClient.get(
-      endpoint,
-      cancelToken: cancelToken,
-      parser: (data) => Product.fromJson(data),
-    );
-    
-    return response;
+  Future<Product> getProductDetails(String productId) async {
+    try {
+      return await _apiService.getProductDetails(productId);
+    } catch (e) {
+      throw ApiFailure.fromException(e);
+    }
   }
   
-  // Other product-related API methods...
+  Future<Product> createProduct(Product product) async {
+    try {
+      return await _apiService.createProduct(product);
+    } catch (e) {
+      throw ApiFailure.fromException(e);
+    }
+  }
+  
+  Future<Product> updateProduct(String productId, Product product) async {
+    try {
+      return await _apiService.updateProduct(productId, product);
+    } catch (e) {
+      throw ApiFailure.fromException(e);
+    }
+  }
+  
+  Future<void> deleteProduct(String productId) async {
+    try {
+      await _apiService.deleteProduct(productId);
+    } catch (e) {
+      throw ApiFailure.fromException(e);
+    }
+  }
 }`} lang="dart" title="Feature Repository" />
-
----
 
 ## API Interceptors
 
@@ -274,6 +284,7 @@ Dio's interceptor system enables powerful request/response processing and global
 import 'package:dio/dio.dart';
 import '../auth/secure_storage_service.dart';
 import 'dart:developer' as developer;
+import 'api_failure.dart'; 
 
 // Authentication Interceptor
 class AuthInterceptor extends Interceptor {
@@ -309,7 +320,7 @@ class AuthInterceptor extends Interceptor {
           // Create a new Dio instance to avoid interceptor loops
           final refreshDio = Dio();
           final refreshResponse = await refreshDio.post(
-            'https://api.example.com/v1/auth/refresh',
+            '\${AppConfig.apiBaseUrl}/auth/refresh',
             data: {'refresh_token': refreshToken},
           );
           
@@ -322,10 +333,10 @@ class AuthInterceptor extends Interceptor {
           await _secureStorage.saveRefreshToken(newRefreshToken);
           
           // Retry the original request with new token
-          final options = err.requestOptions;
-          options.headers['Authorization'] = 'Bearer $newAccessToken';
+          final requestOptions = err.requestOptions;
+          requestOptions.headers['Authorization'] = 'Bearer $newAccessToken';
           
-          final response = await refreshDio.fetch(options);
+          final response = await refreshDio.fetch(requestOptions);
           return handler.resolve(response);
         } catch (e) {
           // Refresh token is also invalid, logout user
@@ -380,50 +391,29 @@ class LoggingInterceptor extends Interceptor {
   }
 }
 
-// Error Interceptor
+// Error Interceptor using Freezed union classes
 class ErrorInterceptor extends Interceptor {
   @override
   void onError(
     DioException err,
     ErrorInterceptorHandler handler,
   ) {
-    // Convert DioExceptions to more user-friendly errors
-    final errorResponse = err.response;
+    // Convert DioExceptions to ApiFailure using Freezed union classes
+    final apiFailure = ApiFailure.fromDioException(err);
     
-    if (errorResponse != null) {
-      final statusCode = errorResponse.statusCode;
-      final data = errorResponse.data;
-      
-      switch (statusCode) {
-        case 400:
-          err.error = 'Bad request';
-          break;
-        case 401:
-          err.error = 'Unauthorized';
-          break;
-        case 403:
-          err.error = 'Access forbidden';
-          break;
-        case 404:
-          err.error = 'Resource not found';
-          break;
-        case 500:
-          err.error = 'Internal server error';
-          break;
-        default:
-          err.error = 'Unexpected error occurred';
-          break;
-      }
-      
-      // Extract error message from response if available
-      if (data is Map && data.containsKey('message')) {
-        err.error = data['message'];
-      }
-    }
+    // You can log the structured error
+    developer.log(
+      'API Error: \${apiFailure.runtimeType}',
+      name: 'API',
+      error: apiFailure.toString(),
+    );
     
+    // Continue with the original DioException
+    // The repository will convert it to ApiFailure
     return handler.next(err);
   }
-}`} lang="dart" title="API Interceptors" />
+}
+`} lang="dart" title="API Interceptors" />
 </Card>
 
 ---
@@ -634,21 +624,49 @@ FutureBuilder<List<Product>>(
     }
     
     if (snapshot.hasError) {
-      // Extract meaningful error message
-      String errorMessage = 'Failed to load products';
+      final error = snapshot.error;
       
-      if (snapshot.error is ApiException) {
-        final apiError = snapshot.error as ApiException;
-        errorMessage = apiError.message;
+      // Handle ApiFailure with pattern matching
+      if (error is ApiFailure) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                _getErrorIcon(error),
+                size: 48,
+                color: Colors.red,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                error.userFriendlyMessage,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => setState(() {}),
+                child: const Text('Try Again'),
+              ),
+              // Show retry button only for certain errors
+              if (_shouldShowRetryButton(error))
+                TextButton(
+                  onPressed: _showErrorDetails,
+                  child: const Text('Show Details'),
+                ),
+            ],
+          ),
+        );
       }
       
+      // Fallback for other errors
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(errorMessage),
+            const Text('Something went wrong'),
             ElevatedButton(
-              onPressed: () => setState(() {}),  // Trigger rebuild to retry
+              onPressed: () => setState(() {}),
               child: const Text('Try Again'),
             ),
           ],
@@ -662,7 +680,44 @@ FutureBuilder<List<Product>>(
       itemBuilder: (context, index) => ProductItem(products[index]),
     );
   },
-)`} lang="dart" title="UI Error Handling" />
+);
+
+// Helper methods for UI error handling
+IconData _getErrorIcon(ApiFailure failure) {
+  return failure.when(
+    serverError: (_, __, ___) => Icons.error,
+    connectionTimeout: (_) => Icons.wifi_off,
+    sendTimeout: (_) => Icons.upload,
+    receiveTimeout: (_) => Icons.download,
+    badRequest: (_, __) => Icons.warning,
+    unauthorized: (_) => Icons.lock,
+    forbidden: (_) => Icons.block,
+    notFound: (_) => Icons.search_off,
+    conflict: (_) => Icons.warning,
+    internalServerError: (_) => Icons.error,
+    noInternetConnection: (_) => Icons.wifi_off,
+    requestCancelled: (_) => Icons.cancel,
+    unexpected: (_) => Icons.error_outline,
+  );
+}
+
+bool _shouldShowRetryButton(ApiFailure failure) {
+  return failure.when(
+    serverError: (_, __, ___) => true,
+    connectionTimeout: (_) => true,
+    sendTimeout: (_) => true,
+    receiveTimeout: (_) => true,
+    badRequest: (_, __) => false,
+    unauthorized: (_) => false,
+    forbidden: (_) => false,
+    notFound: (_) => true,
+    conflict: (_) => false,
+    internalServerError: (_) => true,
+    noInternetConnection: (_) => true,
+    requestCancelled: (_) => true,
+    unexpected: (_) => true,
+  );
+}`} lang="dart" title="UI Error Handling" />
 
 ---
 
