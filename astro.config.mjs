@@ -73,7 +73,6 @@ export default defineConfig({
               link: "express/error-handling",
             },
             { label: "File Uploads", link: "express/file-uploads" },
-            { label: "Testing", link: "express/testing" },
             { label: "Performance", link: "express/performance-optimization" },
             { label: "Deployment", link: "express/deployment" },
           ],

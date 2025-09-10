@@ -1,16 +1,16 @@
 ---
 title: Welcome to GDG Docs!
-description: Get to know more about GDG's workflow
+description: Your comprehensive guide to development best practices, workflows, and code standards for modern web and mobile applications
 template: splash
 hero:
-  tagline: Find all the workflow guidelines that you need to know!
+  tagline: Master development workflows and best practices with our comprehensive guides
   image:
     file: ../../assets/gdg-logo.svg
   actions:
-    - text: Discover
+    - text: Get Started
       link: overview/what-is-gdg-docs/
       icon: right-arrow
-    - text: Visit GDG website
+    - text: Visit GDG Algiers
       link: https://gdgalgiers.dev
       icon: external
       variant: minimal
@@ -20,13 +20,31 @@ hero:
 
 import { Card, CardGrid } from '@astrojs/starlight/components';
 
-## Here you can find:
+## What you'll find here
 
 <CardGrid stagger>
-	<Card title="Workflow guidelines" icon="rocket">
-		Learn how we work on our projects and manage our teams. Check out the [Workflow Guidelines](/workflow).
+	<Card title="🚀 React Development" icon="react">
+		Complete guides for React applications: project structure, state management, performance optimization, and authentication patterns.
+		[Explore React →](react/project-structure/)
 	</Card>
-	<Card title="Code conventions and guidelines" icon="seti:html">
-		Dive into our ongoing projects in web development, backend systems, and more. Check out the [Projects Page](/projects).
+	<Card title="⚡ Express Backend" icon="laptop">
+		Backend development with Express.js: API design, security, testing, performance, and deployment strategies.
+		[Explore Express →](express/project-structure/)
+	</Card>
+	<Card title="📱 Flutter Mobile" icon="mobile">
+		Mobile app development: Flutter architecture, state management, navigation, and cross-platform best practices.
+		[Explore Flutter →](flutter/project-structure/)
+	</Card>
+	<Card title="🛠️ Development Workflow" icon="setting">
+		Team collaboration tools: GitHub workflows, issue tracking, code review processes, and project management.
+		[View Workflows →](guides/github-issues/)
+	</Card>
+	<Card title="📋 Code Standards" icon="document">
+		Coding conventions, linting rules, and best practices to maintain clean, consistent, and maintainable codebases.
+		[Check Guidelines →](code-guidelines/general/)
+	</Card>
+	<Card title="🎯 Quick Start" icon="rocket">
+		New to the team? Start here for essential onboarding information and contribution guidelines.
+		[Get Started →](overview/what-is-gdg-docs/)
 	</Card>
 </CardGrid>
