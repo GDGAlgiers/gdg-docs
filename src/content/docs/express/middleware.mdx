@@ -1,4 +1,567 @@
 ---
-title: "Middleware"
-description: "Middleware"
+title: "Setting Up Express & Middleware"
+description: "A guide to effectively organizing and implementing middleware in Express applications"
 ---
+
+import { Aside, Steps, Tabs, TabItem, FileTree } from '@astrojs/starlight/components';
+
+Middleware functions are the backbone of Express applications. They have access to the request object, response object, and the next middleware function in the application's request-response cycle. This guide covers best practices for organizing, implementing, and using middleware in Express applications.
+
+## Middleware Fundamentals
+
+Middleware functions can perform a variety of tasks:
+
+- Execute code during the request-response cycle
+- Modify request or response objects
+- End the request-response cycle
+- Call the next middleware in the stack
+
+### Middleware Execution Flow
+
+```javascript
+const express = require('express');
+const app = express();
+
+// Middleware 1
+app.use((req, res, next) => {
+  console.log('Middleware 1 executed');
+  next(); // Pass control to the next middleware
+});
+
+// Middleware 2
+app.use((req, res, next) => {
+  console.log('Middleware 2 executed');
+  next();
+});
+
+// Route handler
+app.get('/', (req, res) => {
+  res.send('Hello World');
+});
+
+app.listen(3000);
+```
+
+<Aside type="tip">
+  The order of middleware registration is crucial. Middleware functions are executed in the order they are added.
+</Aside>
+
+## Organizing Middleware
+
+### Project Structure
+
+We organize middleware in a dedicated `/middlewares` folder to keep the codebase clean and maintainable:
+
+<FileTree>
+- src/
+  - middlewares/
+    - authMiddleware.js
+    - loggerMiddleware.js
+    - errorMiddleware.js
+    - validationMiddleware.js
+    - corsMiddleware.js
+    - notFoundMiddleware.js
+  - routes/
+  - controllers/
+  - app.js
+  - server.js
+</FileTree>
+
+<Aside type="note">
+  Use camelCase for middleware file names to maintain consistency with JavaScript naming conventions and make imports more intuitive.
+</Aside>
+
+### Middleware Registration
+
+All middleware should be registered in `app.js` with consistent camelCase naming:
+
+```javascript
+// app.js
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const logger = require('./utils/logger');
+
+const corsMiddleware = require('./middlewares/corsMiddleware');
+const loggerMiddleware = require('./middlewares/loggerMiddleware');
+const errorMiddleware = require('./middlewares/errorMiddleware');
+const authMiddleware = require('./middlewares/authMiddleware');
+const notFoundMiddleware = require('./middlewares/notFoundMiddleware');
+
+const PORT = process.env.PORT || 3000;
+
+const app = express();
+
+// Third-party middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(corsMiddleware);
+app.use(helmet()); // Directly applying helmet with default settings
+
+// Logging middleware - choose one approach
+// Option 1: Use morgan for HTTP request logging
+// app.use(morgan('dev'));
+
+// Option 2: Use custom logger middleware for more detailed logging
+app.use(loggerMiddleware);
+
+// Routes
+app.use('/api/auth', require('./routes/auth.routes'));
+app.use('/api/products', require('./routes/products.routes'));
+app.use('/api/admin', require('./routes/admin.routes'));
+
+// Not found middleware
+app.use(notFoundMiddleware);
+
+// Error middleware (always last)
+app.use(errorMiddleware);
+
+app.listen(PORT, () => {
+  logger.info(`Server running on port ${PORT}`);
+});
+
+module.exports = app;
+```
+
+<Aside type="tip">
+  Choose either Morgan or a custom logger middleware based on your needs, but typically not both. Morgan is simpler and sufficient for most applications, while a custom logger gives you more control over what gets logged and how.
+</Aside>
+
+## Common Middleware
+
+### Essential Third-Party Middleware
+
+<Tabs>
+  <TabItem label="cors">
+  ```javascript
+  // middlewares/corsMiddleware.js
+  const cors = require('cors');
+
+  const corsOptions = {
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, curl)
+      const allowedOrigins = ['http://localhost:3000', 'https://yourdomain.com'];
+      
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+    optionsSuccessStatus: 200,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  };
+
+  const corsMiddleware = cors(corsOptions);
+
+  module.exports = corsMiddleware;
+  ```
+
+  **What it does:**
+  
+  CORS (Cross-Origin Resource Sharing) middleware allows your Express API to handle requests from different origins (domains). It works by adding appropriate HTTP headers to the server's responses, which tell browsers whether they should allow web applications running at different origins to access your API.
+  
+  Key features:
+  - Controls which domains can access your API
+  - Configures allowed HTTP methods
+  - Specifies allowed headers 
+  - Handles preflight requests
+  - Enables credentials for cross-origin requests (cookies, authentication)
+  </TabItem>
+
+  <TabItem label="morgan">
+  ```javascript
+  // middlewares/morganMiddleware.js
+  const morgan = require('morgan');
+  const logger = require('../utils/logger'); // Custom logger (e.g., winston)
+
+  // Create a custom token for request ID
+  morgan.token('id', function getId(req) {
+    return req.id;
+  });
+
+  // Define different formats for development and production
+  const developmentFormat = ':method :url :status :response-time ms - :res[content-length] - :id';
+  const productionFormat = ':id :method :url :status :response-time ms';
+
+  // Create a write stream for morgan
+  const stream = {
+    write: (message) => logger.info(message.trim())
+  };
+
+  const morganMiddleware = process.env.NODE_ENV === 'production'
+    ? morgan(productionFormat, { stream })
+    : morgan(developmentFormat, { stream });
+
+  module.exports = morganMiddleware;
+  ```
+
+  **What it does:**
+  
+  Morgan is an HTTP request logger middleware for Express that generates logs for every incoming request. It provides visibility into your API's traffic and helps with debugging and monitoring.
+  
+  Key features:
+  - Logs HTTP request details (method, URL, status code, response time)
+  - Supports customizable logging formats
+  - Can be integrated with other logging systems
+  - Helps track request performance
+  - Provides different preset formats ('dev', 'combined', 'common', etc.)
+  </TabItem>
+
+  <TabItem label="helmet">
+
+  **What it does:**
+  
+  Helmet helps secure Express apps by setting various HTTP security headers. These headers help protect your application from well-known web vulnerabilities like Cross-Site Scripting (XSS), clickjacking, and other security threats.
+  
+  Key headers set by Helmet:
+  - Content-Security-Policy: Controls which resources the browser is allowed to load
+  - X-XSS-Protection: Enables browser's built-in XSS filters
+  - X-Frame-Options: Prevents clickjacking by controlling frame embedding
+  - Strict-Transport-Security: Forces HTTPS connections
+  - X-Content-Type-Options: Prevents MIME-type sniffing
+  - Referrer-Policy: Controls how much referrer information is sent
+  - X-DNS-Prefetch-Control: Controls DNS prefetching
+  </TabItem>
+</Tabs>
+
+### Custom Middleware Implementation
+
+<Tabs>
+  <TabItem label="Authentication">
+  ```javascript
+  // middlewares/authMiddleware.js
+  const jwt = require('jsonwebtoken');
+
+  const authMiddleware = (req, res, next) => {
+    try {
+      // Get token from the Authorization header
+      const authHeader = req.headers.authorization;
+      
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({
+          statusCode: 401,
+          message: 'No token provided',
+          path: req.originalUrl
+        });
+      }
+      
+      // Extract the token
+      const token = authHeader.split(' ')[1];
+      
+      // Verify token
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      
+      // Add user data to request
+      req.user = decoded;
+      
+      next();
+    } catch (error) {
+      if (error.name === 'TokenExpiredError') {
+        return res.status(401).json({
+          statusCode: 401,
+          message: 'Token expired',
+          error: 'token_expired',
+          path: req.originalUrl
+        });
+      }
+      
+      return res.status(401).json({
+        statusCode: 401,
+        message: 'Invalid token',
+        path: req.originalUrl
+      });
+    }
+  };
+
+  module.exports = authMiddleware;
+  ```
+  </TabItem>
+
+  <TabItem label="Logging">
+  ```javascript
+  // middlewares/loggerMiddleware.js
+  const { v4: uuidv4 } = require('uuid');
+  const logger = require('../utils/logger');
+
+  const loggerMiddleware = (req, res, next) => {
+    // Generate a unique ID for this request
+    req.id = uuidv4();
+    
+    // Log request details
+    logger.info({
+      id: req.id,
+      method: req.method,
+      url: req.originalUrl,
+      ip: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+    
+    // Track response time
+    const start = Date.now();
+    
+    // Override end method to log response details
+    const originalEnd = res.end;
+    res.end = function() {
+      const responseTime = Date.now() - start;
+      
+      // Log response details
+      logger.info({
+        id: req.id,
+        statusCode: res.statusCode,
+        responseTime: `${responseTime}ms`
+      });
+      
+      originalEnd.apply(res, arguments);
+    };
+    
+    next();
+  };
+
+  module.exports = loggerMiddleware;
+  ```
+  
+  <Aside>
+    This custom logger middleware is more comprehensive than Morgan. It assigns a unique ID to each request, logs detailed request information, tracks response time, and logs the completion of each request. Use this instead of Morgan when you need more detailed logging or want to integrate with a structured logging system.
+  </Aside>
+  </TabItem>
+
+  <TabItem label="Error Handling">
+  ```javascript
+  // middlewares/errorMiddleware.js
+  const logger = require('../utils/logger');
+
+  // Custom error class for API errors
+  class CustomError extends Error {
+    constructor(statusCode, message, isOperational = true, stack = '') {
+      super(message);
+      this.statusCode = statusCode;
+      this.isOperational = isOperational;
+      
+      if (stack) {
+        this.stack = stack;
+      } else {
+        Error.captureStackTrace(this, this.constructor);
+      }
+    }
+
+    /**
+     * The stack trace provides information about where an error occurred in your code.
+     * It contains the sequence of function calls that led to the error, helping with debugging.
+     * 
+     * The isOperational flag helps distinguish between:
+     * - Operational errors (true): Expected errors like validation failures, wrong input, etc.
+     * - Programming errors (false): Bugs, syntax errors, or other unexpected issues
+     * 
+     * This distinction allows handling operational errors gracefully while possibly crashing
+     * the application for critical programming errors that need immediate attention.
+     */
+  }
+
+  // Error middleware
+  const errorMiddleware = (err, req, res, next) => {
+    // Default error values
+    err.statusCode = err.statusCode || 500;
+    err.message = err.message || 'Internal Server Error';
+    
+    // Log error
+    logger.error({
+      id: req.id,
+      statusCode: err.statusCode,
+      message: err.message,
+      stack: err.stack,
+      isOperational: err.isOperational || false
+    });
+    
+    // Send response
+    res.status(err.statusCode).json({
+      statusCode: err.statusCode,
+      message: err.message,
+      ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+      path: req.originalUrl
+    });
+  };
+
+  module.exports = { 
+    CustomError,
+    errorMiddleware 
+  };
+  ```
+  </TabItem>
+
+  <TabItem label="Not Found">
+  ```javascript
+  // middlewares/notFoundMiddleware.js
+  /**
+   * Not Found middleware
+   * 
+   * This middleware handles requests to routes that don't exist.
+   * Should be placed after all route definitions and before the error middleware.
+   */
+  const notFoundMiddleware = (req, res) => {
+    res.status(404).json({
+      statusCode: 404,
+      message: 'Resource not found',
+      path: req.originalUrl
+    });
+  };
+
+  module.exports = notFoundMiddleware;
+  ```
+  </TabItem>
+
+  <TabItem label="Request Validation">
+  ```javascript
+  // middlewares/validationMiddleware.js
+  const { validationResult } = require('express-validator');
+
+  const validateRequest = (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        statusCode: 400,
+        message: 'Validation failed',
+        errors: errors.array().map(error => ({
+          field: error.param,
+          message: error.msg
+        })),
+        path: req.originalUrl
+      });
+    }
+    next();
+  };
+
+  module.exports = validateRequest;
+  ```
+
+  **Usage example with route:**
+  ```javascript
+  // routes/users.routes.js
+  const express = require('express');
+  const { body } = require('express-validator');
+  const { validateRequest } = require('../middlewares/validationMiddleware');
+  const userController = require('../controllers/user.controller');
+
+  const router = express.Router();
+
+  router.post(
+    '/register',
+    [
+      body('email').isEmail().withMessage('Please provide a valid email'),
+      body('password').isLength({ min: 8 }).withMessage('Password must be at least 8 characters'),
+      body('name').notEmpty().withMessage('Name is required')
+    ],
+    validateRequest,
+    userController.register
+  );
+
+  module.exports = router;
+  ```
+  </TabItem>
+</Tabs>
+
+## Route-Specific Middleware
+
+Sometimes middleware should only apply to specific routes:
+
+```javascript
+// routes/admin.routes.js
+const express = require('express');
+const router = express.Router();
+const { authMiddleware } = require('../middlewares/authMiddleware');
+const { authorize } = require('../middlewares/rbac.middleware');
+const adminController = require('../controllers/admin.controller');
+
+// Apply middleware to all routes in this router
+router.use(authMiddleware);
+router.use(authorize('admin'));
+
+// Admin routes
+router.get('/users', adminController.getAllUsers);
+router.delete('/users/:id', adminController.deleteUser);
+
+module.exports = router;
+
+// In app.js
+app.use('/api/admin', require('./routes/admin.routes'));
+```
+
+## Error Handling Middleware
+
+Error handling middleware should always be registered last:
+
+```javascript
+// app.js
+const express = require('express');
+const app = express();
+const { errorMiddleware } = require('./middlewares/errorMiddleware');
+
+// Regular middleware and routes...
+
+// Error handling middleware (must be last)
+app.use(errorMiddleware);
+```
+
+## Best Practices & Common Pitfalls
+
+### Best Practices
+
+1. **Keep middleware focused**
+   - Each middleware should have a single responsibility
+   - Create separate files for different middleware functions
+
+2. **Order matters**
+   - Place middleware in the correct order based on dependencies
+   - Error-handling middleware should always be last
+
+3. **Use next() properly**
+   - Always call `next()` to pass control
+   - Call `next(err)` to skip to error handlers
+
+4. **Modularize your middleware**
+   - Export individual middleware functions
+   - Group related middleware in the same file
+
+5. **Handle middleware errors**
+   - Use try/catch blocks in async middleware
+   - Or use express-async-errors package
+
+### Common Pitfalls
+
+❌ **Forgetting to call next()**
+- Requests will hang if next() isn't called in middleware that doesn't end the response
+
+❌ **Using middleware after sending a response**
+- Once res.send()/res.json()/res.end() is called, subsequent middleware won't execute
+
+❌ **Incorrect middleware order**
+- Body-parsing middleware must come before routes that need parsed body data
+- Authentication middleware should come before protected routes
+
+❌ **Not handling async errors**
+- Unhandled promise rejections can crash your application
+- Always use try/catch or a promise-catching utility
+
+<Aside type="caution">
+  Be careful with middleware that modifies the request or response objects. Such modifications affect all downstream middleware and route handlers.
+</Aside>
+
+## Conclusion
+
+Middleware is a powerful feature of Express that allows you to insert processing logic into the request-response cycle. By organizing middleware in a dedicated folder and following best practices, you can create a clean, maintainable, and secure Express application.
+
+When implementing middleware, remember:
+1. Keep middleware functions focused on a single responsibility
+2. Use the correct order of middleware registration
+3. Handle errors appropriately
+4. Modularize your middleware code
+5. Use built-in and third-party middleware wisely
+
+## Further Reading
+
+- [Express.js Middleware Documentation](https://expressjs.com/en/guide/using-middleware.html)
+- [Writing Middleware for Express.js](https://expressjs.com/en/guide/writing-middleware.html)
+- [Error Handling in Express.js](https://expressjs.com/en/guide/error-handling.html)
+- [Popular Express.js Middleware](https://expressjs.com/en/resources/middleware.html)
