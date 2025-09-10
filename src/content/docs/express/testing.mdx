@@ -1,4 +1,113 @@
 ---
-title: "Testing"
-description: "Testing"
+title: Express Testing & Debugging
+description: Best practices for testing and debugging Express applications, covering unit and integration tests, mocking strategies, API documentation with Swagger, and debugging tools.
 ---
+
+# Introduction
+
+Ensuring reliable and maintainable Express applications requires a structured approach to testing and debugging. This guide covers essential testing techniques, including **unit and integration testing with Jest & Supertest**, **mocking external services**, **API documentation with Swagger**, and **debugging tools like Postman and VS Code Debugger**.
+
+## Unit Testing with Jest & Supertest
+
+Unit testing verifies individual functions and modules in isolation, ensuring predictable behavior.
+
+### **Installation**
+```sh
+npm install --save-dev jest supertest
+```
+
+### **Basic Unit Test Example**
+```js
+import request from 'supertest';
+import app from '../server';
+
+test('GET /api/health should return status 200', async () => {
+  const response = await request(app).get('/api/health');
+  expect(response.status).toBe(200);
+  expect(response.body.message).toBe('Server is running');
+});
+```
+✅ **Best Practice:** Keep tests small, focused, and independent.
+
+## Integration Testing
+
+Integration tests validate the interactions between multiple modules, ensuring data flows correctly through your app.
+
+### **Example: Testing a User Route**
+```js
+test('POST /api/users should create a new user', async () => {
+  const response = await request(app)
+    .post('/api/users')
+    .send({ name: 'John Doe', email: 'john@example.com' });
+  
+  expect(response.status).toBe(201);
+  expect(response.body).toHaveProperty('id');
+});
+```
+✅ **Best Practice:** Use a test database or mock database interactions.
+
+## Mocking External Services
+
+Mocking prevents dependencies from interfering with test outcomes.
+
+### **Example: Mocking an External API**
+```js
+jest.mock('axios');
+import axios from 'axios';
+
+test('Fetch data from API', async () => {
+  axios.get.mockResolvedValue({ data: { success: true } });
+  const response = await fetchData();
+  expect(response.success).toBe(true);
+});
+```
+✅ **Best Practice:** Mock external dependencies to ensure tests remain reliable and fast.
+
+## API Documentation with Swagger
+
+Swagger generates interactive API documentation, improving developer experience.
+
+### **Installation**
+```sh
+npm install swagger-ui-express swagger-jsdoc
+```
+
+### **Basic Setup**
+```js
+import swaggerJsDoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
+
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'Express API',
+      version: '1.0.0',
+    },
+  },
+  apis: ['./routes/*.js'],
+};
+
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+```
+✅ **Best Practice:** Keep API docs updated to reflect changes in endpoints.
+
+## Debugging Tools
+
+### **Postman for API Testing**
+- Use Postman to send API requests and validate responses.
+- Save and organize test collections for easy reuse.
+
+### **VS Code Debugger**
+- Add breakpoints in your Express app for step-by-step execution.
+- Use `node --inspect index.js` to enable debugging in VS Code.
+
+✅ **Best Practice:** Combine logging, debugging tools, and automated tests to streamline issue resolution.
+
+## ✅ Best Practices Checklist
+✔ Write unit tests with Jest & Supertest  
+✔ Implement integration tests for complete workflows  
+✔ Mock external APIs for reliable testing  
+✔ Use Swagger for comprehensive API documentation  
+✔ Leverage debugging tools like Postman & VS Code Debugger  
