@@ -1,4 +1,244 @@
 ---
-title: "Project Structure"
-description: "Project Structure"
+title: "Project Structure & Best Practices"
+description: "Essential React project organization patterns, folder structures, and naming conventions for maintainable applications."
 ---
+
+import { Aside, Tabs, TabItem, FileTree } from '@astrojs/starlight/components';
+
+A well-organized project structure is essential for React applications to remain maintainable as they grow. This guide covers practical folder organization patterns and naming conventions.
+
+## Standard React Project Structure
+
+### Basic Structure
+
+Every React project should start with this foundational structure:
+
+<FileTree>
+- src/
+  - components/
+  - hooks/
+  - contexts/
+  - services/
+  - pages/
+  - assets/
+  - utils/
+  - App.js
+  - index.js
+</FileTree>
+
+### Folder Purposes
+
+- **components/**: Reusable UI components
+- **hooks/**: Custom React hooks
+- **contexts/**: React Context providers
+- **services/**: API calls and external service integrations
+- **pages/**: Top-level page components (for routing)
+- **assets/**: Images, icons, fonts, and static files
+- **utils/**: Helper functions and utilities
+
+## Structuring Approaches
+
+### Layer-Based Structure
+
+Organize by technical layers (recommended for most projects):
+
+<Tabs>
+  <TabItem label="Structure">
+  <FileTree>
+  - src/
+    - components/
+      - ui/
+        - Button.jsx
+        - Input.jsx
+        - Modal.jsx
+      - layout/
+        - Header.jsx
+        - Sidebar.jsx
+        - Footer.jsx
+      - forms/
+        - LoginForm.jsx
+        - SignupForm.jsx
+    - hooks/
+      - useAuth.js
+      - useLocalStorage.js
+    - services/
+      - api.js
+      - authService.js
+    - contexts/
+      - AuthContext.js
+      - ThemeContext.js
+  </FileTree>
+  </TabItem>
+
+  <TabItem label="Benefits">
+  **Advantages:**
+  - Clear separation of concerns
+  - Easy to find components by type
+  - Good for teams with different skill levels
+  - Scales well for medium projects
+
+  **Best for:**
+  - Teams new to React
+  - Projects with clear UI component libraries
+  - When components are highly reusable
+  </TabItem>
+</Tabs>
+
+### Feature-Based Structure
+
+Organize by business features (for complex applications):
+
+<Tabs>
+  <TabItem label="Structure">
+  <FileTree>
+  - src/
+    - features/
+      - auth/
+        - components/
+          - LoginForm/
+          - SignupForm/
+        - hooks/
+          - useAuth.js
+        - services/
+          - authService.js
+        - index.js
+      - dashboard/
+        - components/
+          - DashboardCard/
+          - StatsWidget/
+        - hooks/
+          - useDashboard.js
+        - services/
+          - dashboardService.js
+      - profile/
+        - components/
+          - ProfileForm/
+          - AvatarUpload/
+        - hooks/
+          - useProfile.js
+    - shared/
+      - components/
+        - Button.jsx
+        - Input.jsx
+      - hooks/
+      - utils/
+  </FileTree>
+  </TabItem>
+
+  <TabItem label="Benefits">
+  **Advantages:**
+  - Features are self-contained
+  - Easy to understand business logic
+  - Good for large teams
+  - Supports micro-frontend architecture
+
+  **Best for:**
+  - Large applications (50+ components)
+  - Multiple development teams
+  - Complex business domains
+  - When features have little overlap
+  </TabItem>
+</Tabs>
+
+## File Naming Conventions
+
+### Component Files
+
+```bash
+# PascalCase for component files
+UserProfile.jsx
+NavigationMenu.jsx
+ProductCard.jsx
+
+# Include component type in folder structure
+components/forms/LoginForm.jsx
+components/ui/Button.jsx
+components/layout/Header.jsx
+```
+
+
+## Import Aliases Setup
+
+### Vite Configuration
+
+```javascript
+// vite.config.js
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      '@components': path.resolve(__dirname, './src/components'),
+      '@hooks': path.resolve(__dirname, './src/hooks'),
+      '@services': path.resolve(__dirname, './src/services'),
+      '@utils': path.resolve(__dirname, './src/utils'),
+      '@assets': path.resolve(__dirname, './src/assets'),
+      '@pages': path.resolve(__dirname, './src/pages')
+    }
+  }
+});
+```
+
+### Usage Examples
+
+```jsx
+// Without aliases
+import Button from '../../../components/ui/Button/Button';
+import { useAuth } from '../../../hooks/useAuth';
+import { userService } from '../../../services/userService';
+
+// With aliases
+import Button from '@components/ui/Button';
+import { useAuth } from '@hooks/useAuth';
+import { userService } from '@services/userService';
+```
+
+## When to Refactor Structure
+
+### Signs You Need Better Organization
+
+1. **Import Paths Getting Long**: `../../../components/ui/Button`
+2. **Hard to Find Components**: Spending time looking for files
+3. **Naming Conflicts**: Multiple components with similar names
+4. **Large Folders**: More than 10-15 files in a single folder
+5. **Feature Coupling**: Changes in one area break unrelated features
+
+### Migration Strategy
+
+1. **Start Small**: Begin with one feature or component type
+2. **Update Imports**: Use find/replace for import paths
+3. **Setup Aliases**: Configure path aliases before big moves
+4. **Test Thoroughly**: Ensure nothing breaks during restructuring
+5. **Document Changes**: Update team on new conventions
+
+## Best Practices
+
+### Component Organization
+
+1. **One Component Per File**: Keep components focused and testable
+2. **Colocate Related Files**: Keep component, styles, and tests together
+3. **Use Index Files**: Simplify imports with index.js exports
+4. **Consistent Naming**: Stick to naming conventions across the project
+
+### Project Scaling
+
+1. **Start Simple**: Begin with flat structure, refactor as needed
+2. **Feature Boundaries**: Group related functionality together
+3. **Shared Components**: Extract reusable components to shared folder
+4. **Regular Cleanup**: Remove unused files and refactor regularly
+
+<Aside type="tip">
+  Choose one approach (layer-based or feature-based) and stick with it. Mixing approaches creates confusion and makes the codebase harder to navigate.
+</Aside>
+
+<Aside type="note">
+  For most React projects, start with layer-based structure. Only move to feature-based when you have multiple teams or very complex business domains.
+</Aside>
+
+## Further Reading
+
+- [Feature-Based Architecture](https://feature-sliced.design/)

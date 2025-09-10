@@ -1,4 +1,628 @@
 ---
 title: "Authentication & Security"
-description: "Authentication & Security"
+description: "Implementing secure authentication and access control in React applications with JWT, protected routes, token refresh, and RBAC"
 ---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+**Authentication and security** are foundational elements of any production-ready React application. This guide covers implementing secure user authentication and access control in React applications.
+
+<Aside type="tip">
+  This guide focuses on authentication patterns and implementation in React. For general API integration details, see the [API Integration](/react/api-integration) guide. For backend implementation, see the [Express Authentication & Security](/express/authentication-security) guide.
+</Aside>
+
+## JWT Authentication
+
+For secure and stateless authentication, use JSON Web Tokens (JWT) with a combination of local storage (for access tokens) and HTTP-only cookies (for refresh tokens).
+
+### Authentication Flow
+
+<Tabs>
+  <TabItem label="Login">
+  ```javascript
+  // src/services/authService.js
+  import api from './api/axios';
+
+  export const login = async (email, password) => {
+    const response = await api.post('/auth/login', { email, password }, {
+      withCredentials: true, // Important for cookies
+    });
+    
+    // Save access token to localStorage
+    if (response.data.accessToken) {
+      localStorage.setItem('accessToken', response.data.accessToken);
+    }
+    
+    return response.data;
+  };
+  ```
+  </TabItem>
+  <TabItem label="Logout">
+  ```javascript
+  // src/services/authService.js
+  import api from './api/axios';
+
+  export const logout = async () => {
+    try {
+      // Call logout endpoint to invalidate the refresh token
+      await api.post('/auth/logout', {}, {
+        withCredentials: true,
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Remove the access token regardless of server response
+      localStorage.removeItem('accessToken');
+    }
+  };
+  ```
+  </TabItem>
+  <TabItem label="Token Refresh">
+  ```javascript
+  // src/services/authService.js
+  import api from './api/axios';
+
+  export const refreshToken = async () => {
+    const response = await api.post('/auth/refresh', {}, {
+      withCredentials: true,
+    });
+    
+    if (response.data.accessToken) {
+      localStorage.setItem('accessToken', response.data.accessToken);
+    }
+    
+    return response.data;
+  };
+  ```
+  </TabItem>
+</Tabs>
+
+### Authentication Context
+
+Improve the AuthContext to better manage authentication state and tokens:
+
+```javascript
+// src/contexts/AuthContext.jsx
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+
+const AuthContext = createContext();
+
+// Token management functions
+const getStoredToken = () => localStorage.getItem('accessToken');
+const getStoredUser = () => {
+  const userData = localStorage.getItem('user');
+  return userData ? JSON.parse(userData) : null;
+};
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [authToken, setAuthToken] = useState(getStoredToken());
+  
+  // Initialize auth state from localStorage
+  useEffect(() => {
+    const initializeAuth = () => {
+      try {
+        const storedUser = getStoredUser();
+        const storedToken = getStoredToken();
+        
+        if (storedToken && storedUser) {
+          setUser(storedUser);
+          setAuthToken(storedToken);
+        }
+      } catch (error) {
+        console.error('Error initializing authentication state:', error);
+        // Clear potentially corrupted data
+        clearAuthData();
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    initializeAuth();
+  }, []);
+  
+  // Function to save tokens and user data
+  const setAuthData = useCallback((userData, token) => {
+    try {
+      // Update state
+      setUser(userData);
+      setAuthToken(token);
+      
+      // Persist data
+      if (token) {
+        localStorage.setItem('accessToken', token);
+      }
+      if (userData) {
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
+    } catch (error) {
+      console.error('Error setting auth data:', error);
+    }
+  }, []);
+  
+  // Clear all auth data (for logout, token expiry, etc.)
+  const clearAuthData = useCallback(() => {
+    // Clear state
+    setUser(null);
+    setAuthToken(null);
+    
+    // Clear storage
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('user');
+  }, []);
+
+  // Update user data without changing the token
+  const updateUserData = useCallback((userData) => {
+    try {
+      setUser(userData);
+      localStorage.setItem('user', JSON.stringify(userData));
+    } catch (error) {
+      console.error('Error updating user data:', error);
+    }
+  }, []);
+  
+  const contextValue = {
+    user,
+    authToken,
+    isAuthenticated: !!user && !!authToken,
+    isLoading,
+    setAuthData,
+    clearAuthData,
+    updateUserData,
+    getToken: () => getStoredToken() // Useful for components that need the latest token
+  };
+
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
+```
+
+### Using the Enhanced Auth Context
+
+With this improved context, you can handle authentication state changes without embedding API calls:
+
+```jsx
+// src/pages/Login.jsx
+import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { login } from '../services/authService';
+
+function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const { setAuthData } = useAuth();
+  const navigate = useNavigate();
+  
+  const loginMutation = useMutation({
+    mutationFn: (credentials) => login(credentials),
+    onSuccess: (data) => {
+      // Update auth context with user data and token
+      setAuthData(data.user, data.accessToken);
+      navigate('/dashboard');
+    }
+  });
+  
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    loginMutation.mutate({ email, password });
+  };
+  
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* Form inputs */}
+      <div>
+        <label htmlFor="email">Email</label>
+        <input 
+          type="email" 
+          id="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <label htmlFor="password">Password</label>
+        <input 
+          type="password"
+          id="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+        />
+      </div>
+      <button 
+        type="submit"
+        disabled={loginMutation.isPending}
+      >
+        {loginMutation.isPending ? 'Logging in...' : 'Log In'}
+      </button>
+      
+      {loginMutation.isError && (
+        <div className="error">{loginMutation.error.message}</div>
+      )}
+    </form>
+  );
+}
+```
+
+### Logout Implementation
+
+```jsx
+// src/components/LogoutButton.jsx
+import { useMutation } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import { logout } from '../services/authService';
+
+function LogoutButton() {
+  const { clearAuthData } = useAuth();
+  const navigate = useNavigate();
+  
+  const logoutMutation = useMutation({
+    mutationFn: logout,
+    onSettled: () => {
+      // Always clear auth data, even if the API call fails
+      clearAuthData();
+      navigate('/login');
+    }
+  });
+  
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
+  
+  return (
+    <button 
+      onClick={handleLogout}
+      disabled={logoutMutation.isPending}
+    >
+      {logoutMutation.isPending ? 'Logging out...' : 'Log Out'}
+    </button>
+  );
+}
+```
+
+## Automatic Token Refresh Flow
+
+To provide a seamless user experience, add token refresh capabilities to the API instance created in the [API Integration guide](/react/api-integration#configured-axios-instance). This prevents users from being logged out when their access token expires.
+
+Add the following response interceptor to your existing API instance:
+
+```javascript
+// src/services/api/axios.js
+import { refreshToken } from '../authService';
+
+// Response interceptor for API calls
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    const isTokenError = error.response?.data?.error === 'token_expired' || 
+                         error.response?.data?.error === 'invalid_token' ||
+                         error.response?.data?.error === 'missing_token';
+                         
+    if (error.response?.status === 401 && isTokenError && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        // Attempt to refresh the token
+        const response = await refreshToken();
+        
+        const { accessToken } = response.data;
+        localStorage.setItem('accessToken', accessToken);
+        
+        // Update the Authorization header with the new token
+        api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+        
+        // Retry the original request
+        return api(originalRequest);
+      } catch (refreshError) {
+        // Handle refresh token failure (e.g., redirect to login)
+        localStorage.removeItem('accessToken');
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+export default api;
+```
+
+### How the Token Refresh Flow Works
+
+1. **User makes an authenticated request** using an access token
+2. **Token expires** and the server returns a `401 Unauthorized` error with a specific error code (`token_expired`, `invalid_token`, or `missing_token`)
+3. **Response interceptor detects** the 401 status with the token-related error code and initiates token refresh
+4. **Refresh endpoint is called** with the refresh token (sent automatically via HttpOnly cookie)
+5. **New access token is received** and stored in localStorage
+6. **Original request is retried** with the new access token
+7. **If refresh fails**, the user is redirected to the login page
+
+This flow ensures that users don't experience interruptions when their access tokens expire, as long as their refresh token is still valid.
+
+### Token Refresh Integration
+
+When a token refresh happens in the API interceptor, update the auth context:
+
+```javascript
+// src/services/api/axios.js
+import { refreshToken } from '../authService';
+
+// Response interceptor
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    // ...existing token refresh logic...
+    
+    try {
+      const response = await refreshToken();
+      const { accessToken } = response.data;
+      
+      // Store new token in localStorage
+      localStorage.setItem('accessToken', accessToken);
+      
+      // If you need to update the auth context, you can use a custom event:
+      window.dispatchEvent(new CustomEvent('auth:token-refreshed', { 
+        detail: { accessToken } 
+      }));
+      
+      // ...rest of the refresh logic...
+    } catch (error) {
+      // ...error handling...
+    }
+  }
+);
+```
+
+Then in your AuthContext:
+
+```js
+// src/contexts/AuthContext.jsx
+useEffect(() => {
+  const handleTokenRefresh = (event) => {
+    // Update auth token state when refresh happens
+    setAuthToken(event.detail.accessToken);
+  };
+  
+  window.addEventListener('auth:token-refreshed', handleTokenRefresh);
+  return () => {
+    window.removeEventListener('auth:token-refreshed', handleTokenRefresh);
+  };
+}, []);
+```
+
+This approach keeps your authentication context focused on managing state without embedding API calls directly in it. The API calls are handled by TanStack Query in components or by the Axios interceptors, while the AuthContext provides the state management layer.
+
+## Protected Routes & Role-Based Access Control
+
+Protected routes prevent unauthorized users from accessing certain parts of your application. By incorporating role-based access control (RBAC), you can restrict access based on user roles.
+
+### ProtectedRoute Component with RBAC
+
+```jsx
+// src/components/ProtectedRoute.jsx
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+
+export default function ProtectedRoute({ 
+  children, 
+  requiredRoles = [], 
+  redirectPath = '/login'
+}) {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const location = useLocation();
+
+  // Show loading indicator while checking auth state
+  if (isLoading) {
+    return <div className="loading-spinner">Verifying authentication...</div>;
+  }
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    return <Navigate to={redirectPath} state={{ from: location }} replace />;
+  }
+
+  // Role-based access control check
+  const hasRequiredRole = requiredRoles.length === 0 || 
+                         (user && requiredRoles.includes(user.role));
+                         
+  if (requiredRoles.length > 0 && !hasRequiredRole) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  // User is authenticated and authorized
+  return children;
+}
+```
+
+### Implementing Protected Routes with Role Checks
+
+```jsx
+// src/routes/index.jsx
+import { Routes, Route } from 'react-router-dom';
+import ProtectedRoute from '../components/ProtectedRoute';
+import Layout from '../components/Layout';
+import Home from '../pages/Home';
+import Login from '../pages/Login';
+import Dashboard from '../pages/Dashboard';
+import AdminPanel from '../pages/AdminPanel';
+import Profile from '../pages/Profile';
+import Unauthorized from '../pages/Unauthorized';
+
+export default function AppRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<Layout />}>
+        {/* Public routes */}
+        <Route index element={<Home />} />
+        <Route path="login" element={<Login />} />
+        <Route path="unauthorized" element={<Unauthorized />} />
+        
+        {/* User routes (any authenticated user) */}
+        <Route path="dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="profile" element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        } />
+        
+        {/* Admin routes */}
+        <Route path="admin" element={
+          <ProtectedRoute requiredRoles={['admin']}>
+            <AdminPanel />
+          </ProtectedRoute>
+        } />
+
+        {/* Manager routes */}
+        <Route path="reports" element={
+          <ProtectedRoute requiredRoles={['admin', 'manager']}>
+            <Reports />
+          </ProtectedRoute>
+        } />
+      </Route>
+    </Routes>
+  );
+}
+```
+
+### Component-Level Role-Based Access Control
+
+For finer-grained control within components:
+
+```jsx
+// src/pages/Dashboard.jsx
+import { useAuth } from '../context/AuthContext';
+
+export default function Dashboard() {
+  const { user } = useAuth();
+  
+  // Helper function for RBAC within components
+  const canAccess = (allowedRoles) => {
+    return allowedRoles.includes(user?.role);
+  };
+  
+  return (
+    <div className="dashboard">
+      <h1>Welcome, {user?.name}</h1>
+      
+      {/* Basic content visible to all users */}
+      <div className="dashboard-widget">
+        <h2>Your Activity</h2>
+        {/* User activity content */}
+      </div>
+      
+      {/* Content visible only to managers and admins */}
+      {canAccess(['manager', 'admin']) && (
+        <div className="dashboard-widget">
+          <h2>Team Overview</h2>
+          {/* Team management content */}
+        </div>
+      )}
+      
+      {/* Admin-only content */}
+      {canAccess(['admin']) ? (
+        <div className="dashboard-widget admin-widget">
+          <h2>Admin Controls</h2>
+          <button>Manage Users</button>
+          <button>System Settings</button>
+        </div>
+      ) : (
+        user && <p>You need admin privileges to view additional controls</p>
+      )}
+    </div>
+  );
+}
+```
+
+## Security Best Practices
+
+### Token Security
+
+1. **Keep access tokens short-lived**
+   - Use 15-60 minute expiration to minimize risk from compromised tokens
+
+2. **Implement proper logout**
+   - Clear localStorage and invalidate refresh token on logout
+   - Send logout request to server to invalidate token
+
+3. **Secure token transmission**
+   - Always use HTTPS for API communications
+   - Set secure and SameSite flags on cookies
+
+### Protecting Against Common Attacks
+
+1. **Cross-Site Scripting (XSS)**
+   - React has built-in XSS protection for most cases
+   - Avoid using `dangerouslySetInnerHTML` without sanitization
+   - Consider Content Security Policy (CSP) for additional protection
+
+2. **Cross-Site Request Forgery (CSRF)**
+   - HttpOnly cookies with SameSite attribute help prevent CSRF
+   - For sensitive operations, consider additional anti-CSRF tokens
+
+### Authentication UX Best Practices
+
+1. **Handle loading states**
+   - Always show loading indicators during authentication processes
+   - Prevent UI flickering during auth checks
+
+2. **Provide clear error messages**
+   - Show specific, actionable error messages
+   - Avoid revealing sensitive information in errors
+
+3. **Handle session expiration gracefully**
+   - Implement automatic token refresh
+   - Show session expiration warnings
+   - Preserve user input when re-authenticating
+
+## Common Pitfalls & Their Solutions
+
+❌ **Excessive token payload**
+- Problem: Large tokens decrease performance and storage efficiency
+- Solution: Keep tokens small with minimal claims
+
+❌ **Not handling token expiration**
+- Problem: Users get logged out unexpectedly
+- Solution: Implement automatic token refresh
+
+❌ **Hardcoding roles in multiple components**
+- Problem: Difficult to maintain and update role permissions
+- Solution: Use centralized RBAC components
+
+❌ **No loading states during auth checks**
+- Problem: UI jumps or shows unauthorized content briefly
+- Solution: Always show loading indicators during auth checks
+
+❌ **Insufficient error handling**
+- Problem: Poor user experience when auth fails
+- Solution: Implement comprehensive error handling with clear messages
+
+## Further Reading
+
+- [OWASP Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html)
+- [JWT.io Introduction](https://jwt.io/introduction)
+- [React Router Authentication Documentation](https://reactrouter.com/en/main/start/concepts#authentication)
+- [Best Practices for Storing Access Tokens in the Browser](http://curity.medium.com/best-practices-for-storing-access-tokens-in-the-browser-6b3d515d9814)
