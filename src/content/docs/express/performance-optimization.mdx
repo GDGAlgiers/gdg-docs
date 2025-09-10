@@ -51,6 +51,9 @@ module.exports = {
 
 <Tabs>
   <TabItem label="Per-Route Limiting">
+  **Use Case:** Different endpoints need different rate limits based on their computational cost or business importance.
+  **When to use:** When you have expensive operations (like file uploads) that need stricter limits, or public endpoints that can handle more traffic.
+
   ```javascript
   // Different limits for different routes
   app.get('/api/public', 
@@ -72,6 +75,9 @@ module.exports = {
   </TabItem>
   
   <TabItem label="Dynamic Limits">
+  **Use Case:** Adjust rate limits based on user characteristics like subscription tier, authentication status, or user behavior.
+  **When to use:** When you have different user tiers (free vs premium) or want to reward authenticated users with higher limits.
+
   ```javascript
   // Dynamic rate limiting based on user roles
   const dynamicRateLimit = rateLimit({
@@ -91,6 +97,9 @@ module.exports = {
   </TabItem>
   
   <TabItem label="Redis Store">
+  **Use Case:** Share rate limiting data across multiple server instances in a distributed system.
+  **When to use:** When running multiple Express servers behind a load balancer and need consistent rate limiting across all instances.
+
   ```javascript
   // Using Redis to store rate limit data (for distributed systems)
   const RedisStore = require('rate-limit-redis');
@@ -267,6 +276,8 @@ Not all operations need to be performed synchronously within the request-respons
 
 <Tabs>
   <TabItem label="Setting Up Bull">
+  **Why we need this:** Imagine your user registration takes 3 seconds because you're sending a welcome email. That's 3 seconds of waiting for something that could happen in the background. Bull queues let you respond instantly while handling the email separately.
+
   ```javascript
   // src/queues/index.js
   const Queue = require('bull');
@@ -280,37 +291,38 @@ Not all operations need to be performed synchronously within the request-respons
         password: process.env.REDIS_PASSWORD || undefined
       },
       defaultJobOptions: {
-        attempts: 3,
+        attempts: 3, // Sometimes emails fail - network issues, server down, etc.
         backoff: {
           type: 'exponential',
-          delay: 2000
+          delay: 2000  // Wait 2s, then 4s, then 8s between retries
         },
-        removeOnComplete: true
+        removeOnComplete: true // Redis can get cluttered with old jobs
       }
     });
   };
 
-  // Initialize queue instances
+  // Separate queues for different job types - this way image processing 
+  // won't block email sending if it gets backed up
   const emailQueue = createQueue('email-processing');
   const pdfQueue = createQueue('pdf-generation');
   const imageQueue = createQueue('image-processing');
 
-  // Set up event handlers for all queues
+  // Monitor what's happening - crucial for debugging production issues
   const setupQueueEvents = (queue) => {
     queue.on('completed', job => {
-      console.log(`${queue.name} job ${job.id} completed successfully`);
+      console.log(`✅ ${queue.name} job ${job.id} completed`);
     });
 
     queue.on('failed', (job, err) => {
-      console.error(`${queue.name} job ${job.id} failed:`, err);
+      console.error(`❌ ${queue.name} job ${job.id} failed:`, err.message);
+      // In production, you'd send this to your error tracking service
     });
 
     queue.on('error', (error) => {
-      console.error(`${queue.name} queue error:`, error);
+      console.error(`🚨 ${queue.name} queue error:`, error);
     });
   };
 
-  // Register events for all queues
   [emailQueue, pdfQueue, imageQueue].forEach(setupQueueEvents);
 
   module.exports = {
@@ -322,6 +334,8 @@ Not all operations need to be performed synchronously within the request-respons
   </TabItem>
   
   <TabItem label="Email Processor">
+  **The worker side:** This is where the actual work happens. While your Express server handles new requests, separate worker processes run this code to process queued jobs. You can run multiple workers to handle high email volumes.
+
   ```javascript
   // src/queues/processors/emailProcessor.js
   const emailTransporter = require('../../config/emailTransporter');
@@ -330,10 +344,15 @@ Not all operations need to be performed synchronously within the request-respons
     const { recipient, subject, template, context, text, html } = job.data;
     
     try {
-      // Prepare email content - either use provided html/text or render from template
+      // You might want to validate the email address first
+      if (!recipient || !recipient.includes('@')) {
+        throw new Error('Invalid email address');
+      }
+
+      // Prepare email content - in real apps, you'd probably render templates here
       let emailContent = { text, html };
       
-      // Send the email using the configured transporter
+      // The actual email sending - this can take 1-5 seconds depending on provider
       const info = await emailTransporter.sendMail({
         from: process.env.EMAIL_FROM,
         to: recipient,
@@ -342,15 +361,20 @@ Not all operations need to be performed synchronously within the request-respons
         text: emailContent.text
       });
       
-      // Return success result for logging
+      // Log success for monitoring - helps track delivery rates
+      console.log(`📧 Email sent to ${recipient}, messageId: ${info.messageId}`);
+      
       return {
         success: true,
         messageId: info.messageId,
-        recipient
+        recipient,
+        sentAt: new Date()
       };
     } catch (error) {
-      console.error('Email sending failed:', error);
-      // Re-throw so Bull marks the job as failed
+      // Common failures: invalid email, SMTP server down, rate limits
+      console.error(`📧 Failed to send email to ${recipient}:`, error.message);
+      
+      // Bull will automatically retry this job based on our queue config
       throw error;
     }
   }
@@ -360,17 +384,20 @@ Not all operations need to be performed synchronously within the request-respons
   </TabItem>
   
   <TabItem label="Using In Controllers">
+  **The magic moment:** Instead of making users wait for email delivery (which can fail and retry), we just queue it up and respond immediately. The user gets instant feedback, and the email gets handled reliably in the background.
+
   ```javascript
   // src/controllers/userController.js
   const { emailQueue } = require('../queues');
 
   exports.register = async (req, res, next) => {
     try {
-      // Create user
+      // This is fast - just a database write
       const user = await User.create(req.body);
       
-      // Add job to email queue directly
-      await emailQueue.add({
+      // Queue the email instead of sending it now
+      // Even if this fails, the user is still created successfully
+      await emailQueue.add('welcome-email', {
         recipient: user.email,
         subject: 'Welcome to our platform!',
         template: 'welcome',
@@ -378,9 +405,13 @@ Not all operations need to be performed synchronously within the request-respons
           name: user.name,
           verificationUrl: `https://example.com/verify/${user.verificationToken}`
         }
+      }, {
+        // Job-specific options can override queue defaults
+        delay: 5000, // Send after 5 seconds (feels more natural)
+        attempts: 5,  // Welcome emails are important - retry more
       });
       
-      // Respond immediately without waiting for email
+      // User gets this response immediately, regardless of email status
       res.status(201).json({
         statusCode: 201,
         data: {
@@ -389,9 +420,12 @@ Not all operations need to be performed synchronously within the request-respons
             name: user.name,
             email: user.email
           },
-          message: 'User created successfully. Verification email has been sent.'
+          message: 'Account created! Check your email for verification.'
         }
       });
+      
+      // Pro tip: You could also track this job ID to show email status
+      // in your admin dashboard or to the user
     } catch (error) {
       next(error);
     }
@@ -454,3 +488,6 @@ Not all operations need to be performed synchronously within the request-respons
 - [Node.js Performance and Scalability](https://nodejs.org/en/docs/guides/dont-block-the-event-loop/)
 - [Bull Documentation](https://github.com/OptimalBits/bull/blob/master/REFERENCE.md)
 - [Redis Caching Patterns](https://redis.io/documentation)
+- [Understanding the Offset and Cursor Pagination](https://medium.com/better-programming/understanding-the-offset-and-cursor-pagination-8ddc54d10d98)
+- [JavaScript Event Loop Visualized](https://www.youtube.com/watch?v=eiC58R16hb8&pp=ygUXYmxvY2tpbmcgdGhlIGV2ZW50IGxvb3A%3D)
+- [The N+1 Database Query Problem](https://medium.com/databases-in-simple-words/the-n-1-database-query-problem-a-simple-explanation-and-solutions-ef11751aef8a)
