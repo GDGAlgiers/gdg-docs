@@ -1,4 +1,308 @@
 ---
 title: "State Management"
-description: "State Management"
+description: "Understanding state management approaches in Flutter and why BLoC is preferred in our MVVM architecture."
+---
+
+import { Aside, Code, FileTree, Card, CardGrid, Steps, Tabs } from '@astrojs/starlight/components';
+
+---
+State management is crucial for building scalable, maintainable, and efficient Flutter applications. It defines how data flows and changes in an app, impacting performance, modularity, and developer experience.
+
+<Aside type="tip">
+  **Pro tip:** Understanding state management is essential for building production-ready Flutter applications. It's worth taking the time to learn the different approaches thoroughly.
+</Aside>
+
+---
+
+## Why is State Management Important?
+
+<CardGrid>
+  <Card title="✅ Predictability">
+    Ensures a structured way to manage UI changes.
+  </Card>
+  <Card title="✅ Performance Optimization">
+    Prevents unnecessary widget rebuilds.
+  </Card>
+  <Card title="✅ Code Maintainability">
+    Separates concerns between UI, logic, and data layers.
+  </Card>
+  <Card title="✅ Scalability">
+    Enables the app to grow without becoming difficult to manage.
+  </Card>
+</CardGrid>
+
+---
+
+## State Management Approaches in Flutter
+
+Flutter offers multiple ways to handle state, each with trade-offs. Below are some of the most popular approaches:
+
+<Tabs>
+  <Tabs label="Provider">
+    ### Provider (Officially Recommended)
+    - Lightweight and easy to use.
+    - Built on top of `ChangeNotifier`.
+    - Good for small-to-medium applications.
+
+    **Use Case:** Suitable for apps that require simple state changes and dependency injection.
+
+    <Code code={`// Example of Provider usage
+class Counter with ChangeNotifier {
+  int _count = 0;
+  int get count => _count;
+
+  void increment() {
+    _count++;
+    notifyListeners();
+  }
+}`} lang="dart" />
+  </Tabs>
+
+  <Tabs label="Riverpod">
+    ### Riverpod (Provider's Successor)
+    - Eliminates `BuildContext` dependency.
+    - Supports better performance optimizations.
+    - Ensures state immutability.
+
+    **Use Case:** Ideal for medium-to-large applications that need enhanced scalability.
+
+    <Code code={`// Example of Riverpod usage
+final counterProvider = StateProvider((ref) => 0);
+
+class Counter extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, ScopedReader watch) {
+    final count = watch(counterProvider).state;
+    return Text('$count');
+  }
+}`} lang="dart" />
+  </Tabs>
+
+  <Tabs label="GetX">
+    ### GetX (Minimal Boilerplate)
+    - Simple API and reactive state management.
+    - Built-in dependency injection and navigation.
+    - Less structured but very convenient.
+
+    **Use Case:** Best for small projects or apps that prioritize rapid development over strict architecture.
+
+    <Code code={`// Example of GetX usage
+class CounterController extends GetxController {
+  var count = 0.obs;
+  void increment() => count++;
+}`} lang="dart" />
+  </Tabs>
+
+  <Tabs label="BLoC">
+    ### BLoC (Business Logic Component)
+    - Implements a structured event-driven approach.
+    - Uses streams (`Cubit` or `Bloc`) to manage state.
+    - Promotes a clean separation of concerns.
+
+    **Use Case:** Preferred for **large-scale** applications following the **MVVM pattern** due to its clear structure and testability.
+
+    <Code code={`// Example of BLoC usage
+class CounterCubit extends Cubit<int> {
+  CounterCubit() : super(0);
+
+  void increment() => emit(state + 1);
+}`} lang="dart" />
+  </Tabs>
+</Tabs>
+
+---
+
+## Why We Use BLoC for MVVM Architecture
+
+<Aside type="note">
+  In our architecture, we follow the **Model-View-ViewModel (MVVM)** pattern to separate UI from business logic.
+</Aside>
+
+BLoC aligns well with the MVVM approach because:
+
+<CardGrid>
+  <Card title="✅ Encapsulated Business Logic">
+    Keeps UI and logic independent.
+  </Card>
+  <Card title="✅ Event-driven Workflow">
+    UI triggers events, and BLoC processes logic.
+  </Card>
+  <Card title="✅ Scalability & Maintainability">
+    Modular and testable code structure.
+  </Card>
+  <Card title="✅ Consistency Across Features">
+    Ensures a uniform way of handling state across the app.
+  </Card>
+</CardGrid>
+
+---
+
+## How BLoC Works in Our Architecture
+
+In our MVVM architecture, BLoC is used to manage the state and business logic.
+
+<Steps>
+  1. **Model**: Represents the data and business logic.
+  2. **View**: The UI of the application that displays data and sends events.
+  3. **ViewModel (BLoC)**: Manages the state and handles the business logic, connecting the Model and View.
+</Steps>
+
+<Code code={`// Example of BLoC in MVVM
+class UserBloc extends Bloc<UserEvent, UserState> {
+  final UserRepository userRepository;
+
+  UserBloc(this.userRepository) : super(UserInitial());
+
+  @override
+  Stream<UserState> mapEventToState(UserEvent event) async* {
+    if (event is LoadUser) {
+      yield UserLoading();
+      try {
+        final user = await userRepository.getUser(event.userId);
+        yield UserLoaded(user);
+      } catch (_) {
+        yield UserError();
+      }
+    }
+  }
+}`} lang="dart" title="BLoC Implementation Example" />
+
+---
+
+## Best Practices for Managing State in Flutter
+
+### 1. Keep Business Logic Out of UI
+
+<Tabs>
+  <Tabs label="Bad Practice">
+    <Aside type="caution">
+      Avoid placing business logic directly in the UI components.
+    </Aside>
+
+    <Code code={`// Bad Practice
+class CounterWidget extends StatelessWidget {
+  int count = 0;
+
+  void increment() {
+    count++;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Text('$count');
+  }
+}`} lang="dart" />
+  </Tabs>
+
+  <Tabs label="Good Practice">
+    <Aside type="tip">
+      Use `Cubit` or `Bloc` for handling logic instead of placing it in widgets.
+    </Aside>
+
+    <Code code={`// Good Practice
+class CounterCubit extends Cubit<int> {
+  CounterCubit() : super(0);
+
+  void increment() => emit(state + 1);
+}
+
+class CounterWidget extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<CounterCubit, int>(
+      builder: (context, count) {
+        return Text('$count');
+      },
+    );
+  }
+}`} lang="dart" />
+  </Tabs>
+</Tabs>
+
+### 2. Use Immutable State
+
+<Aside type="note">
+  Ensure state objects are immutable to prevent unexpected UI behavior.
+</Aside>
+
+<Code code={`// Example of Immutable State
+class CounterState {
+  final int count;
+  
+  // Constructor with required final field
+  const CounterState(this.count);
+  
+  // Copy with method for creating new instances
+  CounterState copyWith({int? count}) {
+    return CounterState(count ?? this.count);
+  }
+}`} lang="dart" title="Immutable State Example" />
+
+### 3. Minimize Widget Rebuilds
+
+<Aside type="tip">
+  Use `BlocSelector` or `BlocBuilder` efficiently to only rebuild widgets when necessary.
+</Aside>
+
+<Code code={`// Example of BlocSelector
+BlocSelector<CounterCubit, int, bool>(
+  selector: (state) => state % 2 == 0,
+  builder: (context, isEven) {
+    return Text(isEven ? 'Even' : 'Odd');
+  },
+);`} lang="dart" />
+
+### 4. Structure Your Code Properly
+
+<Aside type="note">
+  Organize your app into a Feature-Driven Architecture for better maintainability.
+</Aside>
+
+<FileTree>
+- features
+  - user_profile
+    - domain
+      - models
+        - user_model.dart
+      - providers
+        - user_api_provider.dart
+      - repository
+        - user_repository.dart
+    - logic
+      - cubits
+        - user_cubit.dart
+      - states
+        - user_state.dart
+    - presentation
+      - screens
+        - user_profile_screen.dart
+      - fragments
+        - profile_header_fragment.dart
+      - widgets
+        - user_avatar.dart
+</FileTree>
+
+---
+
+## Final Thoughts
+
+<Aside type="tip">
+  Choosing the right state management approach depends on your project's complexity.
+</Aside>
+
+**BLoC is the best fit for our structured MVVM architecture**, ensuring clear separation of concerns, scalability, and maintainability.
+
+<Card title="When to Consider Other Approaches">
+  For very simple features or screens with minimal state changes, simpler approaches like Provider might reduce boilerplate code while still maintaining good architecture.
+
+  Always evaluate the complexity of your feature before deciding on a state management approach.
+</Card>
+
+---
+
+## See Also
+1. [BLoC Package](https://pub.dev/packages/bloc) – The official BLoC package documentation
+2. [Riverpod](riverpod) – Documentation for the Riverpod state management solution
+3. [Flutter Official Documentation](https://flutter.dev/docs/development/data-and-backend/state-mgmt/intro) – Official Flutter documentation on state management
+
 ---

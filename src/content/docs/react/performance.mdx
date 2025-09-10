@@ -1,0 +1,691 @@
+---
+title: "Performance Optimization"
+description: "Essential React performance techniques including profiling, rendering optimizations, code splitting, asset optimization, and state management patterns for building fast applications."
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Performance optimization in React isn't about premature optimization—it's about understanding how React works and making informed decisions. This guide covers practical techniques to measure, identify, and fix performance issues in React applications.
+
+## Profiling & Measurement
+
+Before optimizing anything, you need to measure what's actually slow. React provides excellent tools for identifying performance bottlenecks.
+
+### React DevTools Profiler
+
+The React DevTools Profiler shows you exactly which components are slow and why they re-render.
+
+```bash title="Terminal"
+# Install React DevTools browser extension
+# Available for Chrome, Firefox, and Edge
+```
+
+**How to Use the Profiler:**
+
+```jsx title="components/ProfilerExample.jsx"
+import { Profiler } from 'react';
+
+const onRenderCallback = (id, phase, actualDuration) => {
+  // Log slow renders in development
+  if (actualDuration > 10) {
+    console.log(`🐌 Slow render detected in ${id}: ${actualDuration}ms`);
+  }
+};
+
+const App = () => (
+  <Profiler id="App" onRender={onRenderCallback}>
+    <ExpensiveComponent />
+    <AnotherComponent />
+  </Profiler>
+);
+```
+
+**What to Look For:**
+- **Flame Graph**: Shows render duration for each component
+- **Ranked Chart**: Lists components by render time
+- **Interactions**: Tracks user interactions and resulting renders
+
+### Lighthouse & Web Vitals
+
+Web Vitals measure real user experience. React apps should optimize for these core metrics.
+
+```jsx title="utils/webVitals.js"
+// Measure Web Vitals in your React app
+import { getCLS, getFID, getFCP, getLCP, getTTFB } from 'web-vitals';
+
+const reportWebVitals = (metric) => {
+  console.log(metric);
+  
+  // Send to analytics in production
+  if (process.env.NODE_ENV === 'production') {
+    // analytics.track('Web Vital', metric);
+  }
+};
+
+// Measure all vitals
+getCLS(reportWebVitals);
+getFID(reportWebVitals);
+getFCP(reportWebVitals);
+getLCP(reportWebVitals);
+getTTFB(reportWebVitals);
+```
+
+**Key Metrics for React Apps:**
+- **LCP (Largest Contentful Paint)**: Optimize image loading and critical rendering path
+- **FID (First Input Delay)**: Reduce JavaScript bundle size and main thread blocking
+- **CLS (Cumulative Layout Shift)**: Prevent layout shifts from dynamic content
+
+<Aside type="tip">
+  **Profiling Tip**: Always profile in production mode (`npm run build && npm run start`) as development mode includes additional overhead that skews results.
+</Aside>
+
+## Rendering Optimizations
+
+React re-renders components when state or props change. While React is fast, unnecessary re-renders can impact performance, especially with complex calculations or large component trees.
+
+**When to optimize renders:**
+- Components with expensive calculations or API calls
+- Lists with many items (100+ items)
+- Components that re-render frequently but display the same content
+- Child components receiving new object/function props on every render
+
+### Understanding Re-render Causes
+
+Most performance issues come from components re-rendering when they don't need to. Here's what triggers re-renders:
+
+```jsx title="examples/ReRenderCauses.jsx"
+import { useState } from 'react';
+
+const ChildComponent = ({ data, onClick }) => {
+  console.log('ChildComponent rendered'); // Track renders
+  return <button onClick={onClick}>{data}</button>;
+};
+
+const ParentComponent = () => {
+  const [count, setCount] = useState(0);
+  const [name, setName] = useState('');
+
+  // ❌ These cause unnecessary child re-renders every time parent renders
+  const data = `Count: ${count}`; // New string created each render
+  const handleClick = () => setCount(c => c + 1); // New function each render
+
+  return (
+    <div>
+      {/* When name changes, ChildComponent re-renders even though count didn't change */}
+      <input value={name} onChange={e => setName(e.target.value)} />
+      <ChildComponent data={data} onClick={handleClick} />
+    </div>
+  );
+};
+```
+
+**The problem:** Typing in the input re-renders ChildComponent unnecessarily because `data` and `handleClick` are recreated on every render.
+
+### React.memo - Prevent Unnecessary Re-renders
+
+React.memo prevents re-renders when props haven't actually changed. Use it for components that render often with the same props.
+
+```jsx title="components/MemoizedComponent.jsx"
+import { memo } from 'react';
+
+// ✅ Only re-renders when props actually change
+const ExpensiveChild = memo(({ data, onClick }) => {
+  console.log('ExpensiveChild rendered');
+  
+  // Simulate expensive operation
+  const expensiveValue = data.items.reduce((sum, item) => sum + item.value, 0);
+
+  return (
+    <div>
+      <p>Computed value: {expensiveValue}</p>
+      <button onClick={onClick}>Update</button>
+    </div>
+  );
+});
+
+// ✅ For complex props, provide custom comparison
+const SmartMemoComponent = memo(({ user, settings }) => {
+  return <div>{user.name} - {settings.theme}</div>;
+}, (prevProps, nextProps) => {
+  // Only re-render if user ID or theme actually changed
+  return prevProps.user.id === nextProps.user.id && 
+         prevProps.settings.theme === nextProps.settings.theme;
+});
+```
+
+**When to use React.memo:**
+- Components that receive the same props frequently
+- Components with expensive rendering logic
+- Child components in lists
+- **Don't use for:** Simple components, components that change often
+
+### useMemo and useCallback - Stabilize Values and Functions
+
+These hooks help you avoid recreating expensive calculations and functions on every render.
+
+**When to use:**
+- `useMemo`: For expensive calculations (filtering large arrays, complex computations)
+- `useCallback`: For functions passed to child components (especially memoized ones)
+- **Don't use for:** Simple calculations like `count * 2` or basic string concatenation
+
+<Tabs>
+<TabItem label="useMemo for Expensive Calculations">
+
+```jsx title="hooks/useMemoExample.jsx"
+import { useState, useMemo } from 'react';
+
+const SearchableList = ({ items }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // ✅ Good use: Expensive operation - filtering 1000+ items
+  const filteredItems = useMemo(() => {
+    return items.filter(item => 
+      item.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [items, searchTerm]); // Only recalculate when items or search changes
+
+  // ❌ Bad use: Simple calculation doesn't need memoization
+  const itemCount = useMemo(() => items.length, [items]); // Unnecessary
+
+  return (
+    <div>
+      <input 
+        value={searchTerm}
+        onChange={e => setSearchTerm(e.target.value)}
+        placeholder="Search..."
+      />
+      <p>Found {filteredItems.length} items</p>
+      {filteredItems.map(item => (
+        <div key={item.id}>{item.name}</div>
+      ))}
+    </div>
+  );
+};
+```
+
+**Use useMemo when:**
+- Filtering/sorting large arrays (100+ items)
+- Complex calculations that take time
+- Creating objects that get passed to multiple children
+
+</TabItem>
+<TabItem label="useCallback for Stable Functions">
+
+```jsx title="hooks/useCallbackExample.jsx"
+import { useState, useCallback, memo } from 'react';
+
+// Memoized child that only re-renders when props change
+const ListItem = memo(({ item, onUpdate }) => {
+  console.log(`Rendering item ${item.id}`);
+  return (
+    <div>
+      <span>{item.name}</span>
+      <button onClick={() => onUpdate(item.id)}>Update</button>
+    </div>
+  );
+});
+
+const ItemList = ({ items, setItems }) => {
+  const [filter, setFilter] = useState('');
+
+  // ✅ Stable function - prevents ListItem re-renders
+  const handleUpdate = useCallback((id) => {
+    setItems(prev => 
+      prev.map(item => 
+        item.id === id ? { ...item, updated: true } : item
+      )
+    );
+  }, []); // No dependencies needed - setItems is stable
+
+  return (
+    <div>
+      <input 
+        value={filter}
+        onChange={e => setFilter(e.target.value)} // This won't re-render ListItems
+      />
+      
+      {items.map(item => (
+        <ListItem 
+          key={item.id}
+          item={item}
+          onUpdate={handleUpdate} // Stable reference
+        />
+      ))}
+    </div>
+  );
+};
+```
+
+**Use useCallback when:**
+- Passing functions to memoized child components
+- Functions are expensive to create
+- Functions are dependencies in other hooks
+
+</TabItem>
+</Tabs>
+
+**Key Decision Rules:**
+- Use `useMemo` when you have expensive calculations (array processing, API transformations)
+- Use `useCallback` when passing functions to memoized child components
+- Skip optimization for simple operations - the overhead isn't worth it
+
+### React Compiler - The Future of Optimization
+
+React Compiler is an experimental tool that automatically optimizes your components by adding memoization where needed. Think of it as having an expert developer automatically apply `useMemo`, `useCallback`, and `React.memo` optimally.
+
+**Current Status (2025):**
+- **Experimental**: Not yet stable for production use
+- **Opt-in**: You need to explicitly enable it
+- **Limited Support**: Not all React patterns are supported yet
+
+**What React Compiler Does:**
+- Automatically memoizes expensive calculations
+- Prevents unnecessary re-renders without manual optimization
+- Optimizes component props and callbacks behind the scenes
+
+```jsx title="examples/CompilerComparison.jsx"
+// ✅ With React Compiler - automatic optimization
+const AutoOptimized = ({ items, onSelect }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Compiler automatically optimizes this filtering
+  const filteredItems = items.filter(item => item.name.includes(searchTerm));
+
+  // Compiler automatically stabilizes this callback
+  const handleSelect = (item) => {
+    onSelect(item);
+    setSearchTerm('');
+  };
+
+  return (
+    <div>
+      <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+      {filteredItems.map(item => (
+        <ItemCard key={item.id} item={item} onSelect={handleSelect} />
+      ))}
+    </div>
+  );
+};
+```
+
+**Should You Use React Compiler Now?**
+
+**For Learning (2025)**: **No** - Learn `useMemo`, `useCallback`, and `React.memo` first. These concepts help you understand React's rendering behavior.
+
+**For Production (2025)**: **Wait** - The compiler is still experimental. Stick with manual optimization for now.
+
+**For Future**: **Yes** - Once stable, React Compiler will handle most optimizations automatically, but you'll still need to understand the concepts for:
+- Debugging performance issues
+- Cases the compiler can't optimize
+- Understanding why your app is fast or slow
+
+<Aside type="note">
+  **Learning Path**: Master manual optimization first. React Compiler will make optimization easier, but understanding the underlying concepts remains valuable for debugging and edge cases.
+</Aside>
+
+## Code Splitting & Lazy Loading
+
+Code splitting reduces your initial bundle size by loading code only when needed. This improves First Contentful Paint and overall loading performance and user experience.
+
+**Why code splitting matters:**
+- **Faster initial load**: Smaller initial JavaScript bundle
+- **Better user experience**: Users see content sooner
+- **Progressive loading**: Load features as users navigate
+
+<Tabs>
+<TabItem label="Route-Based Splitting">
+
+```jsx title="components/LazyRoutes.jsx"
+import { lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+
+// ✅ Split by routes - most common and effective approach
+const Home = lazy(() => import('./pages/Home'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Settings = lazy(() => import('./pages/Settings'));
+
+const App = () => (
+  <BrowserRouter>
+    <Suspense fallback={<div className="loading">Loading page...</div>}>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/settings" element={<Settings />} />
+      </Routes>
+    </Suspense>
+  </BrowserRouter>
+);
+```
+
+**Route-based splitting benefits:**
+- Natural loading boundaries (users expect pages to load)
+- Easy to implement
+- Significant bundle size reduction
+- Works well with browser caching
+
+</TabItem>
+<TabItem label="Feature-Based Splitting">
+
+```jsx title="components/ConditionalFeatures.jsx"
+import { useState, Suspense } from 'react';
+
+const ConditionalFeatures = ({ userRole }) => {
+  const [showChart, setShowChart] = useState(false);
+
+  // ✅ Load heavy chart library only when needed
+  const ChartComponent = lazy(() => import('./HeavyChartComponent'));
+
+  const handleShowChart = () => {
+    setShowChart(true); // This triggers the lazy load
+  };
+
+  return (
+    <div>
+      <h2>Analytics Dashboard</h2>
+      
+      {!showChart ? (
+        <button onClick={handleShowChart}>
+          Load Chart (Heavy Component)
+        </button>
+      ) : (
+        <Suspense fallback={<div>Loading chart...</div>}>
+          <ChartComponent data={analyticsData} />
+        </Suspense>
+      )}
+      
+      {/* Admin-only features */}
+      {userRole === 'admin' && (
+        <Suspense fallback={<div>Loading admin tools...</div>}>
+          <AdminTools />
+        </Suspense>
+      )}
+    </div>
+  );
+};
+
+// Heavy component with large dependencies (chart libraries, etc.)
+const AdminTools = lazy(() => import('./AdminTools'));
+```
+
+**Feature-based splitting benefits:**
+- Load expensive libraries conditionally
+- Reduce bundle for users who don't need features
+- Great for role-based functionality
+
+</TabItem>
+</Tabs>
+
+## Network & Asset Optimizations
+
+Optimize how your React app loads and handles external resources.
+
+### Image Optimization
+
+Images often represent the largest assets in React apps. Start with simple optimizations before moving to complex solutions.
+
+**Simple Image Optimizations (Start Here):**
+
+```jsx title="components/SimpleImageOptimization.jsx"
+// ✅ Use Next.js Image component (recommended for Next.js apps)
+import Image from 'next/image';
+
+const OptimizedImage = () => (
+  <Image
+    src="/hero-image.jpg"
+    alt="Hero image"
+    width={800}
+    height={400}
+    placeholder="blur" // Shows blur while loading
+    priority // Load immediately for above-the-fold images
+  />
+);
+
+// ✅ Use native lazy loading (for non-Next.js apps)
+const NativeLazyImage = ({ src, alt }) => (
+  <img 
+    src={src}
+    alt={alt}
+    loading="lazy" // Browser handles lazy loading
+    decoding="async" // Non-blocking decode
+  />
+);
+
+// ✅ Using WebP format with fallback
+const OptimizedImage = ({ src, alt }) => (
+  <picture>
+    <source srcSet={`${src}.webp`} type="image/webp" />
+    <img src={`${src}.jpg`} alt={alt} loading="lazy" />
+  </picture>
+);
+
+// ✅ Simple WebP usage (if you have WebP versions)
+const SimpleWebP = ({ imageName, alt }) => (
+  <img src={`/images/${imageName}.webp`} alt={alt} loading="lazy" />
+);
+```
+
+**Why WebP Matters:**
+WebP images are **25-35% smaller** than JPEG/PNG with the same visual quality. This means faster loading and less bandwidth usage.
+
+**Image Optimization Strategy:**
+1. **Convert images to WebP**: Use tools like `imagemin` or online converters
+2. **Next.js apps**: Use `next/image` component (handles WebP conversion automatically)
+3. **Other React apps**: Use the `picture` element with WebP + fallback format
+4. **Quick wins**: Add `loading="lazy"` to all images below the fold
+
+<Aside type="tip">
+  **Quick Win**: Use `loading="lazy"` on images below the fold. It's supported by all modern browsers and requires zero JavaScript.
+</Aside>
+
+## State Management Performance
+
+Poor state management is one of the biggest causes of React performance issues. Understanding these patterns helps you avoid common pitfalls.
+
+### Context Performance Pitfalls
+
+React Context can cause performance issues when used incorrectly. The main problem: all consumers re-render when any context value changes.
+
+```jsx title="context/ContextProblems.jsx"
+// ❌ Performance Problem: Everything re-renders when anything changes
+const AppContext = createContext();
+
+const BadProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [theme, setTheme] = useState('light');
+  const [cartItems, setCartItems] = useState([]);
+
+  // This object is recreated on every render
+  const value = { 
+    user, setUser, 
+    theme, setTheme, 
+    cartItems, setCartItems 
+  };
+  
+  return (
+    <AppContext.Provider value={value}>
+      {children}
+    </AppContext.Provider>
+  );
+};
+
+// Problem: When theme changes, ALL components using AppContext re-render
+// even if they only care about user data
+```
+
+**The Solution: Split Contexts by Update Frequency**
+
+```jsx title="context/OptimizedContext.jsx"
+// ✅ Split contexts - components only re-render when relevant data changes
+const UserContext = createContext();
+const ThemeContext = createContext();
+const CartContext = createContext();
+
+const OptimizedProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [theme, setTheme] = useState('light');
+  const [cartItems, setCartItems] = useState([]);
+
+  // Memoize context values to prevent unnecessary re-renders
+  const userValue = useMemo(() => ({ 
+    user, 
+    setUser 
+  }), [user]);
+  
+  const themeValue = useMemo(() => ({ 
+    theme, 
+    setTheme 
+  }), [theme]);
+  
+  const cartValue = useMemo(() => ({ 
+    cartItems, 
+    setCartItems 
+  }), [cartItems]);
+
+  return (
+    <UserContext.Provider value={userValue}>
+      <ThemeContext.Provider value={themeValue}>
+        <CartContext.Provider value={cartValue}>
+          {children}
+        </CartContext.Provider>
+      </ThemeContext.Provider>
+    </UserContext.Provider>
+  );
+};
+
+// Now theme changes only affect components using ThemeContext
+const ThemeButton = () => {
+  const { theme, setTheme } = useContext(ThemeContext); // Only re-renders on theme change
+  return <button onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>Toggle</button>;
+};
+```
+
+**Context Performance Rules:**
+- **Split by update frequency**: Fast-changing data in separate contexts
+- **Memoize context values**: Use `useMemo` for context provider values
+- **Keep context focused**: Don't put everything in one giant context
+
+## Optimizing React Builds
+
+Build-time optimizations happen when you run `npm run build`. These optimizations reduce bundle size and improve loading performance without changing your development experience.
+
+**Why build optimization matters:**
+- **Smaller bundles**: Faster downloads for users
+- **Better caching**: Split vendor and app code for optimal caching
+- **Tree shaking**: Remove unused code automatically
+- **Compression**: Minify and compress files
+
+### Production Build Optimizations
+
+React already includes many optimizations by default, but you can enhance them further.
+
+```json title="package.json"
+{
+  "scripts": {
+    "build": "NODE_ENV=production react-scripts build",
+    "build:analyze": "npm run build && npx webpack-bundle-analyzer build/static/js/*.js"
+  }
+}
+```
+
+**What happens in production builds:**
+- **Minification**: Code gets compressed (removes whitespace, shortens variable names)
+- **Dead code elimination**: Unused imports and functions are removed
+- **Code splitting**: Automatically splits vendor libraries from your app code
+- **Asset optimization**: Images and other assets get optimized
+
+```js title="webpack.config.js"
+// Custom webpack optimizations (for ejected apps or custom setups)
+module.exports = {
+  optimization: {
+    splitChunks: {
+      chunks: 'all',
+      cacheGroups: {
+        // Separate vendor libraries (React, lodash, etc.)
+        vendor: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          chunks: 'all',
+        },
+        // Common code shared between pages
+        common: {
+          name: 'common',
+          minChunks: 2, // Used by at least 2 chunks
+          chunks: 'all',
+        },
+      },
+    },
+  },
+  resolve: {
+    alias: {
+      // Use ES modules version for better tree shaking
+      'lodash': 'lodash-es',
+    },
+  },
+};
+```
+
+### Environment-Specific Optimizations
+
+Remove development-only code from production builds to reduce bundle size.
+
+```jsx title="utils/buildOptimizations.js"
+// Environment-based code removal
+const isDevelopment = process.env.NODE_ENV === 'development';
+
+// Debug logs only in development
+const debugLog = isDevelopment 
+  ? console.log 
+  : () => {}; // Removed in production build
+
+// Development tools only load in development
+const DevTools = isDevelopment 
+  ? lazy(() => import('./DevTools'))
+  : () => null;
+
+// Production-only optimizations
+if (process.env.NODE_ENV === 'production') {
+  // Disable React DevTools
+  if (typeof window !== 'undefined') {
+    window.__REACT_DEVTOOLS_GLOBAL_HOOK__?.onCommitFiberRoot = undefined;
+  }
+}
+```
+
+<Aside type="tip">
+  **Production Tip**: Always test performance optimizations in production builds. Development mode includes overhead that can mask or exaggerate performance issues.
+</Aside>
+
+## Performance Best Practices Summary
+
+### Measurement First
+
+**Always Profile Before Optimizing:**
+- Use React DevTools Profiler to identify actual bottlenecks
+- Measure Web Vitals for real user impact
+- Focus on the 80/20 rule - optimize what actually matters
+
+### Optimization Strategy
+
+**Smart Optimization Approach:**
+- Start with code splitting for immediate bundle size wins
+- Optimize expensive computations with useMemo
+- Memoize components only when they have many props or expensive renders
+- Use React Query for server state management
+
+### Common Performance Mistakes
+
+**Avoid These Pitfalls:**
+- Over-memoizing simple components (adds overhead)
+- Creating objects/functions in render (breaks memoization)
+- Using context for frequently changing state
+- Loading all data upfront instead of lazy loading
+
+<Aside type="tip">
+  **Performance Rule**: Measure first, optimize second. Many performance "optimizations" actually make code slower or harder to maintain without providing real benefits.
+</Aside>
+
+
+## Further Reading
+
+- [React DevTools Profiler Guide](https://react.dev/reference/react/Profiler)
+- [Web Vitals Documentation](https://web.dev/vitals/)
