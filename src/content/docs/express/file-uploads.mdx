@@ -1,4 +1,434 @@
 ---
 title: "File Uploads"
-description: "File Uploads"
+description: "Best practices for handling file uploads in Express using multer, express-fileupload, and Cloudinary, including validation and error handling."
 ---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+File uploads are a common requirement in web applications. This guide covers best practices for handling file uploads in Express.js applications, including different upload libraries, storage options, and implementation approaches.
+
+## File Upload Libraries
+
+### Multer vs express-fileupload
+
+There are two popular libraries for handling file uploads in Express:
+
+<Tabs>
+  <TabItem label="Multer">
+  **Multer** is the most popular and widely-used file upload middleware for Express. It's built on top of `busboy` and offers excellent performance and flexibility.
+
+  **Advantages:**
+  - High performance and memory efficient
+  - Extensive configuration options
+  - Built-in field filtering and validation
+  - Strong community support
+  - Flexible storage options (memory, disk, custom)
+
+  **Best for:** Production applications requiring performance and flexibility
+  </TabItem>
+
+  <TabItem label="express-fileupload">
+  **express-fileupload** is a simpler alternative that's easier to set up but less performant for large files.
+
+  **Advantages:**
+  - Simple API and setup
+  - Built-in file moving capabilities
+  - Good for small to medium files
+
+  **Disadvantages:**
+  - Loads entire file into memory
+  - Less performant for large files
+  - Fewer configuration options
+
+  **Best for:** Simple applications with small file uploads
+  </TabItem>
+</Tabs>
+
+<Aside type="tip">
+  We recommend using **Multer** for most applications due to its performance advantages and extensive configuration options.
+</Aside>
+
+## Storage Configuration
+
+### Installation
+
+```bash
+npm install multer
+npm install cloudinary multer-storage-cloudinary 
+npm install @types/multer  # If using TypeScript
+```
+
+### Multer Configuration Options
+
+<Tabs>
+  <TabItem label="Disk Storage Config">
+  ```javascript
+  // config/multer.js
+  const multer = require('multer');
+  const path = require('path');
+  const { validateFile } = require('../utils/fileValidation');
+
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, 'uploads/'); // Local directory
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+  });
+
+  const upload = multer({
+    storage: storage,
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5MB limit
+      files: 5
+    },
+    fileFilter: validateFile
+  });
+
+  module.exports = upload;
+  ```
+  </TabItem>
+
+  <TabItem label="Cloudinary Storage Config">
+  ```javascript
+  // config/cloudinaryMulter.js
+  const multer = require('multer');
+  const { CloudinaryStorage } = require('multer-storage-cloudinary');
+  const { cloudinary } = require('./cloudinary');
+  const { validateFile } = require('../utils/fileValidation');
+
+  const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+      folder: 'uploads',
+      allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx']
+    }
+  });
+
+  const upload = multer({
+    storage: storage,
+    limits: {
+      fileSize: 10 * 1024 * 1024, // 10MB for cloud storage
+      files: 5
+    },
+    fileFilter: validateFile
+  });
+
+  module.exports = upload;
+  ```
+  </TabItem>
+</Tabs>
+
+## Cloudinary Integration
+
+Cloudinary is recommended for production applications as it provides cloud storage, automatic optimization, and CDN delivery.
+
+```javascript
+// config/cloudinary.js
+const cloudinary = require('cloudinary').v2;
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+module.exports = { cloudinary };
+```
+
+## Implementation Approaches
+
+There are two ways to handle file uploads in your application:
+
+### Middleware Approach (Cloudinary Storage)
+
+Files are automatically uploaded to cloud storage during request processing:
+
+```javascript
+// Uses CloudinaryStorage - files uploaded directly in middleware
+const upload = multer({ storage: cloudinaryStorage });
+
+router.post('/register', upload.single('avatar'), userController.register);
+
+// In controller, file is already in cloud
+exports.register = (req, res) => {
+  const avatarUrl = req.file?.path; // Cloudinary URL available immediately
+  // Business logic here...
+};
+```
+
+**Pros:** Simple, automatic, less code
+**Cons:** Always uploads even if business logic fails
+
+### Helper Approach (Disk Storage) - Recommended
+
+Files are temporarily stored on disk, then manually uploaded to cloud with full control:
+
+```javascript
+// Uses disk storage - files saved locally first
+const upload = multer({ storage: diskStorage });
+
+router.post('/register', upload.single('avatar'), userController.register);
+
+// In controller, file is on disk - you control cloud upload
+exports.register = async (req, res) => {
+  if (req.file) {
+    // File is temporarily on disk at req.file.path
+    const cloudResult = await uploadToCloudinary(req.file.path);
+    const avatarUrl = cloudResult.secure_url;
+    
+    // Clean up temporary file
+    fs.unlinkSync(req.file.path);
+  }
+  // Business logic here...
+};
+```
+
+**Pros:** Full control, conditional uploads, better error handling
+**Cons:** More manual work, temporary disk usage
+
+<Aside type="tip">
+  We recommend the **Helper Approach** for most applications as it provides better control over the upload process and allows you to validate business logic before uploading files.
+</Aside>
+
+## Utility Functions
+
+### Cloudinary Helper Functions
+
+```javascript
+// utils/cloudinaryHelpers.js
+const { cloudinary } = require('../config/cloudinary');
+const fs = require('fs');
+
+const uploadToCloudinary = async (filePath, options = {}) => {
+  try {
+    const uploadOptions = {
+      folder: 'uploads',
+      resource_type: 'auto',
+      ...options
+    };
+
+    const result = await cloudinary.uploader.upload(filePath, uploadOptions);
+    
+    // Clean up temporary file
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    
+    return result.secure_url;
+  } catch (error) {
+    // Clean up temporary file even if upload fails
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    throw error;
+  }
+};
+
+const deleteFromCloudinary = async (publicId, resourceType = 'auto') => {
+  const result = await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
+  return result;
+};
+
+module.exports = { uploadToCloudinary, deleteFromCloudinary };
+```
+
+### Upload Error Handling
+
+```javascript
+// middleware/uploadErrorHandler.js
+const multer = require('multer');
+
+const handleUploadError = (error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    let message = 'Upload error';
+    
+    switch (error.code) {
+      case 'LIMIT_FILE_SIZE':
+        message = 'File too large. Maximum size is 5MB';
+        break;
+      case 'LIMIT_FILE_COUNT':
+        message = 'Too many files';
+        break;
+      case 'LIMIT_UNEXPECTED_FILE':
+        message = 'Unexpected field name';
+        break;
+      default:
+        message = error.message;
+    }
+    
+    throw new Error(message);
+  }
+  
+  if (error.code === 'INVALID_FILE_TYPE') {
+    throw new Error(error.message);
+  }
+  
+  next(error);
+};
+
+module.exports = { handleUploadError };
+```
+
+## Practical Implementation
+
+### User Registration with Profile Picture
+
+<Tabs>
+  <TabItem label="Controller">
+  ```javascript
+  // controllers/userController.js
+  const userService = require('../services/userService');
+
+  exports.register = async (req, res) => {
+    const { name, email, password } = req.body;
+    const profilePicture = req.file;
+    
+    const user = await userService.register({ 
+      name, 
+      email, 
+      password, 
+      profilePicture 
+    });
+    
+    return res.status(201).json({
+      statusCode: 201,
+      message: 'User registered successfully',
+      data: {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          profilePicture: user.profilePicture
+        }
+      }
+    });
+  };
+  ```
+  </TabItem>
+
+  <TabItem label="Service">
+  ```javascript
+  // services/userService.js
+  const { uploadToCloudinary } = require('../utils/cloudinaryHelpers');
+
+  exports.register = async ({ name, email, password, profilePicture }) => {
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      throw new Error('User already exists');
+    }
+    
+    // Handle profile picture upload if provided
+    let profilePictureUrl = null;
+    if (profilePicture) {
+      profilePictureUrl = await uploadToCloudinary(profilePicture.path, {
+        folder: 'profile-pictures'
+      });
+    }
+    
+    // Hash password and create user
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const user = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      profilePicture: profilePictureUrl
+    });
+    
+    return user;
+  };
+  ```
+  </TabItem>
+</Tabs>
+
+### Route Setup with Error Handling
+
+```javascript
+// routes/userRoutes.js
+const express = require('express');
+const upload = require('../config/multer');
+const userController = require('../controllers/userController');
+const { handleUploadError } = require('../middleware/uploadErrorHandler');
+
+const router = express.Router();
+
+// Routes with integrated error handling
+router.post('/register', 
+  upload.single('profilePicture'),
+  handleUploadError,
+  userController.register
+);
+
+router.put('/profile', 
+  upload.single('avatar'),
+  handleUploadError,
+  userController.updateProfile
+);
+
+module.exports = router;
+```
+
+## File Validation
+
+### File Type and Format Validation
+
+```javascript
+// utils/fileValidation.js
+const path = require('path');
+
+const validateFile = (req, file, cb) => {
+  const imageTypes = /jpeg|jpg|png|gif|webp/;
+  const documentTypes = /pdf|doc|docx|txt|rtf/;
+  const videoTypes = /mp4|avi|mov|wmv|mkv/;
+  
+  const extname = path.extname(file.originalname).toLowerCase();
+  const mimetype = file.mimetype.toLowerCase();
+
+  const isImage = imageTypes.test(extname) && mimetype.startsWith('image/');
+  const isDocument = documentTypes.test(extname) && 
+    (mimetype.startsWith('application/') || mimetype.startsWith('text/'));
+  const isVideo = videoTypes.test(extname) && mimetype.startsWith('video/');
+
+  if (isImage || isDocument || isVideo) {
+    return cb(null, true);
+  }
+
+  const error = new Error(`Invalid file type: ${extname}. Allowed: images, documents, videos`);
+  error.code = 'INVALID_FILE_TYPE';
+  cb(error);
+};
+
+module.exports = { validateFile };
+```
+
+## Best Practices
+
+1. **Use cloud storage for production**
+   - Cloudinary provides automatic optimization and CDN delivery
+   - Local storage doesn't scale and creates backup complications
+
+2. **Validate business logic before uploading**
+   - Use helper approach to upload only after validating user data
+   - Avoid orphaned files from failed business operations
+
+3. **Implement proper error handling**
+   - Handle upload errors gracefully
+   - Provide clear error messages to users
+
+4. **Organize files properly**
+   - Configuration in `config/` folder
+   - Validation utilities in `utils/` folder
+   - Upload middleware in `middleware/` folder
+
+<Aside type="caution">
+  Never store uploaded files in your application's source code directory. Always use cloud storage for production applications.
+</Aside>
+
+## Further Reading
+
+- [Multer Documentation](https://github.com/expressjs/multer)
+- [Cloudinary Node.js Documentation](https://cloudinary.com/documentation/node_integration)
