@@ -14,7 +14,7 @@ Modern React applications typically need to communicate with backend services. T
 Create a centralized Axios instance with interceptors that can be reused throughout your application:
 
 ```javascript
-// src/services/api/axios.js
+// src/utils/axios.js
 import axios from 'axios';
 
 const baseURL = process.env.REACT_APP_API_URL || 'https://api.example.com';
@@ -381,9 +381,9 @@ To maintain clean separation of concerns, organize API calls into service module
 
 <FileTree>
 - src/
+  - utils/
+    - axios.js       // Axios instance and interceptors
   - services/
-    - api/
-      - axios.js    // Axios instance and interceptors
     - userService.js  // User-related API calls
     - authService.js  // Authentication API calls 
     - postService.js  // Post-related API calls
@@ -393,7 +393,7 @@ To maintain clean separation of concerns, organize API calls into service module
 
 ```javascript
 // src/services/userService.js
-import api from './api/axios';
+import api from '../utils/axios';
 
 export const getUserProfile = async (userId) => {
   return await api.get(`/users/${userId}`);
