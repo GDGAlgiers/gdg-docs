@@ -1,0 +1,493 @@
+---
+title: "API Performance Optimization"
+description: "Comprehensive guide to optimizing Express API performance through rate limiting, pagination strategies, caching, and background processing techniques"
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+**API performance optimization** is critical for ensuring your Express application remains responsive, scalable, and resilient under load. This guide covers essential techniques for improving API performance and handling large-scale operations efficiently.
+
+## Rate Limiting
+
+Rate limiting restricts how many requests a client can make to your API within a specific time window. This prevents abuse, protects against DoS attacks, and ensures fair resource distribution among clients.
+
+### Implementing Rate Limiting
+
+The most common approach uses the `express-rate-limit` middleware:
+
+```javascript
+// src/middleware/rateLimiter.js
+const rateLimit = require('express-rate-limit');
+
+// Basic rate limiter - applies to all requests
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  message: {
+    status: 429,
+    message: 'Too many requests, please try again later.'
+  }
+});
+
+// More restrictive limiter for authentication endpoints
+const authLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5, // limit each IP to 5 login attempts per hour
+  message: {
+    status: 429,
+    message: 'Too many login attempts, please try again after an hour'
+  }
+});
+
+module.exports = {
+  globalLimiter,
+  authLimiter
+};
+```
+
+### Advanced Rate Limiting Strategies
+
+<Tabs>
+  <TabItem label="Per-Route Limiting">
+  **Use Case:** Different endpoints need different rate limits based on their computational cost or business importance.
+  **When to use:** When you have expensive operations (like file uploads) that need stricter limits, or public endpoints that can handle more traffic.
+
+  ```javascript
+  // Different limits for different routes
+  app.get('/api/public', 
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 200 // More generous for public routes
+    }),
+    publicController.getData
+  );
+  
+  app.get('/api/premium', 
+    rateLimit({
+      windowMs: 15 * 60 * 1000,
+      max: 600 // More generous for premium users
+    }),
+    premiumController.getData
+  );
+  ```
+  </TabItem>
+  
+  <TabItem label="Dynamic Limits">
+  **Use Case:** Adjust rate limits based on user characteristics like subscription tier, authentication status, or user behavior.
+  **When to use:** When you have different user tiers (free vs premium) or want to reward authenticated users with higher limits.
+
+  ```javascript
+  // Dynamic rate limiting based on user roles
+  const dynamicRateLimit = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: (req, res) => {
+      if (req.user?.role === 'premium') return 300;
+      if (req.user?.role === 'admin') return 1000;
+      return 100; // default limit
+    },
+    keyGenerator: (req) => {
+      return req.user ? req.user.id : req.ip; // Use user ID or IP
+    }
+  });
+  
+  app.use('/api/resources', authenticate, dynamicRateLimit, resourceController.getResources);
+  ```
+  </TabItem>
+  
+  <TabItem label="Redis Store">
+  **Use Case:** Share rate limiting data across multiple server instances in a distributed system.
+  **When to use:** When running multiple Express servers behind a load balancer and need consistent rate limiting across all instances.
+
+  ```javascript
+  // Using Redis to store rate limit data (for distributed systems)
+  const RedisStore = require('rate-limit-redis');
+  const Redis = require('ioredis');
+  
+  const redisClient = new Redis({
+    host: process.env.REDIS_HOST,
+    port: process.env.REDIS_PORT,
+    password: process.env.REDIS_PASSWORD
+  });
+  
+  const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    standardHeaders: true,
+    store: new RedisStore({
+      sendCommand: (...args) => redisClient.call(...args)
+    })
+  });
+  ```
+  </TabItem>
+</Tabs>
+
+<Aside type="tip">
+  Consider using different rate limits based on authentication status, user roles, or subscription levels to provide better service to legitimate users while still protecting against abuse.
+</Aside>
+
+## Pagination Strategies
+
+Pagination is essential when dealing with large datasets to avoid performance issues and excessive resource consumption.
+
+### Pagination with Prisma
+
+```javascript
+// src/services/productService.js
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+exports.getProducts = async (page = 1, limit = 10) => {
+  try {
+    const skip = (page - 1) * limit;
+    
+    // Execute queries in parallel
+    const [products, totalCount] = await Promise.all([
+      prisma.product.findMany({
+        skip,
+        take: Number(limit),
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.product.count()
+    ]);
+    
+    // Calculate pagination metadata
+    const totalPages = Math.ceil(totalCount / limit);
+    
+    return {
+      data: products,
+      pagination: {
+        page: Number(page),
+        limit: Number(limit),
+        totalItems: totalCount,
+        totalPages,
+      }
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+```
+
+### Alternative Pagination Approaches
+
+While the example above demonstrates offset-based pagination, cursor-based pagination is often more efficient for large datasets. Instead of using `skip` and `take`, cursor-based pagination uses a reference point (usually an ID or unique timestamp) and retrieves records after that point. Both SQL and NoSQL databases support this pattern with slightly different implementations.
+
+## Caching Strategies
+
+Caching dramatically improves API performance by serving previously computed results without repeating expensive operations.
+
+### Redis Caching
+
+Redis is an in-memory data store perfect for caching in distributed systems:
+
+```javascript
+// middleware/cacheMiddleware.js
+const redisClient = require("../config/redis");
+
+const checkCache = (keyFn) => {
+  return async (req, res, next) => {
+    const key = keyFn(req);
+    const cachedData = await redisClient.get(key);
+
+    if (cachedData) {
+      const parsedData = JSON.parse(cachedData);
+
+      return res.status(200).json({
+        message: parsedData.message,
+        data: parsedData.data,
+        statusCode: parsedData.statusCode,
+      });
+    }
+    next();
+  };
+};
+
+module.exports = checkCache;
+```
+
+### Redis Configuration
+
+```javascript
+// config/redis.js
+const { createClient } = require('redis');
+
+const redisClient = createClient({
+  url: process.env.REDIS_URL || 'redis://localhost:6379'
+});
+
+redisClient.on('error', (err) => console.log('Redis Client Error', err));
+
+// Connect to Redis
+(async () => {
+  try {
+    await redisClient.connect();
+    console.log('Connected to Redis successfully');
+  } catch (error) {
+    console.error('Redis connection error:', error);
+    // Application can continue without Redis
+  }
+})();
+
+module.exports = redisClient;
+```
+
+### Using the Cache Middleware
+
+```javascript
+// routes/productRoutes.js
+const express = require('express');
+const router = express.Router();
+const productController = require('../controllers/productController');
+const checkCache = require('../middleware/cacheMiddleware');
+
+// Cache product list by category
+router.get('/products/category/:categoryId', 
+  checkCache((req) => `products:category:${req.params.categoryId}`),
+  productController.getProductsByCategory
+);
+
+// Cache individual product lookups
+router.get('/products/:id', 
+  checkCache((req) => `products:${req.params.id}`),
+  productController.getProductById
+);
+
+module.exports = router;
+```
+
+<Aside type="caution">
+  Cache invalidation is one of the hardest problems in computer science. Be careful not to serve stale data, especially for critical features like user account information or financial transactions.
+</Aside>
+
+### Caching Recommendations
+
+1. **Cache read-heavy resources** that don't change frequently
+2. **Don't cache user-specific data** that changes frequently
+3. **Use short TTLs** for data that changes moderately often
+4. **Monitor cache hit ratios** to ensure your caching strategy is effective
+
+## Background Task Processing
+
+Not all operations need to be performed synchronously within the request-response cycle. Moving time-consuming tasks to background processes improves API responsiveness.
+
+### Using Job Queues
+
+<Tabs>
+  <TabItem label="Setting Up Bull">
+  **Why we need this:** Imagine your user registration takes 3 seconds because you're sending a welcome email. That's 3 seconds of waiting for something that could happen in the background. Bull queues let you respond instantly while handling the email separately.
+
+  ```javascript
+  // src/queues/index.js
+  const Queue = require('bull');
+
+  // Create queues with configuration
+  const createQueue = (name) => {
+    return new Queue(name, {
+      redis: {
+        host: process.env.REDIS_HOST || 'localhost',
+        port: process.env.REDIS_PORT || 6379,
+        password: process.env.REDIS_PASSWORD || undefined
+      },
+      defaultJobOptions: {
+        attempts: 3, // Sometimes emails fail - network issues, server down, etc.
+        backoff: {
+          type: 'exponential',
+          delay: 2000  // Wait 2s, then 4s, then 8s between retries
+        },
+        removeOnComplete: true // Redis can get cluttered with old jobs
+      }
+    });
+  };
+
+  // Separate queues for different job types - this way image processing 
+  // won't block email sending if it gets backed up
+  const emailQueue = createQueue('email-processing');
+  const pdfQueue = createQueue('pdf-generation');
+  const imageQueue = createQueue('image-processing');
+
+  // Monitor what's happening - crucial for debugging production issues
+  const setupQueueEvents = (queue) => {
+    queue.on('completed', job => {
+      console.log(`✅ ${queue.name} job ${job.id} completed`);
+    });
+
+    queue.on('failed', (job, err) => {
+      console.error(`❌ ${queue.name} job ${job.id} failed:`, err.message);
+      // In production, you'd send this to your error tracking service
+    });
+
+    queue.on('error', (error) => {
+      console.error(`🚨 ${queue.name} queue error:`, error);
+    });
+  };
+
+  [emailQueue, pdfQueue, imageQueue].forEach(setupQueueEvents);
+
+  module.exports = {
+    emailQueue,
+    pdfQueue,
+    imageQueue
+  };
+  ```
+  </TabItem>
+  
+  <TabItem label="Email Processor">
+  **The worker side:** This is where the actual work happens. While your Express server handles new requests, separate worker processes run this code to process queued jobs. You can run multiple workers to handle high email volumes.
+
+  ```javascript
+  // src/queues/processors/emailProcessor.js
+  const emailTransporter = require('../../config/emailTransporter');
+
+  async function processEmail(job) {
+    const { recipient, subject, template, context, text, html } = job.data;
+    
+    try {
+      // You might want to validate the email address first
+      if (!recipient || !recipient.includes('@')) {
+        throw new Error('Invalid email address');
+      }
+
+      // Prepare email content - in real apps, you'd probably render templates here
+      let emailContent = { text, html };
+      
+      // The actual email sending - this can take 1-5 seconds depending on provider
+      const info = await emailTransporter.sendMail({
+        from: process.env.EMAIL_FROM,
+        to: recipient,
+        subject,
+        html: emailContent.html,
+        text: emailContent.text
+      });
+      
+      // Log success for monitoring - helps track delivery rates
+      console.log(`📧 Email sent to ${recipient}, messageId: ${info.messageId}`);
+      
+      return {
+        success: true,
+        messageId: info.messageId,
+        recipient,
+        sentAt: new Date()
+      };
+    } catch (error) {
+      // Common failures: invalid email, SMTP server down, rate limits
+      console.error(`📧 Failed to send email to ${recipient}:`, error.message);
+      
+      // Bull will automatically retry this job based on our queue config
+      throw error;
+    }
+  }
+
+  module.exports = processEmail;
+  ```
+  </TabItem>
+  
+  <TabItem label="Using In Controllers">
+  **The magic moment:** Instead of making users wait for email delivery (which can fail and retry), we just queue it up and respond immediately. The user gets instant feedback, and the email gets handled reliably in the background.
+
+  ```javascript
+  // src/controllers/userController.js
+  const { emailQueue } = require('../queues');
+
+  exports.register = async (req, res, next) => {
+    try {
+      // This is fast - just a database write
+      const user = await User.create(req.body);
+      
+      // Queue the email instead of sending it now
+      // Even if this fails, the user is still created successfully
+      await emailQueue.add('welcome-email', {
+        recipient: user.email,
+        subject: 'Welcome to our platform!',
+        template: 'welcome',
+        context: { 
+          name: user.name,
+          verificationUrl: `https://example.com/verify/${user.verificationToken}`
+        }
+      }, {
+        // Job-specific options can override queue defaults
+        delay: 5000, // Send after 5 seconds (feels more natural)
+        attempts: 5,  // Welcome emails are important - retry more
+      });
+      
+      // User gets this response immediately, regardless of email status
+      res.status(201).json({
+        statusCode: 201,
+        data: {
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email
+          },
+          message: 'Account created! Check your email for verification.'
+        }
+      });
+      
+      // Pro tip: You could also track this job ID to show email status
+      // in your admin dashboard or to the user
+    } catch (error) {
+      next(error);
+    }
+  };
+  ```
+  </TabItem>
+</Tabs>
+
+<Aside type="tip">
+  For production systems, consider more robust task processing frameworks like [Agenda](https://github.com/agenda/agenda) or [Bullmq](https://github.com/taskforcesh/bullmq) which offer more advanced features.
+</Aside>
+
+## Best Practices & Performance Tips
+
+### General Best Practices
+
+1. **Use compression** for response payloads
+   ```javascript
+   const compression = require('compression');
+   app.use(compression());
+   ```
+
+2. **Implement connection pooling** for databases
+
+3. **Use streams** for large files
+   ```javascript
+   app.get('/api/reports/large-csv', (req, res) => {
+     const fileStream = fs.createReadStream('path/to/large-report.csv');
+     fileStream.pipe(res);
+   });
+   ```
+
+5. **Implement proper error handling** to prevent resource leaks
+
+### Common Performance Pitfalls
+
+❌ **N+1 Query Problem**
+- Problem: Executing a database query for each item in a collection
+- Solution: Use eager loading or batch queries
+
+❌ **Memory Leaks**
+- Problem: Objects that aren't garbage collected
+- Solution: Use proper cleanup in event listeners and timers
+
+❌ **Blocking the Event Loop**
+- Problem: Long-running synchronous operations
+- Solution: Use asynchronous APIs and background processing
+
+❌ **Excessive Logging**
+- Problem: Logging everything, including sensitive info
+- Solution: Use appropriate log levels and sampling
+
+<Aside type="tip">
+  Remember that premature optimization is the root of all evil. Focus on writing clean, maintainable code first, then optimize when you have specific performance issues identified through monitoring and testing.
+</Aside>
+
+## Further Reading
+
+- [Express.js Performance Best Practices](https://expressjs.com/en/advanced/best-practice-performance.html)
+- [Node.js Performance and Scalability](https://nodejs.org/en/docs/guides/dont-block-the-event-loop/)
+- [Bull Documentation](https://github.com/OptimalBits/bull/blob/master/REFERENCE.md)
+- [Redis Caching Patterns](https://redis.io/documentation)
+- [Understanding the Offset and Cursor Pagination](https://medium.com/better-programming/understanding-the-offset-and-cursor-pagination-8ddc54d10d98)
+- [JavaScript Event Loop Visualized](https://www.youtube.com/watch?v=eiC58R16hb8&pp=ygUXYmxvY2tpbmcgdGhlIGV2ZW50IGxvb3A%3D)
+- [The N+1 Database Query Problem](https://medium.com/databases-in-simple-words/the-n-1-database-query-problem-a-simple-explanation-and-solutions-ef11751aef8a)
