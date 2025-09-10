@@ -1,4 +1,1002 @@
 ---
 title: "Common Issues & Debugging"
-description: "Common Issues & Debugging"
+description: "Strategies and best practices for identifying and resolving common issues in Flutter apps, including state rebuild problems, layout issues, and performance optimization."
+---
+
+import { Aside, Code, FileTree, Card, CardGrid, Steps, Tabs } from '@astrojs/starlight/components';
+
+---
+
+Diagnosing and resolving issues in Flutter applications requires systematic approaches and proper tooling. This guide covers common problems and effective strategies to identify, debug, and optimize your Flutter applications.
+
+<Aside type="tip">
+  **Pro tip:** Invest time in learning debugging techniques early. The ability to quickly diagnose issues will save countless hours during development and maintenance.
+</Aside>
+
+---
+
+## State Rebuild Issues
+
+State management problems often manifest as inefficient UI updates, leading to performance issues or unexpected behaviors.
+
+<Card title="Common State Rebuild Problems">
+  <Steps>
+    1. **Excessive Rebuilds**
+       Too many widgets rebuilding when only a small part of the UI needs updating.
+    
+    2. **Missing Rebuilds**
+       UI not updating when the underlying data changes.
+    
+    3. **Inconsistent State**
+       Different parts of the UI showing inconsistent data.
+    
+    4. **Build Context Issues**
+       Errors related to using BuildContext after widget disposal.
+  </Steps>
+</Card>
+
+### Diagnosing State Rebuild Issues
+
+<Code code={`// Add this import for the debugPrint function
+import 'package:flutter/foundation.dart';
+
+class MyWidget extends StatelessWidget {
+  const MyWidget({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    // Add debug print to track rebuilds
+    debugPrint('MyWidget rebuilding');
+    
+    return Consumer<MyDataModel>(
+      builder: (context, model, child) {
+        // Add more specific rebuild tracking
+        debugPrint('MyWidget Consumer rebuilding with data: \${model.someValue}');
+        
+        return Text(model.someValue);
+      },
+    );
+  }
+}`} lang="dart" title="Tracking Widget Rebuilds" />
+
+### Flutter Widget Inspector
+
+<Aside type="note">
+  The Flutter Widget Inspector in DevTools allows you to visualize rebuild boundaries and identify which parts of your widget tree are rebuilding.
+</Aside>
+
+<Code code={`// Enable performance overlay in your app
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(
+    MaterialApp(
+      showPerformanceOverlay: true,  // Shows performance metrics on screen
+      checkerboardRasterCacheImages: true,  // Highlights cached images
+      checkerboardOffscreenLayers: true,    // Highlights offscreen rendering
+      home: MyApp(),
+    ),
+  );
+}`} lang="dart" title="Enabling Performance Overlay" />
+
+### Resolving State Management Issues
+
+<Card title="State Containment">
+  <Code code={`// BAD: Rebuilding the entire screen when only a small part changes
+class CounterScreen extends StatefulWidget {
+  @override
+  _CounterScreenState createState() => _CounterScreenState();
+}
+
+class _CounterScreenState extends State<CounterScreen> {
+  int _counter = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          // This expensive widget rebuilds unnecessarily
+          ExpensiveWidget(),
+          
+          // Only this actually needs to rebuild
+          Text('Count: $_counter'),
+          
+          ElevatedButton(
+            onPressed: () => setState(() => _counter++),
+            child: Text('Increment'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// GOOD: Isolate state to smallest possible widget
+class CounterScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Column(
+        children: [
+          // Now this expensive widget doesn't rebuild
+          ExpensiveWidget(),
+          
+          // Only this small widget rebuilds
+          CounterWidget(),
+        ],
+      ),
+    );
+  }
+}
+
+class CounterWidget extends StatefulWidget {
+  @override
+  _CounterWidgetState createState() => _CounterWidgetState();
+}
+
+class _CounterWidgetState extends State<CounterWidget> {
+  int _counter = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text('Count: $_counter'),
+        ElevatedButton(
+          onPressed: () => setState(() => _counter++),
+          child: Text('Increment'),
+        ),
+      ],
+    );
+  }
+}`} lang="dart" title="Isolating State" />
+</Card>
+
+<Card title="SelectionModel Pattern for Partial Updates">
+  <Code code={`// Selection model pattern to avoid full list rebuilds
+class SelectableListItem extends StatelessWidget {
+  final String title;
+  final String id;
+  final SelectionModel selectionModel;
+
+  const SelectableListItem({
+    required this.title,
+    required this.id,
+    required this.selectionModel,
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    // Only listen to changes for this specific item
+    final isSelected = selectionModel.isSelected(id);
+    
+    return ListTile(
+      title: Text(title),
+      selected: isSelected,
+      onTap: () {
+        // Toggle selection without rebuilding other items
+        selectionModel.toggleSelection(id);
+      },
+    );
+  }
+}
+
+// Selection model that notifies only affected items
+class SelectionModel extends ChangeNotifier {
+  final Set<String> _selectedIds = {};
+  
+  // Value notifier for each item to avoid global rebuilds
+  final Map<String, ValueNotifier<bool>> _selectionNotifiers = {};
+  
+  // Get or create a notifier for a specific ID
+  ValueNotifier<bool> selectionNotifierFor(String id) {
+    return _selectionNotifiers.putIfAbsent(
+      id, 
+      () => ValueNotifier<bool>(_selectedIds.contains(id))
+    );
+  }
+  
+  bool isSelected(String id) => _selectedIds.contains(id);
+  
+  void toggleSelection(String id) {
+    if (_selectedIds.contains(id)) {
+      _selectedIds.remove(id);
+    } else {
+      _selectedIds.add(id);
+    }
+    
+    // Only notify the specific item that changed
+    if (_selectionNotifiers.containsKey(id)) {
+      _selectionNotifiers[id]!.value = _selectedIds.contains(id);
+    }
+    
+    // Also notify listeners for global state changes
+    notifyListeners();
+  }
+}`} lang="dart" title="Selection Model Pattern" />
+</Card>
+
+---
+
+## Layout Overflows
+
+Layout overflows occur when widgets attempt to render outside their allocated bounds, causing visual defects and warning messages.
+
+<Card title="Identifying Layout Overflows">
+  <Code code={`// Enable debug painting to see layout bounds
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show debugPaintSizeEnabled;
+
+void main() {
+  debugPaintSizeEnabled = true;  // Shows widget boundaries
+  runApp(MyApp());
+}`} lang="dart" title="Enabling Debug Painting" />
+</Card>
+
+### Common Overflow Scenarios and Solutions
+
+<Tabs>
+  <Tabs label="Row/Column Overflow">
+    <Code code={`// PROBLEM: Text overflows in a fixed width Row
+Row(
+  children: [
+    Icon(Icons.account_circle),
+    Text(
+      'This is a very long text that will overflow the available space',
+    ),
+  ],
+)
+
+// SOLUTION 1: Use Expanded to allow the Text to take remaining space
+Row(
+  children: [
+    Icon(Icons.account_circle),
+    Expanded(
+      child: Text(
+        'This is a very long text that will no longer overflow',
+        overflow: TextOverflow.ellipsis,  // Show ellipsis for overflow
+      ),
+    ),
+  ],
+)
+
+// SOLUTION 2: Use Flexible with a tight fit
+Row(
+  children: [
+    Icon(Icons.account_circle),
+    Flexible(
+      child: Text(
+        'This is a very long text that will wrap to multiple lines',
+        softWrap: true,
+      ),
+    ),
+  ],
+)`} lang="dart" title="Row Overflow Solutions" />
+  </Tabs>
+
+  <Tabs label="ListView Overflow">
+    <Code code={`// PROBLEM: ListView inside a Column causes overflow
+Column(
+  children: [
+    Text('Header'),
+    ListView(  // This creates an infinite height issue
+      children: List.generate(
+        20,
+        (index) => ListTile(title: Text('Item $index')),
+      ),
+    ),
+    Text('Footer'),
+  ],
+)
+
+// SOLUTION 1: Use ListView.builder with a fixed height
+Column(
+  children: [
+    Text('Header'),
+    SizedBox(
+      height: 300,  // Fixed height
+      child: ListView.builder(
+        itemCount: 20,
+        itemBuilder: (context, index) => ListTile(
+          title: Text('Item $index'),
+        ),
+      ),
+    ),
+    Text('Footer'),
+  ],
+)
+
+// SOLUTION 2: Use Expanded with a ListView
+Scaffold(
+  body: Column(
+    children: [
+      Text('Header'),
+      Expanded(  // Takes remaining available space
+        child: ListView.builder(
+          itemCount: 20,
+          itemBuilder: (context, index) => ListTile(
+            title: Text('Item $index'),
+          ),
+        ),
+      ),
+      Text('Footer'),
+    ],
+  ),
+)
+
+// SOLUTION 3: Use a shrinkWrap ListView (less efficient but simpler)
+Column(
+  children: [
+    Text('Header'),
+    ListView.builder(
+      shrinkWrap: true,  // Makes ListView take only needed space
+      physics: NeverScrollableScrollPhysics(),  // Prevents nested scrolling
+      itemCount: 5,  // Limit items for better performance
+      itemBuilder: (context, index) => ListTile(
+        title: Text('Item $index'),
+      ),
+    ),
+    Text('Footer'),
+  ],
+)`} lang="dart" title="ListView in Column Solutions" />
+  </Tabs>
+
+  <Tabs label="Text Overflow">
+    <Code code={`// PROBLEM: Text overflows its container
+Container(
+  width: 100,
+  child: Text(
+    'This is a long text that will overflow its container',
+  ),
+)
+
+// SOLUTION 1: Use overflow property to handle overflow gracefully
+Container(
+  width: 100,
+  child: Text(
+    'This is a long text that will overflow its container',
+    overflow: TextOverflow.ellipsis,  // Show "..." when text overflows
+    maxLines: 1,  // Limit to single line
+  ),
+)
+
+// SOLUTION 2: Allow text to wrap to multiple lines
+Container(
+  width: 100,
+  child: Text(
+    'This is a long text that will wrap to multiple lines',
+    softWrap: true,
+  ),
+)
+
+// SOLUTION 3: Use FittedBox to scale text to fit
+Container(
+  width: 100,
+  child: FittedBox(
+    fit: BoxFit.scaleDown,
+    child: Text(
+      'This text will scale down',
+    ),
+  ),
+)`} lang="dart" title="Text Overflow Solutions" />
+  </Tabs>
+</Tabs>
+
+### Widget Constraints Visualization
+
+<Aside type="tip">
+  Use the **Layout Explorer** in Flutter DevTools to visualize widget constraints and understand why your widgets are positioned and sized as they are.
+</Aside>
+
+<Card title="Using LayoutBuilder for Responsive Layouts">
+  <Code code={`// Use LayoutBuilder to adapt to available space
+LayoutBuilder(
+  builder: (BuildContext context, BoxConstraints constraints) {
+    if (constraints.maxWidth > 600) {
+      // Wide layout
+      return WideLayout();
+    } else {
+      // Narrow layout
+      return NarrowLayout();
+    }
+  },
+)
+
+// Using LayoutBuilder to handle potential overflow
+LayoutBuilder(
+  builder: (BuildContext context, BoxConstraints constraints) {
+    final maxWidth = constraints.maxWidth;
+    
+    return Container(
+      width: maxWidth,
+      child: Text(
+        'This text adapts to available width',
+        style: TextStyle(
+          fontSize: maxWidth > 300 ? 18.0 : 14.0,
+        ),
+        overflow: TextOverflow.ellipsis,
+        maxLines: maxWidth > 200 ? 2 : 1,
+      ),
+    );
+  },
+)`} lang="dart" title="LayoutBuilder Example" />
+</Card>
+
+### Flex Widget and Flexible Children
+
+<Code code={`// Using Flexible and Expanded to handle space allocation
+Row(
+  children: [
+    // This will take 2/6 of the available space
+    Flexible(
+      flex: 2,
+      child: Container(
+        color: Colors.red,
+        height: 50,
+      ),
+    ),
+    // This will take 3/6 of the available space
+    Flexible(
+      flex: 3,
+      child: Container(
+        color: Colors.blue,
+        height: 50,
+      ),
+    ),
+    // This will take 1/6 of the available space
+    Flexible(
+      flex: 1,
+      child: Container(
+        color: Colors.green,
+        height: 50,
+      ),
+    ),
+  ],
+)`} lang="dart" title="Flex Space Allocation" />
+
+---
+
+## Performance Profiling with DevTools
+
+Flutter DevTools provides comprehensive profiling capabilities to identify performance bottlenecks.
+
+<Card title="Setting Up DevTools">
+  <Steps>
+    1. **Install DevTools**
+       ```bash
+       flutter pub global activate devtools
+       ```
+    
+    2. **Run Your App in Debug/Profile Mode**
+       ```bash
+       flutter run --profile  # For performance testing
+       ```
+    
+    3. **Connect DevTools**
+       ```bash
+       flutter pub global run devtools
+       ```
+    
+    4. **Connect to Your App**
+       Enter the URL from the Flutter run command into DevTools
+  </Steps>
+</Card>
+
+### Using the Flutter Performance View
+
+<Aside type="note">
+  The **Performance** page in DevTools allows you to record and analyze UI and CPU performance, helping you identify janky frames and excessive rebuilds.
+</Aside>
+
+<Card title="Key Performance Metrics to Watch">
+  <Steps>
+    1. **Frame Rendering Time**
+       Look for frames that take longer than 16ms (60fps) to render.
+    
+    2. **CPU Usage**
+       Identify CPU-intensive operations that might be causing stutters.
+    
+    3. **Memory Usage**
+       Monitor for memory leaks and excessive object allocations.
+    
+    4. **Widget Rebuild Count**
+       Check for widgets that rebuild too frequently.
+  </Steps>
+</Card>
+
+### Widget Build Profiling
+
+<Code code={`// Add a custom performance overlay to track rebuild times
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+
+class RebuildTracker extends StatefulWidget {
+  final Widget child;
+  final String name;
+  
+  const RebuildTracker({
+    required this.child,
+    required this.name,
+    Key? key,
+  }) : super(key: key);
+  
+  @override
+  _RebuildTrackerState createState() => _RebuildTrackerState();
+}
+
+class _RebuildTrackerState extends State<RebuildTracker> {
+  int _buildCount = 0;
+  late final Stopwatch _stopwatch;
+  
+  @override
+  void initState() {
+    super.initState();
+    _stopwatch = Stopwatch();
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    _buildCount++;
+    
+    _stopwatch.start();
+    final result = widget.child;
+    _stopwatch.stop();
+    
+    if (_buildCount % 10 == 0 || _stopwatch.elapsedMilliseconds > 16) {
+      debugPrint(
+        '[PERF] \${widget.name} rebuilt $_buildCount times. '
+        'Last build took \${_stopwatch.elapsedMilliseconds}ms'
+      );
+    }
+    
+    _stopwatch.reset();
+    return result;
+  }
+}`} lang="dart" title="Custom Rebuild Tracker" />
+
+<Code code={`// Usage of the RebuildTracker
+RebuildTracker(
+  name: 'ProductList',
+  child: ListView.builder(
+    itemCount: products.length,
+    itemBuilder: (context, index) {
+      return RebuildTracker(
+        name: 'ProductItem $index',
+        child: ProductItem(product: products[index]),
+      );
+    },
+  ),
+)`} lang="dart" title="Using the Rebuild Tracker" />
+
+### Memory Profiling
+
+<Card title="Monitoring Memory Leaks">
+  <Code code={`// Proper disposal of resources to prevent memory leaks
+class _MyWidgetState extends State<MyWidget> {
+  late StreamSubscription _subscription;
+  late AnimationController _controller;
+  
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this);
+    _subscription = stream.listen(_handleData);
+  }
+  
+  @override
+  void dispose() {
+    // Always dispose resources when the widget is removed
+    _subscription.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+  
+  // Rest of the implementation...
+}`} lang="dart" title="Proper Resource Disposal" />
+</Card>
+
+<Card title="Using Memory Snapshot">
+  <Aside type="tip">
+    DevTools' Memory page allows you to take memory snapshots. Look for:
+    
+    - Objects that unexpectedly persist across snapshots
+    - Large numbers of the same object type
+    - Steadily increasing memory usage during normal operation
+  </Aside>
+</Card>
+
+---
+
+## Reducing Unnecessary Rebuilds
+
+Excessive rebuilds are one of the most common performance issues in Flutter applications.
+
+<Card title="Techniques to Reduce Rebuilds">
+  <Tabs>
+    <Tabs label="Const Constructors">
+      <Code code={`// Non-const widgets are recreated on each build
+Widget build(BuildContext context) {
+  return Container(
+    padding: EdgeInsets.all(16.0),
+    child: Icon(Icons.star),
+  );
+}
+
+// Const widgets are reused across builds
+Widget build(BuildContext context) {
+  return const Container(
+    padding: EdgeInsets.all(16.0),
+    child: Icon(Icons.star),
+  );
+}`} lang="dart" title="Using Const Constructors" />
+      
+      <Aside type="note">
+        The `const` constructor creates compile-time constants that are guaranteed to be the same instance across all builds. This reduces memory allocation and improves performance.
+      </Aside>
+    </Tabs>
+    
+    <Tabs label="ValueNotifier & ValueListenableBuilder">
+      <Code code={`// Using ValueNotifier for fine-grained updates
+class CounterWidget extends StatelessWidget {
+  // Create a ValueNotifier to hold the counter value
+  final ValueNotifier<int> _counter = ValueNotifier<int>(0);
+  
+  @override
+  Widget build(BuildContext context) {
+    print('CounterWidget build'); // This runs only once
+    
+    return Column(
+      children: [
+        // This expensive widget doesn't rebuild when counter changes
+        ExpensiveWidget(),
+        
+        // Only this small widget rebuilds
+        ValueListenableBuilder<int>(
+          valueListenable: _counter,
+          builder: (context, value, child) {
+            print('ValueListenableBuilder build'); // This runs on counter change
+            return Text('Count: $value');
+          },
+        ),
+        
+        ElevatedButton(
+          onPressed: () => _counter.value++,
+          child: const Text('Increment'),
+        ),
+      ],
+    );
+  }
+}`} lang="dart" title="ValueNotifier Pattern" />
+      
+      <Aside type="tip">
+        ValueNotifier is perfect for updating small parts of the UI without rebuilding the entire widget tree. It's lightweight and doesn't require Provider or other state management libraries.
+      </Aside>
+    </Tabs>
+    
+    <Tabs label="BLoC & StreamBuilder">
+      <Code code={`// Using BLoC pattern with StreamBuilder for efficient updates
+class CounterBloc {
+  final _counterController = StreamController<int>.broadcast();
+  int _counter = 0;
+  
+  Stream<int> get counterStream => _counterController.stream;
+  int get counter => _counter;
+  
+  void increment() {
+    _counter++;
+    _counterController.sink.add(_counter);
+  }
+  
+  void dispose() {
+    _counterController.close();
+  }
+}
+
+class CounterPage extends StatefulWidget {
+  @override
+  _CounterPageState createState() => _CounterPageState();
+}
+
+class _CounterPageState extends State<CounterPage> {
+  final CounterBloc _bloc = CounterBloc();
+  
+  @override
+  void dispose() {
+    _bloc.dispose();
+    super.dispose();
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    print('CounterPage build'); // This runs only once
+    
+    return Column(
+      children: [
+        // This expensive widget doesn't rebuild
+        ExpensiveWidget(),
+        
+        // Only this widget rebuilds when the counter changes
+        StreamBuilder<int>(
+          stream: _bloc.counterStream,
+          initialData: _bloc.counter,
+          builder: (context, snapshot) {
+            print('StreamBuilder build'); // This runs on counter change
+            return Text('Count: \${snapshot.data}');
+          },
+        ),
+        
+        ElevatedButton(
+          onPressed: () => _bloc.increment(),
+          child: const Text('Increment'),
+        ),
+      ],
+    );
+  }
+}`} lang="dart" title="BLoC Pattern" />
+    </Tabs>
+    
+    <Tabs label="RepaintBoundary">
+      <Code code={`// Using RepaintBoundary to isolate painting
+class MyWidget extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        // This won't cause the AnimatedWidget to repaint
+        RepaintBoundary(
+          child: ExpensiveToRenderWidget(),
+        ),
+        
+        // This animation will repaint independently
+        RepaintBoundary(
+          child: AnimatedWidget(),
+        ),
+      ],
+    );
+  }
+}`} lang="dart" title="RepaintBoundary Usage" />
+      
+      <Aside type="tip">
+        Use RepaintBoundary for:
+        
+        - Complex animations that don't need to trigger repaints elsewhere
+        - Widget subtrees that update independently from the rest
+        - Expensive rendering operations that don't change often
+        
+        But be cautious: excessive use can increase memory usage.
+      </Aside>
+    </Tabs>
+  </Tabs>
+</Card>
+
+### Optimizing Lists and Grids
+
+<Code code={`// Using ListView.builder for efficient list rendering
+ListView.builder(
+  itemCount: items.length,
+  itemBuilder: (context, index) {
+    // Only builds items that are visible
+    return ListTile(
+      title: Text(items[index].title),
+      subtitle: Text(items[index].description),
+    );
+  },
+)
+
+// Further optimization with cacheExtent
+ListView.builder(
+  // Pre-build items beyond the visible area
+  cacheExtent: 200.0, // Default is 250.0
+  itemCount: items.length,
+  itemBuilder: (context, index) {
+    return ListTile(
+      title: Text(items[index].title),
+    );
+  },
+)
+
+// For complex lists, use constant keys to preserve state
+ListView.builder(
+  itemCount: items.length,
+  itemBuilder: (context, index) {
+    final item = items[index];
+    return ListTile(
+      // Using a key based on stable identifier helps Flutter reuse widgets
+      key: ValueKey(item.id),
+      title: Text(item.title),
+    );
+  },
+)`} lang="dart" title="Optimizing Lists" />
+
+### Computed Properties and Memoization
+
+<Code code={`// Using computed properties to avoid recalculation
+class ProductViewModel {
+  final List<Product> products;
+  
+  ProductViewModel(this.products);
+  
+  // Cache for expensive computation
+  double? _averagePrice;
+  
+  // Computed property with memoization
+  double get averagePrice {
+    // Return cached value if available
+    _averagePrice ??= _calculateAveragePrice();
+    return _averagePrice!;
+  }
+  
+  double _calculateAveragePrice() {
+    if (products.isEmpty) return 0.0;
+    
+    // This could be expensive for large lists
+    final total = products.fold<double>(
+      0.0,
+      (sum, product) => sum + product.price,
+    );
+    
+    return total / products.length;
+  }
+  
+  // Reset cache when data changes
+  void updateProducts(List<Product> newProducts) {
+    products = newProducts;
+    _averagePrice = null; // Invalidate cache
+  }
+}`} lang="dart" title="Computed Properties" />
+
+### Isolates for Expensive Computations
+
+<Code code={`// Moving expensive work to an isolate
+import 'dart:isolate';
+import 'dart:async';
+
+// Function to run in isolate
+Future<List<String>> processDataInBackground(List<String> inputData) async {
+  // Create a ReceivePort for getting the result back
+  final receivePort = ReceivePort();
+  
+  // Spawn isolate
+  await Isolate.spawn(
+    _processDataIsolate, 
+    _IsolateData(receivePort.sendPort, inputData),
+  );
+  
+  // Get the result
+  final result = await receivePort.first as List<String>;
+  return result;
+}
+
+// Data wrapper for sending to isolate
+class _IsolateData {
+  final SendPort sendPort;
+  final List<String> data;
+  
+  _IsolateData(this.sendPort, this.data);
+}
+
+// Function that runs in the isolate
+void _processDataIsolate(_IsolateData isolateData) {
+  // Perform expensive computation
+  final result = isolateData.data.map((item) {
+    // Simulate complex processing
+    return item.toUpperCase();
+  }).toList();
+  
+  // Send result back to the main isolate
+  isolateData.sendPort.send(result);
+}`} lang="dart" title="Using Isolates for Heavy Processing" />
+
+<Card title="Using Compute Function">
+  <Code code={`// Using compute for simpler isolate usage
+import 'package:flutter/foundation.dart';
+
+// This function will run in a separate isolate
+List<String> _processData(List<String> data) {
+  // Do expensive work here
+  return data.map((item) => item.toUpperCase()).toList();
+}
+
+class MyWidget extends StatefulWidget {
+  @override
+  _MyWidgetState createState() => _MyWidgetState();
+}
+
+class _MyWidgetState extends State<MyWidget> {
+  List<String> _processedData = [];
+  bool _isLoading = false;
+  
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    
+    // Get raw data
+    final rawData = await fetchRawData();
+    
+    // Process in background thread
+    final processedData = await compute(_processData, rawData);
+    
+    setState(() {
+      _processedData = processedData;
+      _isLoading = false;
+    });
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return _isLoading 
+      ? CircularProgressIndicator()
+      : ListView.builder(
+          itemCount: _processedData.length,
+          itemBuilder: (context, index) {
+            return ListTile(
+              title: Text(_processedData[index]),
+            );
+          },
+        );
+  }
+}`} lang="dart" title="Compute Function" />
+</Card>
+
+---
+
+## Best Practices Summary
+
+<Card title="Performance Best Practices Checklist">
+  <Steps>
+    1. **State Management**
+       - Isolate state to the smallest widgets possible
+       - Use appropriate state management patterns for your app size
+       - Leverage granular update mechanisms like ValueNotifier
+    
+    2. **Widget Structure**
+       - Use `const` constructors for static widgets
+       - Apply proper keys in lists and dynamic widget trees
+       - Create logical rebuild boundaries to contain updates
+    
+    3. **Layout**
+       - Handle overflow issues with Expanded, Flexible, and proper constraints
+       - Use LayoutBuilder to adapt to available space
+       - Apply appropriate overflow strategies for text (ellipsis, wrapping)
+    
+    4. **Resource Management**
+       - Properly dispose of controllers, listeners, and other resources
+       - Use lazy loading for expensive resources
+       - Move heavy computations off the main thread using isolates
+    
+    5. **Profiling & Monitoring**
+       - Regularly profile your app with DevTools
+       - Add performance tracking in debug builds
+       - Benchmark critical paths and user journeys
+  </Steps>
+</Card>
+
+<Aside type="tip">
+  ### Performance Tips for Release Builds
+  
+  - ✅ Test performance in **profile mode**, not debug mode
+  - ✅ Use **flutter run --profile** for more accurate performance testing
+  - ✅ Test on lower-end devices to ensure good performance for all users
+  - ✅ Consider enabling **Performance Overlay** in a development-only build variant
+</Aside>
+
+<Aside type="caution">
+  ### Common Mistakes to Avoid
+  
+  - ❌ **Putting setState too high** in the widget tree
+  - ❌ **Forgetting to use keys** for dynamic lists
+  - ❌ **Loading large images** without proper caching
+  - ❌ **Computing values in build** methods repeatedly
+  - ❌ **Using ListView instead of ListView.builder** for large lists
+</Aside>
+
+---
+
+## See Also
+
+1. [Flutter DevTools Documentation](https://docs.flutter.dev/development/tools/devtools/overview) – Official guide to Flutter's profiling tools
+2. [Flutter Performance Best Practices](https://docs.flutter.dev/perf/rendering/best-practices) – Official performance recommendations
+3. [Flutter Profiler](https://docs.flutter.dev/perf/ui-performance) – How to diagnose UI performance issues
+
 ---
