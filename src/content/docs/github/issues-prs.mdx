@@ -1,0 +1,139 @@
+---
+title: "Issues & Pull Requests"
+description: "Simple guide for creating issues, pull requests, and using templates for task management"
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+GitHub Issues and Pull Requests are the core tools for managing tasks and code changes in your projects.
+
+## Creating Issues
+
+### Issue Templates
+
+Use the task template located in `.github/ISSUE_TEMPLATE/task.md`:
+
+```markdown title=".github/ISSUE_TEMPLATE/task.md"
+---
+name: Task
+about: Simple task template for development work
+title: ''
+labels: ''
+assignees: ''
+---
+
+# Task Details
+- [ ] Task detail 1
+- [ ] Task detail 2
+- [ ] Task detail 3
+
+# Guidelines
+- [ ] Follow naming conventions for constants, variables, and files
+- [ ] Ensure code is properly formatted
+- [ ] Pass linter checks
+- [ ] Verify build command succeeds
+- [ ] Update documentation if needed
+
+# Estimated Deadline
+DD/MM/YYYY
+```
+
+### Creating an Issue
+
+1. **Go to Issues tab** in your repository
+2. **Click "New Issue"**
+3. **Choose the task template**
+4. **Fill out the description** and checklist
+5. **Assign to team member**
+6. **Add relevant labels** (bug, feature, documentation)
+
+## Pull Requests
+
+### PR Template
+
+Your PR template in `.github/PULL_REQUEST_TEMPLATE.md`:
+
+```markdown title=".github/PULL_REQUEST_TEMPLATE.md"
+## Description
+Brief description of what this PR accomplishes
+
+## Type of Change
+- [ ] Bug fix (non-breaking change that fixes an issue)
+- [ ] New feature (non-breaking change that adds functionality)
+- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] Documentation update
+- [ ] Code refactoring
+
+## Changes Made
+- Change 1: Brief description
+- Change 2: Brief description  
+- Change 3: Brief description
+
+## Code Quality
+- [ ] Code follows project style guidelines
+- [ ] Self-review of own code completed
+- [ ] Code is properly commented
+- [ ] No merge conflicts
+
+## Related Issues
+Closes #[issue number]
+
+## Additional Notes
+Any additional information or context about the changes
+```
+
+### Creating a Pull Request
+
+1. **Push your branch** to GitHub
+2. **Click "Compare & pull request"**
+3. **Use the PR template** - it auto-fills
+4. **Link related issues** using `Closes #123`
+5. **Request reviewers**
+6. **Add appropriate labels**
+
+## Linking Issues and PRs
+
+### Auto-close Issues
+```markdown
+# In PR description
+Closes #123
+Fixes #456
+Resolves #789
+```
+
+### Reference Issues
+```markdown
+# In commits or comments
+Related to #123
+See #456
+```
+
+## Labels We Use
+
+- `bug` - Something isn't working
+- `feature` - New feature request  
+- `documentation` - Documentation improvements
+- `good first issue` - Good for newcomers
+- `priority: high` - Urgent issues
+
+## Quick Workflow
+
+### For Issues:
+1. Create issue using template
+2. Assign to someone
+3. Add labels
+4. Work on it
+5. Close when done
+
+### For PRs:
+1. Create branch: `yourname/feature/issue-description`
+2. Make changes
+3. Push and create PR using template
+4. Get review
+5. Merge when approved
+
+<Aside type="tip">
+  **Pro Tip**: Always link your PR to an issue using "Closes #123" so the issue automatically closes when the PR is merged.
+</Aside>
+
+That's it! Keep it simple and focus on getting work done. 🚀

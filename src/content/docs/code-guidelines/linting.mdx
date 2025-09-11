@@ -1,0 +1,344 @@
+---
+title: "Code Linting"
+description: "Code quality enforcement with linting tools, focusing on ESLint for JavaScript and TypeScript projects"
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+## What is Linting?
+
+**Linting** is the process of analyzing source code to flag programming errors, bugs, stylistic errors, and suspicious constructs. Unlike formatters that focus on style, linters focus on code quality and correctness.
+
+### Benefits of Linting
+
+- **Error Prevention**: Catch potential bugs before they reach production
+- **Code Quality**: Enforce best practices and coding standards
+- **Consistency**: Maintain uniform code patterns across the team
+- **Learning Tool**: Helps developers learn better coding practices
+- **Security**: Identify potential security vulnerabilities
+
+## ESLint for JavaScript/TypeScript
+
+**ESLint** is the most popular and configurable linting tool for JavaScript and TypeScript projects.
+
+### Installation
+
+<Tabs>
+  <TabItem label="npm">
+  ```bash
+  # Install ESLint
+  npm install --save-dev eslint
+  
+  # For TypeScript projects, also install:
+  npm install --save-dev @typescript-eslint/parser @typescript-eslint/eslint-plugin
+  
+  # For React projects:
+  npm install --save-dev eslint-plugin-react eslint-plugin-react-hooks
+  ```
+  </TabItem>
+  
+  <TabItem label="yarn">
+  ```bash
+  # Install ESLint
+  yarn add --dev eslint
+  
+  # Additional packages for TypeScript/React
+  yarn add --dev @typescript-eslint/parser @typescript-eslint/eslint-plugin
+  yarn add --dev eslint-plugin-react eslint-plugin-react-hooks
+  ```
+  </TabItem>
+</Tabs>
+
+### Basic Configuration
+
+Initialize ESLint configuration:
+
+```bash
+npx eslint --init
+```
+
+Or create a `.eslintrc.json` file manually:
+
+<Tabs>
+  <TabItem label="JavaScript">
+  ```json title=".eslintrc.json"
+  {
+    "env": {
+      "browser": true,
+      "es2021": true,
+      "node": true
+    },
+    "extends": [
+      "eslint:recommended"
+    ],
+    "parserOptions": {
+      "ecmaVersion": "latest",
+      "sourceType": "module"
+    },
+    "rules": {
+      "no-console": "warn", // Warns about console.log statements (should be removed in production)
+      "no-unused-vars": "error", // Flags variables that are declared but never used
+      "no-undef": "error", // Catches usage of undefined variables (prevents typos)
+      "prefer-const": "error", // Requires const for variables that are never reassigned
+      "no-var": "error" // Disallows old 'var' keyword, enforces let/const instead
+    }
+  }
+  ```
+  </TabItem>
+  
+  <TabItem label="TypeScript">
+  ```json title=".eslintrc.json"
+  {
+    "env": {
+      "browser": true,
+      "es2021": true,
+      "node": true
+    },
+    "extends": [
+      "eslint:recommended",
+      "@typescript-eslint/recommended"
+    ],
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+      "ecmaVersion": "latest",
+      "sourceType": "module"
+    },
+    "plugins": ["@typescript-eslint"],
+    "rules": {
+      "no-console": "warn", // Warns about console.log statements in production code
+      "@typescript-eslint/no-unused-vars": "error", // Flags unused variables in TypeScript
+      "@typescript-eslint/explicit-function-return-type": "warn", // Encourages explicit return types for functions
+      "@typescript-eslint/no-explicit-any": "warn" // Discourages use of 'any' type (reduces type safety)
+    }
+  }
+  ```
+  </TabItem>
+  
+  <TabItem label="React + TypeScript">
+  ```json title=".eslintrc.json"
+  {
+    "env": {
+      "browser": true,
+      "es2021": true
+    },
+    "extends": [
+      "eslint:recommended",
+      "@typescript-eslint/recommended",
+      "plugin:react/recommended",
+      "plugin:react-hooks/recommended"
+    ],
+    "parser": "@typescript-eslint/parser",
+    "parserOptions": {
+      "ecmaFeatures": {
+        "jsx": true
+      },
+      "ecmaVersion": "latest",
+      "sourceType": "module"
+    },
+    "plugins": [
+      "react",
+      "react-hooks",
+      "@typescript-eslint"
+    ],
+    "rules": {
+      "react/react-in-jsx-scope": "off", // Not needed in React 17+ (automatic JSX transform)
+      "react/prop-types": "off", // Disabled because TypeScript handles prop validation
+      "@typescript-eslint/no-unused-vars": "error", // Flags unused variables in TypeScript
+      "react-hooks/rules-of-hooks": "error", // Enforces React hooks rules (call order, conditions)
+      "react-hooks/exhaustive-deps": "warn" // Warns about missing dependencies in useEffect
+    },
+    "settings": {
+      "react": {
+        "version": "detect"
+      }
+    }
+  }
+  ```
+  </TabItem>
+</Tabs>
+
+## Package.json Scripts
+
+Add linting scripts to your `package.json`:
+
+```json title="package.json"
+{
+  "scripts": {
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx", // Check all files for linting errors
+    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix", // Automatically fix fixable linting issues
+    "lint:check": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings 0" // Fail if ANY warnings exist (strict mode)
+  }
+}
+```
+
+## Editor Integration
+
+### VS Code Setup
+
+Install the ESLint extension and configure VS Code settings:
+
+```json title=".vscode/settings.json"
+{
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": true
+  },
+  "eslint.run": "onType"
+}
+```
+
+## Ignoring Files
+
+Create a `.eslintignore` file:
+
+```text title=".eslintignore"
+# Build outputs
+dist/
+build/
+coverage/
+
+# Dependencies
+node_modules/
+
+# Generated files
+*.min.js
+*.bundle.js
+
+# Configuration files
+*.config.js
+.eslintrc.js
+```
+
+### Pre-commit Hooks
+
+Combine with Prettier in `package.json`:
+
+```json title="package.json"
+{
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
+  }
+}
+```
+
+## Common Linting Patterns
+
+### Before Linting
+```javascript
+var name = "John";  // Should use const
+let age = 25;       // Unused variable
+if (true) {         // Constant condition
+  console.log("Always runs");  // Console statement
+}
+
+function getUser(id) {  // Missing return type
+  return fetch("/api/users/" + id);  // Should use template literal
+}
+```
+
+### After Linting Fixes
+```javascript
+const name = "John";
+
+if (name) {
+  // Conditional logic here
+}
+
+function getUser(id: string): Promise<Response> {
+  return fetch(`/api/users/${id}`);
+}
+```
+
+## Custom Rules for Your Project
+
+### Creating Custom Rules
+
+```json title=".eslintrc.json"
+{
+  "rules": {
+    // Enforce specific naming conventions
+    "camelcase": ["error", { "properties": "always" }], // Requires camelCase for variables and properties
+    
+    // Limit function complexity
+    "complexity": ["warn", { "max": 10 }], // Warns when functions have too many conditional paths
+    
+    // Limit file length
+    "max-lines": ["warn", { "max": 300 }], // Warns when files exceed 300 lines (encourages smaller files)
+    
+    // Require documentation for functions
+    "require-jsdoc": ["warn", { // Encourages JSDoc comments for functions and classes
+      "require": {
+        "FunctionDeclaration": true,
+        "MethodDefinition": true,
+        "ClassDeclaration": true
+      }
+    }]
+  }
+}
+```
+
+## CI/CD Integration
+
+### GitHub Actions Example
+
+```yaml title=".github/workflows/lint.yml"
+name: Lint Code
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - run: npm ci
+      - run: npm run lint:check
+```
+
+## Best Practices
+
+### Do's
+- ✅ **Enable linting in your editor** for real-time feedback
+- ✅ **Fix linting errors** before committing code
+- ✅ **Use consistent rules** across all team members
+- ✅ **Gradually introduce stricter rules** to existing projects
+- ✅ **Document custom rules** and their reasoning
+
+### Don'ts
+- ❌ **Don't disable rules without good reason**
+- ❌ **Don't ignore all warnings** - treat them seriously
+- ❌ **Don't over-configure** - start with recommended configs
+- ❌ **Don't lint generated files** or dependencies
+
+## Troubleshooting
+
+### Performance Issues
+If ESLint is slow on large codebases:
+
+```json title=".eslintrc.json"
+{
+  "ignorePatterns": ["dist/", "node_modules/", "coverage/"],
+  "cache": true,
+  "cacheLocation": ".eslintcache"
+}
+```
+
+<Aside type="tip">
+  **Pro Tip**: Start with the `eslint:recommended` configuration and gradually add more specific rules as your team gets comfortable with linting.
+</Aside>
+
+## Further Reading
+
+- [ESLint Official Documentation](https://eslint.org/docs/user-guide/)
+- [TypeScript ESLint](https://typescript-eslint.io/) - TypeScript-specific linting

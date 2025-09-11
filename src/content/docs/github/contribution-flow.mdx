@@ -1,0 +1,146 @@
+---
+title: "Branching & Contribution"
+description: "Simple branching strategy and contribution workflow for team collaboration"
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Simple and practical branching strategy that matches how we actually work in projects.
+
+## Branch Naming Convention
+
+Follow this pattern: `yourname/type/feature-description`
+
+### Examples:
+```bash
+# Feature branches
+john/feature/user-authentication
+sarah/feature/payment-integration
+
+# Bug fixes  
+mike/fix/login-error
+alice/fix/header-styling
+
+# Refactoring
+bob/refactor/api-client
+mary/refactor/user-service
+
+# Other types
+alex/docs/setup-guide
+lisa/chore/update-dependencies
+```
+
+## Basic Workflow
+
+### 1. Create and Switch to Branch
+```bash
+# Create new branch from main
+git checkout main
+git pull origin main
+git checkout -b yourname/feature/user-dashboard
+```
+
+### 2. Work on Your Feature
+```bash
+# Make changes
+git add .
+git commit -m "Add user dashboard component"
+
+# Push to GitHub
+git push origin yourname/feature/user-dashboard
+```
+
+### 3. Create Pull Request
+- Go to GitHub
+- Click "Compare & pull request"
+- Use the PR template
+- Link to related issue: `Closes #123`
+- Request review
+
+### 4. After PR is Merged
+```bash
+# Switch back to main and clean up
+git checkout main
+git pull origin main
+git branch -d yourname/feature/user-dashboard
+```
+
+## Working with Issues
+
+### Issue to Branch Flow:
+1. **Pick an issue** from the project
+2. **Assign yourself** to the issue
+3. **Create branch** using issue description
+4. **Work on the feature**
+5. **Create PR** that closes the issue
+
+### Example:
+- Issue #45: "Add dark mode toggle"
+- Branch: `yourname/feature/dark-mode-toggle`
+- PR title: "Add dark mode toggle (Closes #45)"
+
+## Collaboration Tips
+
+### Before Starting Work:
+```bash
+# Always start from latest main
+git checkout main
+git pull origin main
+git checkout -b yourname/feature/new-feature
+```
+
+### Keep Branch Updated:
+```bash
+# If main has new changes while you work
+git checkout main
+git pull origin main
+git checkout yourname/feature/new-feature
+git merge main
+```
+
+### Small, Focused Changes:
+- One feature per branch
+- Keep PRs small and reviewable
+- Don't mix different types of changes
+
+## Common Scenarios
+
+### Working on Same Feature:
+If multiple people work on one big feature:
+- Create feature branch: `feature/payment-system`
+- Everyone branches from it: `john/feature/payment-ui`, `sarah/feature/payment-api`
+- Merge individual branches to feature branch
+- Merge feature branch to main when complete
+
+### Hotfix:
+For urgent production fixes:
+```bash
+# Create hotfix branch from main
+git checkout main
+git pull origin main
+git checkout -b yourname/hotfix/critical-security-fix
+
+# After fix, create PR to main immediately
+```
+
+## Review Process
+
+### For PR Authors:
+- Use descriptive PR titles
+- Fill out the PR template completely
+- Link related issues
+- Respond to review feedback quickly
+
+### For Reviewers:
+- Check that code works
+- Verify it follows project guidelines
+- Test the changes if possible
+- Be constructive in feedback
+
+<Aside type="tip">
+  **Pro Tip**: Use draft PRs for work-in-progress to get early feedback, then mark as "Ready for review" when complete.
+</Aside>
+
+## Further Reading
+
+- [How to resolve some common git issues](https://ohshitgit.com/)

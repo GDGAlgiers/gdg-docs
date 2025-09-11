@@ -1,0 +1,199 @@
+---
+title: "Conventional Commits"
+description: "Simple guide to writing clear, consistent commit messages"
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+Write commit messages that are clear, consistent, and helpful for your team.
+
+## Basic Format
+
+```
+type: description
+
+# Example:
+feat: add user login button
+fix: resolve header styling issue
+docs: update setup instructions
+```
+
+## Common Types
+
+### Main Types:
+- **feat**: New feature or functionality
+- **fix**: Bug fix
+- **docs**: Documentation changes
+- **style**: Code formatting (no logic changes)
+- **refactor**: Code improvement (no new features)
+- **test**: Adding or updating tests
+- **chore**: Build tasks, dependencies, etc.
+
+### Examples:
+```bash
+# Adding new features
+git commit -m "feat: add dark mode toggle"
+git commit -m "feat: implement user dashboard"
+
+# Fixing bugs
+git commit -m "fix: resolve login validation error"
+git commit -m "fix: correct header alignment on mobile"
+
+# Documentation
+git commit -m "docs: add API usage examples"
+git commit -m "docs: update README with setup steps"
+
+# Code improvements
+git commit -m "refactor: simplify user service logic"
+git commit -m "style: format code with prettier"
+
+# Dependencies and tooling
+git commit -m "chore: update React to v18"
+git commit -m "chore: add ESLint configuration"
+```
+
+## With Scope (Optional)
+
+Add scope in parentheses for more context:
+
+```bash
+# Component-specific changes
+git commit -m "feat(auth): add password reset flow"
+git commit -m "fix(header): resolve mobile menu bug"
+
+# Feature-specific changes  
+git commit -m "feat(dashboard): add user statistics"
+git commit -m "fix(payment): handle failed transactions"
+
+# File-specific changes
+git commit -m "docs(readme): add installation guide"
+git commit -m "test(api): add user endpoint tests"
+```
+
+## Real Examples from Our Workflow
+
+### Feature Development:
+```bash
+# Working on user authentication
+git commit -m "feat(auth): add login form component"
+git commit -m "feat(auth): implement JWT token handling"
+git commit -m "feat(auth): add logout functionality"
+```
+
+### Bug Fixes:
+```bash
+# Fixing issues found in testing
+git commit -m "fix(ui): resolve button spacing issue"
+git commit -m "fix(api): handle empty response error"
+git commit -m "fix(mobile): fix responsive layout"
+```
+
+### Documentation:
+```bash
+# Updating project docs
+git commit -m "docs: add component usage examples"
+git commit -m "docs(api): document authentication endpoints"
+git commit -m "docs: update contributing guidelines"
+```
+
+## Breaking Changes
+
+For major changes that break existing functionality:
+
+```bash
+# Add exclamation mark
+git commit -m "feat!: change API response format"
+git commit -m "refactor!: update user data structure"
+
+# Or use BREAKING CHANGE in body
+git commit -m "feat: update user authentication
+
+BREAKING CHANGE: Login endpoint now requires email instead of username"
+```
+
+## Multi-line Commits
+
+For more complex changes:
+
+```bash
+git commit -m "feat(payment): add Stripe integration
+
+- Add Stripe SDK configuration
+- Implement payment form component  
+- Add error handling for failed payments
+- Update user dashboard to show payment status
+
+Closes #123"
+```
+
+## Linking to Issues
+
+Connect commits to GitHub issues:
+
+```bash
+# Reference issue
+git commit -m "fix(auth): resolve login timeout issue
+
+Fixes #45"
+
+# Multiple issues
+git commit -m "feat(dashboard): add user statistics
+
+Implements #67, #68, #69"
+
+# Close issue
+git commit -m "feat(api): add user search endpoint
+
+Closes #91"
+```
+
+## Quick Reference
+
+### What Makes a Good Commit:
+- **Clear**: Easy to understand what changed
+- **Specific**: Focused on one change
+- **Consistent**: Follows the same format
+- **Helpful**: Useful for reviewing history
+
+### Examples of Good vs Bad:
+
+**Good:**
+```bash
+feat(auth): add password reset functionality
+fix(ui): resolve header overlap on mobile
+docs(api): add authentication examples
+```
+
+**Bad:**
+```bash
+stuff
+fixed things
+wip
+update
+```
+
+## Team Benefits
+
+### Why This Helps:
+- **Code Reviews**: Reviewers understand changes quickly
+- **Release Notes**: Automatically generate from commit types
+- **Bug Tracking**: Easy to find when bugs were introduced
+- **History**: Clean, readable project history
+
+### Tools Integration:
+- **GitHub**: Automatically links commits to issues
+- **Release Tools**: Generate changelogs from commit types
+- **CI/CD**: Trigger different actions based on commit type
+
+<Aside type="tip">
+  **Pro Tip**: Set up a commit message template to help remember the format:
+  ```bash
+  git config commit.template ~/.gitmessage
+  ```
+</Aside>
+
+Keep it simple and be consistent! Your future self (and teammates) will thank you!
+
+## Further Reading
+
+- [Conventional Commits Guide](https://www.conventionalcommits.org/en/v1.0.0/)

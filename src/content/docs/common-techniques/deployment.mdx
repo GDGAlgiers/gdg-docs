@@ -1,0 +1,283 @@
+---
+title: "Deployment & CI/CD"
+description: "Best practices for deploying Express applications with CI/CD pipelines, environment management, and zero-downtime strategies"
+---
+
+import { Aside, Tabs, TabItem, Steps } from '@astrojs/starlight/components';
+
+Deploying Express.js applications to production requires careful planning and strategy. This guide covers our recommended deployment approaches, environment management, CI/CD automation, and best practices for reliable production deployments.
+
+## Backend Deployment Options
+
+When deploying Express applications, there are several excellent platforms to consider based on your application's complexity, scale, and budget.
+
+### Cloud Platform Deployment (Render & Railway)
+
+Both [Render](https://render.com/) and [Railway](https://railway.app/) offer excellent options for deploying Express applications with minimal configuration:
+
+<Steps>
+1. **Create an account and connect your repository**
+   - Sign up at [render.com](https://render.com/) or [railway.app](https://railway.app/)
+   - Connect your GitHub repository to the platform
+   - Select the branch you want to deploy (usually `main` or `master`)
+
+2. **Configure your service**
+   ```bash
+   # Build Command
+   npm install
+
+   # Start Command
+   npm start
+   ```
+
+3. **Set environment variables**
+   - Add all required environment variables through the platform's UI
+   - Include `NODE_ENV=production` and any other necessary variables
+   - For Railway, set `PORT=5000` as Railway injects a default port
+
+4. **Database setup (optional)**
+   - Both platforms offer managed database services (PostgreSQL, MySQL, MongoDB)
+   - Connection strings are automatically injected as environment variables
+</Steps>
+
+**Key Benefits:**
+- Free tier available for small projects
+- Automatic HTTPS with SSL certificates
+- Built-in monitoring and logging
+- Zero-downtime deployments
+- GitHub integration for automatic deployments
+- No server management required
+
+**Platform Differences:**
+- **Render** has a more generous free tier for web services but limited database free tier
+- **Railway** offers a project-based pricing model and excellent database integration
+- **Render** provides more configuration options for larger applications
+- **Railway** has a simpler interface and faster deployments for small projects
+
+### Azure VPS Deployment
+
+For more control and customization, Azure Virtual Machines provide a robust solution for hosting Express applications.
+
+**Deployment Overview:**
+
+1. **Set up the Azure VM**: Create an Ubuntu Server VM and configure networking to allow HTTP/HTTPS and SSH access.
+
+2. **Configure the server environment**: Install Node.js, PM2 (for process management), and Nginx (as a reverse proxy).
+
+3. **Deploy your application**: Clone your repository, install dependencies, set up environment variables, and start the application with PM2.
+
+4. **Set up Nginx**: Configure Nginx as a reverse proxy to forward requests to your Node.js application.
+
+5. **Enable HTTPS**: Use Let's Encrypt and Certbot to implement SSL for secure connections.
+
+**Key Benefits:**
+- Complete control over the server environment
+- Scalable infrastructure options
+- Customizable security settings
+- Suitable for complex deployments
+- Integration with Azure services
+
+<Aside type="tip">
+  For detailed step-by-step instructions on this approach, refer to this [comprehensive guide on Medium](https://medium.com/@a_zeraibi/step-by-step-guide-to-deploying-your-node-js-app-from-development-to-production-f3af6e16ca07) that covers each aspect of deploying a Node.js application on a VPS.
+</Aside>
+
+## Managing Environment Variables
+
+Environment variables are crucial for configuring applications across different environments. Here's how to manage them securely in production:
+
+### Environment Variable Best Practices
+
+1. **Never commit sensitive information to version control**
+   ```
+   # .gitignore
+   .env
+   .env.*
+   !.env.example
+   ```
+
+2. **Provide an example configuration file**
+   ```bash
+   # .env.example
+   NODE_ENV=development
+   PORT=3000
+   DATABASE_URL=postgres://user:pass@localhost:5432/devdb
+   JWT_SECRET=replace-with-secure-secret
+   ```
+
+3. **Validate environment variables on startup**
+4. **Use different variable sets per environment**
+   - Development: `.env.development`
+   - Testing: `.env.test`
+   - Production: Set through deployment platform UI
+
+<Aside type="caution">
+  Never log or expose environment variables in your application. Be especially careful with error messages that might reveal sensitive configuration details.
+</Aside>
+
+## CI/CD with GitHub Actions
+
+Continuous Integration and Continuous Deployment (CI/CD) automates testing and deployment. GitHub Actions is our preferred solution for its simplicity and GitHub integration.
+
+### Basic CI/CD Workflow
+
+```yaml
+# .github/workflows/deploy.yml
+name: Deploy Express App
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run linting
+      run: npm run lint
+      
+    - name: Run tests
+      run: npm test
+      env:
+        NODE_ENV: test
+        DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+        JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Deploy to Render
+      uses: johnbeynon/render-deploy-action@v0.0.8
+      with:
+        service-id: ${{ secrets.RENDER_SERVICE_ID }}
+        api-key: ${{ secrets.RENDER_API_KEY }}
+```
+
+### GitHub Actions Best Practices
+
+1. **Run tests before deployment**: Always run tests before deploying to catch issues early
+
+2. **Use environment secrets**: Store sensitive values as GitHub Secrets, scoped to environments
+
+3. **Create different workflows for different needs**:
+   - CI workflow for pull requests
+   - CD workflow for deployment to environments
+   - Scheduled workflows for maintenance tasks
+
+4. **Cache dependencies**: Speed up workflows by caching node_modules
+
+5. **Implement approval gates**: Use environment protection rules to require approvals for production deployments
+
+<Aside type="tip">
+  GitHub Actions provides environment-specific secrets and required reviewers for deployments. Use these features to ensure that production deployments require explicit approval from senior team members.
+</Aside>
+
+## Deployment Best Practices
+
+### Zero-Downtime Deployments
+
+Zero-downtime deployments ensure users experience no interruption during updates.
+
+<Tabs>
+  <TabItem label="PM2 Cluster Mode">
+  ```javascript
+  // ecosystem.config.js
+  module.exports = {
+    apps: [{
+      name: 'express-app',
+      script: 'src/server.js',
+      instances: 'max', // Use available CPU cores
+      exec_mode: 'cluster',
+      autorestart: true,
+      watch: false,
+      max_memory_restart: '1G',
+      env_production: {
+        NODE_ENV: 'production',
+        PORT: 3000
+      }
+    }]
+  };
+  ```
+  
+  **Deployment script:**
+  ```bash
+  # deploy.sh
+  git pull origin main
+  npm ci --production
+  pm2 reload ecosystem.config.js --env production
+  ```
+  
+  PM2 will gracefully reload workers one by one, ensuring no downtime.
+  </TabItem>
+  
+  <TabItem label="Health Checks">
+  ```javascript
+  // src/routes/health.routes.js
+  const express = require('express');
+  const router = express.Router();
+
+  router.get('/health', async (req, res) => {
+    try {
+      // Basic health check
+      res.status(200).json({ status: 'UP' });
+      
+      // Advanced health check
+      /*
+      const checks = await Promise.all([
+        checkDatabase(),
+        checkRedisConnection(),
+        checkExternalAPIs()
+      ]);
+      
+      const allOk = checks.every(c => c.status === 'UP');
+      
+      res.status(allOk ? 200 : 503).json({
+        status: allOk ? 'UP' : 'DOWN',
+        checks
+      });
+      */
+    } catch (error) {
+      res.status(503).json({ status: 'DOWN', error: error.message });
+    }
+  });
+
+  module.exports = router;
+  ```
+  
+  Implement a health check endpoint for load balancers and monitoring to determine when your service is ready to accept traffic.
+  </TabItem>
+</Tabs>
+
+## Conclusion
+
+Deploying Express applications to production requires attention to many details across infrastructure, security, monitoring, and automation. By following the practices outlined in this guide, you'll create a robust deployment pipeline that delivers consistent, reliable updates to your users.
+
+**Key takeaways:**
+
+1. **Choose the right platform** for your needs (Render, Railway, or Azure VPS)
+2. **Secure your environment variables** and never commit secrets to code
+3. **Implement CI/CD with GitHub Actions** to automate testing and deployment
+4. **Use zero-downtime deployment techniques** to avoid service interruptions
+5. **Monitor your production application** to catch issues quickly
+
+By implementing these practices, you'll create a professional deployment process that supports the ongoing evolution of your Express application.
+
+## Further Reading
+
+- [How to Self-Host a Node.js app on your VPS](https://youtu.be/2T_Dx7YgBFw)

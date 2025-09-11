@@ -15,6 +15,7 @@ This website is designed to serve as the central hub for everything related to o
 ### Who Is This For?
 
 This documentation is for:
+
 - **Members of the Development Department:** To work efficiently.
 - **New Club Members:** To familiarize themselves with the department's work and find ways to contribute.
 - **External Collaborators:** To understand our club's approach to development.
@@ -26,9 +27,3 @@ Our mission is to empower students with technical knowledge and real-world skill
 ---
 
 Take some time to explore the site and get acquainted with its contents. If you have any questions or suggestions, feel free to reach out to the department managers that you can find in the [community Discord server](https://discord.gg/tX2rAAvkxX)
-
----
-
-## Further reading
-
-- Read [about reference](https://diataxis.fr/reference/) in the Diátaxis framework

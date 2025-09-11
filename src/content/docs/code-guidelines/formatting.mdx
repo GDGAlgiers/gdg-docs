@@ -1,0 +1,322 @@
+---
+title: "Code Formatting"
+description: "Automated code formatting with Prettier for consistent code style across projects"
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+Code formatting ensures consistent style across your codebase, making it easier to read, maintain, and collaborate on. **Prettier** is our recommended tool for automatic code formatting.
+
+## Why Use Prettier?
+
+- **Consistency**: Enforces uniform code style across the entire team
+- **Automation**: Formats code automatically, reducing manual effort
+- **Fewer Debates**: Eliminates discussions about code style preferences
+- **Better Diffs**: Consistent formatting makes code reviews more focused on logic
+
+## Setting Up Prettier
+
+### Installation
+
+<Tabs>
+  <TabItem label="npm">
+  ```bash
+  # Install Prettier as a dev dependency
+  npm install --save-dev prettier
+  
+  # Install the Prettier extension for VS Code
+  # Search for "Prettier - Code formatter" in VS Code extensions
+  ```
+  </TabItem>
+  
+  <TabItem label="yarn">
+  ```bash
+  # Install Prettier as a dev dependency
+  yarn add --dev prettier
+  ```
+  </TabItem>
+</Tabs>
+
+### Configuration
+
+Create a `.prettierrc` file in your project root:
+
+```json title=".prettierrc"
+{
+  "semi": true,
+  "trailingComma": "es5",
+  "singleQuote": true,
+  "printWidth": 80,
+  "tabWidth": 2,
+  "useTabs": false,
+  "bracketSpacing": true,
+  "arrowParens": "avoid"
+}
+```
+
+## Prettier Extension for VS Code
+
+### Direct Integration (Recommended)
+
+Instead of always running the format script manually, you can use the **Prettier - Code formatter** extension for automatic formatting:
+
+<Tabs>
+  <TabItem label="Install Extension">
+  ```bash
+  # Install via VS Code
+  1. Open VS Code
+  2. Go to Extensions (Ctrl+Shift+X)
+  3. Search "Prettier - Code formatter"
+  4. Click Install on the official Prettier extension
+  
+  ```
+  </TabItem>
+  
+  <TabItem label="Configure VS Code">
+  Create or update `.vscode/settings.json` in your project:
+
+  ```json title=".vscode/settings.json"
+  {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.formatOnPaste": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll": true
+    },
+    "[javascript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[typescript]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[json]": {
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    }
+  }
+  ```
+  </TabItem>
+</Tabs>
+
+### Configuration Priority
+
+Prettier follows this configuration priority order:
+
+1. **`.prettierrc`** file in your project root (recommended)
+2. **VS Code settings** (`settings.json`)
+3. **Default Prettier settings**
+
+**Example .prettierrc configuration:**
+```json title=".prettierrc"
+{
+  "semi": true,
+  "trailingComma": "es5",
+  "singleQuote": true,
+  "printWidth": 80,
+  "tabWidth": 2,
+  "useTabs": false,
+  "bracketSpacing": true,
+  "arrowParens": "avoid"
+}
+```
+
+### VS Code Settings Alternative
+
+If you prefer to configure Prettier through VS Code settings instead of `.prettierrc`:
+
+```json title=".vscode/settings.json"
+{
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true,
+  "prettier.semi": true,
+  "prettier.singleQuote": true,
+  // ...
+}
+```
+
+<Aside type="tip">
+  **Pro Tip**: Use `.prettierrc` for team consistency, as it ensures all team members use the same formatting rules regardless of their individual VS Code settings.
+</Aside>
+
+## Configuration Options
+
+### Essential Settings
+
+| Option | Description | Recommended Value |
+|--------|-------------|-------------------|
+| `semi` | Add semicolons at end of statements | `true` |
+| `singleQuote` | Use single quotes instead of double | `true` |
+| `trailingComma` | Add trailing commas where valid | `"es5"` |
+| `printWidth` | Line length before wrapping | `80` |
+| `tabWidth` | Number of spaces per indentation | `2` |
+
+## Ignoring Files
+
+Create a `.prettierignore` file to exclude files from formatting:
+
+```text title=".prettierignore"
+# Build outputs
+dist/
+build/
+coverage/
+
+# Dependencies
+node_modules/
+
+# Generated files
+*.min.js
+*.bundle.js
+
+# Configuration files that need specific formatting
+package-lock.json
+yarn.lock
+
+# Documentation that has specific formatting
+CHANGELOG.md
+```
+
+## Format Script
+
+### The Primary Format Script
+
+Add this essential script to your `package.json`:
+
+```json title="package.json"
+{
+  "scripts": {
+    "format": "prettier --write ."
+  }
+}
+```
+
+### What the Format Script Does
+
+When you run `npm run format`, this script:
+
+1. **Finds all files** in your project directory (`.`)
+2. **Applies Prettier formatting** to supported file types
+3. **Writes changes back** to files (`--write` flag)
+4. **Respects your configuration** from `.prettierrc` and `.prettierignore`
+
+**Supported file types include:**
+- JavaScript (`.js`, `.jsx`)
+- TypeScript (`.ts`, `.tsx`)
+- JSON (`.json`)
+- CSS/SCSS (`.css`, `.scss`)
+- HTML (`.html`)
+- Markdown (`.md`, `.mdx`)
+- YAML (`.yml`, `.yaml`)
+
+## How Both Approaches Work Together
+
+### Extension for Development
+- **Format on save**: Automatically formats files when you save
+- **Format on paste**: Formats pasted code instantly
+- **Real-time feedback**: See formatting applied immediately
+- **Individual workflow**: Each developer gets instant formatting
+
+### Script for Team Consistency
+- **Batch formatting**: Format entire project at once
+- **CI/CD integration**: Ensure consistency in automated processes
+- **New team members**: Easy way to format everything correctly
+- **Git hooks**: Automatic formatting before commits
+
+```bash
+# Use both approaches:
+# 1. Extension formats as you work
+# 2. Script ensures everything is formatted
+
+# Before committing, run the script to be sure:
+npm run format
+
+# Then commit your properly formatted code
+git add .
+git commit -m "Add new feature with proper formatting"
+```
+
+## Common Formatting Examples
+
+### Before and After
+
+**Before Prettier:**
+```javascript
+const user={name:"John",age:25,city:"New York"};
+
+function getUserInfo(id){
+return fetch(`/api/users/${id}`).then(response=>response.json()).catch(error=>{
+console.error("Error fetching user:",error);
+throw error;
+});
+}
+```
+
+**After Prettier:**
+```javascript
+const user = { name: 'John', age: 25, city: 'New York' };
+
+function getUserInfo(id) {
+  return fetch(`/api/users/${id}`)
+    .then(response => response.json())
+    .catch(error => {
+      console.error('Error fetching user:', error);
+      throw error;
+    });
+}
+```
+
+## Best Practices
+
+### Recommended Workflow
+
+1. **Install Prettier extension** in VS Code for immediate formatting
+2. **Add format script** to package.json for batch operations
+3. **Use .prettierrc** for team-wide configuration consistency
+4. **Run format script** before important commits
+
+```bash
+# Daily workflow:
+# 1. Code with extension auto-formatting
+# 2. Before major commits:
+npm run format
+git add .
+git commit -m "Feature complete with consistent formatting"
+```
+
+### Do's
+- ✅ **Use the Prettier extension** for real-time formatting
+- ✅ **Add the format script** for batch formatting
+- ✅ **Create .prettierrc** for team consistency
+- ✅ **Format before committing** important changes
+
+### Don'ts
+- ❌ **Don't rely only on manual formatting**
+- ❌ **Don't mix different formatting configs** across team members
+- ❌ **Don't ignore the format script** in CI/CD
+- ❌ **Don't format generated files** or dependencies
+
+## Troubleshooting
+
+### Common Issues
+
+**Prettier not working in VS Code:**
+1. Ensure the Prettier extension is installed and enabled
+2. Check that Prettier is set as the default formatter
+3. Verify your `.prettierrc` file has valid JSON syntax
+
+**Conflicts with ESLint:**
+Install `eslint-config-prettier` to disable ESLint formatting rules:
+
+```bash
+npm install --save-dev eslint-config-prettier
+```
+
+Add to your `.eslintrc`:
+```json
+{
+  "extends": ["eslint:recommended", "prettier"]
+}
+```
+
+## Further Reading
+
+- [Prettier Official Documentation](https://prettier.io/docs/en/)
+- [Prettier Playground](https://prettier.io/playground/) - Test configurations online

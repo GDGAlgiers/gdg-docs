@@ -25,15 +25,43 @@ export default defineConfig({
           label: "Code Guidelines",
           items: [
             { label: "General", link: "code-guidelines/general" },
-            { label: "React", link: "code-guidelines/react" },
+            { label: "Formatting", link: "code-guidelines/formatting" },
+            { label: "Linting", link: "code-guidelines/linting" },
           ],
           collapsed: true,
         },
         {
-          label: "Guides",
+          label: "Common Techniques",
           items: [
-            { label: "GitHub Issues", link: "guides/github-issues" },
-            { label: "GitHub PRs", link: "guides/github-pull-requests" },
+            {
+              label: "API Design Principles",
+              link: "common-techniques/api-design-principles",
+            },
+            {
+              label: "Deployment Strategies",
+              link: "common-techniques/deployment",
+            },
+          ],
+          collapsed: true,
+        },
+        {
+          label: "TypeScript",
+          items: [
+            { label: "General", link: "typescript/general" },
+            { label: "React with TypeScript", link: "typescript/react" },
+            { label: "Express with TypeScript", link: "typescript/express" },
+          ],
+          collapsed: true,
+        },
+        {
+          label: "GitHub Workflows",
+          items: [
+            { label: "Issues & Pull Requests", link: "github/issues-prs" },
+            {
+              label: "Branching & Contribution",
+              link: "github/contribution-flow",
+            },
+            { label: "Conventional Commits", link: "github/commits" },
           ],
           collapsed: true,
         },
@@ -58,10 +86,6 @@ export default defineConfig({
           label: "Express",
           items: [
             { label: "Project Structure", link: "express/project-structure" },
-            {
-              label: "API Design Principles",
-              link: "express/api-design-principles",
-            },
             { label: "Middleware", link: "express/middleware" },
             {
               label: "Authentication & Security",
@@ -74,7 +98,6 @@ export default defineConfig({
             },
             { label: "File Uploads", link: "express/file-uploads" },
             { label: "Performance", link: "express/performance-optimization" },
-            { label: "Deployment", link: "express/deployment" },
           ],
           collapsed: true,
         },
@@ -108,11 +131,6 @@ export default defineConfig({
             { label: "Frontend", link: "workflows/frontend" },
             { label: "Backend", link: "workflows/backend" },
           ],
-          collapsed: true,
-        },
-        {
-          label: "References",
-          items: [{ label: "Example", link: "references/example" }],
           collapsed: true,
         },
       ],
