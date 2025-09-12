@@ -1,0 +1,239 @@
+---
+title: "TypeScript Overview"
+description: "Essential TypeScript concepts and best practices for better development"
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+TypeScript enhances JavaScript by adding static type definitions, enabling early error detection and improved developer experience. Understanding core concepts and organizational patterns is crucial for building maintainable applications.
+
+## Why TypeScript Matters
+
+TypeScript addresses fundamental challenges in JavaScript development. **Type safety** eliminates an entire class of runtime errors by catching type mismatches during compilation. This means fewer bugs in production and more confident deployments.
+
+**Enhanced developer experience** comes through intelligent code completion, automated refactoring, and better navigation. IDEs can provide accurate suggestions because they understand your code's structure and constraints.
+
+**Self-documenting code** emerges naturally - types serve as living documentation that stays synchronized with implementation. When you see `User | null`, you immediately understand the function might not return a user.
+
+**Confident refactoring** becomes possible in large codebases. TypeScript's compiler ensures that changes maintain consistency across your entire application, making structural modifications less risky.
+
+## Understanding Type Strategy
+
+### When to Use Interfaces vs Types
+
+The choice between interfaces and types isn't arbitrary - each serves specific purposes. **Interfaces** excel at describing object shapes and support declaration merging, making them ideal for defining contracts that might be extended.
+
+```typescript
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+```
+
+This interface establishes a clear contract for user objects. The compiler ensures any object claiming to be a `User` must have these exact properties with correct types.
+
+**Types** shine for unions, computed types, and complex type manipulations. They're more flexible but don't support merging.
+
+```typescript
+type Status = "pending" | "approved" | "rejected";
+type UserWithStatus = User & { status: Status };
+```
+
+Here, `Status` creates a constrained set of valid values, while `UserWithStatus` combines existing types to create new ones. This approach prevents invalid status values and ensures type safety across state transitions.
+
+## Strategic Type Organization
+
+### The Types Folder Pattern
+
+Organizing types in dedicated files prevents circular dependencies and improves maintainability. This structure scales from small projects to enterprise applications:
+
+```
+src/types/
+  index.ts      # Central export point
+  auth.ts       # Authentication domain
+  users.ts      # User domain  
+  api.ts        # API contracts
+```
+
+The **index.ts** file acts as a public API for your types, allowing clean imports throughout your application. This pattern provides a single source of truth for type definitions.
+
+**Example: `types/index.ts`**
+```typescript
+export * from './auth';
+export * from './users';
+export * from './projects';
+export * from './api';
+```
+
+**Domain-specific files** group related types together. A `users.ts` file contains all user-related interfaces, from database models to API requests:
+
+```typescript
+// types/users.ts
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+}
+
+export type UserRole = "admin" | "user" | "viewer";
+
+export interface CreateUserRequest {
+  name: string;
+  email: string;
+  role: UserRole;
+}
+```
+
+This organization makes types discoverable and prevents duplication. When working with users, developers know exactly where to find relevant type definitions.
+
+## Advanced Type Patterns
+
+### Utility Types for Real-World Scenarios
+
+TypeScript's utility types solve common development patterns. **Partial** transforms strict interfaces into flexible update objects:
+
+```typescript
+type UpdateUser = Partial<User>;
+```
+
+This allows partial updates without requiring all properties, essential for PATCH endpoints and form handling.
+
+**Pick and Omit** create focused types for specific use cases:
+
+```typescript
+type UserPreview = Pick<User, 'id' | 'name'>;    // Just what lists need
+type CreateUser = Omit<User, 'id' | 'createdAt'>; // Remove auto-generated fields
+```
+
+These patterns prevent over-exposure of data and create clear boundaries between different application layers.
+
+### Environment Type Safety
+
+Untyped environment variables are common sources of runtime errors. TypeScript can eliminate these issues:
+
+```typescript
+interface ProcessEnv {
+  NODE_ENV: 'development' | 'production' | 'test';
+  DATABASE_URL: string;
+  JWT_SECRET: string;
+}
+
+declare global {
+  namespace NodeJS {
+    interface ProcessEnv extends ProcessEnv {}
+  }
+}
+```
+
+This approach provides autocomplete for environment variables and catches missing configuration at compile time. The global declaration ensures these types are available throughout your application without imports.
+
+## Practical Type Techniques
+
+### Generic Functions for Reusability
+
+Generics enable type-safe reusable functions. An API call wrapper demonstrates this pattern:
+
+```typescript
+function apiCall<T>(url: string): Promise<ApiResponse<T>> {
+  return fetch(url).then(res => res.json());
+}
+```
+
+The generic `T` preserves type information through the call chain. When you call `apiCall<User[]>('/users')`, TypeScript knows the result contains user data, providing full type safety without code duplication.
+
+### Type Guards for Runtime Safety
+
+Type guards bridge the gap between compile-time types and runtime validation:
+
+```typescript
+function isUser(obj: unknown): obj is User {
+  return typeof obj === 'object' && 
+         obj !== null && 
+         'id' in obj && 
+         'email' in obj;
+}
+```
+
+This function safely narrows unknown data to typed objects. After the guard passes, TypeScript treats the object as a `User`, enabling safe property access.
+
+## Enums for Constrained Values
+
+### When and How to Use Enums
+
+Enums create named constants for related values, improving code readability and preventing invalid assignments:
+
+```typescript
+enum UserRole {
+  ADMIN = "admin",
+  USER = "user", 
+  VIEWER = "viewer"
+}
+
+enum HttpStatus {
+  OK = 200,
+  NOT_FOUND = 404,
+  SERVER_ERROR = 500
+}
+```
+
+**String enums** provide readable values in runtime and debugging, while **numeric enums** work well for flags or sequential values. String enums are generally preferred for their clarity.
+
+**Const enums** optimize performance by inlining values at compile time:
+
+```typescript
+const enum APIEndpoints {
+  USERS = "/api/users",
+  PROJECTS = "/api/projects"
+}
+```
+
+Use regular enums for values that need runtime existence, const enums for compile-time constants that can be inlined.
+
+## Runtime Validation with Zod
+
+### Bridging TypeScript and Runtime Safety
+
+While TypeScript provides compile-time safety, Zod adds runtime validation and automatic type inference:
+
+```typescript
+import { z } from 'zod';
+
+const UserSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1).max(100),
+  email: z.string().email(),
+  role: z.enum(['admin', 'user', 'viewer'])
+});
+
+type User = z.infer<typeof UserSchema>;
+```
+
+**Schema-first development** ensures types and validation stay synchronized. The `z.infer` utility generates TypeScript types from Zod schemas, eliminating duplicate definitions.
+
+### Zod in Practice
+
+**API Request Validation** ensures incoming data matches expectations:
+
+```typescript
+app.post('/users', (req, res) => {
+  const result = UserSchema.safeParse(req.body);
+  if (!result.success) {
+    return res.status(400).json({ errors: result.error.issues });
+  }
+  
+  const userData = result.data; // Fully typed User object
+  // Process validated data...
+});
+```
+
+**Environment Variable Validation** catches configuration errors early.
+
+Zod combines TypeScript's static analysis with runtime validation, providing comprehensive type safety from API boundaries to database operations.
+
+<Aside type="tip">
+  **Migration Strategy**: When adopting TypeScript, start with `any` for complex data, then gradually add specific types. This allows incremental migration without blocking development.
+</Aside>
+
+TypeScript's power lies in its flexibility and gradual adoption. Focus on typing data structures first - the interfaces that define your domain models and API contracts. These provide the highest value and naturally guide the rest of your typing strategy.

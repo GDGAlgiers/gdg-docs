@@ -1,0 +1,182 @@
+---
+title: "TypeScript with React"
+description: "Practical TypeScript patterns for React development and better component typing"
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+TypeScript transforms React development by providing compile-time safety for component props, state management, and event handling. Understanding proper typing patterns prevents runtime errors and improves developer experience.
+
+## Component Architecture with Types
+
+### Understanding Component Props
+
+Component props define the contract between parent and child components. **Well-typed props** eliminate prop drilling errors and make component APIs self-documenting.
+
+```typescript
+interface UserCardProps {
+  user: User;
+  onEdit?: (id: string) => void;
+  className?: string;
+}
+```
+
+This interface establishes clear expectations: `user` is required, `onEdit` is optional (note the `?`), and `className` allows styling flexibility. The compiler prevents passing incorrect data types or forgetting required props.
+
+**Optional props** deserve special attention. The `onEdit?` pattern indicates the component can function without this callback, making it reusable in read-only contexts. This design communicates intent clearly - when you see the question mark, you know the prop isn't essential for basic functionality.
+
+### Children Pattern Strategy
+
+The `children` prop requires careful typing because React children can be various types:
+
+```typescript
+interface LayoutProps {
+  title: string;
+  children: React.ReactNode;
+}
+```
+
+`React.ReactNode` accepts strings, numbers, JSX elements, arrays, or null - essentially anything React can render. This flexibility allows the `Layout` component to wrap any content while maintaining type safety.
+
+## State Management Patterns
+
+### Typed State with useState
+
+State typing prevents invalid state transitions and catches assignment errors:
+
+```typescript
+const [user, setUser] = useState<User | null>(null);
+const [users, setUsers] = useState<User[]>([]);
+const [loading, setLoading] = useState<boolean>(false);
+```
+
+**Explicit typing** clarifies state possibilities. `User | null` indicates the user might not be loaded yet, preventing premature property access. `User[]` ensures only user objects enter the array, catching data corruption early.
+
+### Custom Hooks for Complex Logic
+
+Custom hooks encapsulate stateful logic with proper typing:
+
+```typescript
+interface UseApiResult<T> {
+  data: T | null;
+  loading: boolean;
+  error: string | null;
+  refetch: () => void;
+}
+
+function useApi<T>(url: string): UseApiResult<T> {
+  // Implementation handles async data fetching
+  // Returns consistent interface regardless of data type
+}
+```
+
+This pattern abstracts API complexity while preserving type information. The generic `T` allows reuse across different data types: `useApi<User[]>('/users')` returns properly typed user data.
+
+**Consistent return interfaces** make hooks predictable. Every `useApi` call provides the same structure, reducing cognitive load and enabling confident destructuring.
+
+## Event Handling Excellence
+
+### Understanding React Event Types
+
+React's synthetic events require specific typing for proper IntelliSense and error prevention:
+
+```typescript
+const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  // Form submission logic
+};
+
+const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  setValue(e.target.value);
+};
+```
+
+**Specific event types** provide accurate property access. `FormEvent` includes `preventDefault()`, while `ChangeEvent` guarantees `target.value` exists. This specificity prevents runtime errors from accessing non-existent properties.
+
+## API Integration Patterns
+
+### Type-Safe Data Fetching with Axios
+
+Proper API typing ensures data consistency between frontend and backend:
+
+```typescript
+import axios from 'axios';
+
+interface ApiResponse<T> {
+  data: T;
+  message: string;
+  success: boolean;
+}
+
+export const getUsers = async (): Promise<User[]> => {
+  const response = await axios.get<ApiResponse<User[]>>('/api/users');
+  return response.data.data;
+}
+
+export const createUser = async (userData: CreateUserRequest): Promise<User> => {
+  const response = await axios.post<ApiResponse<User>>('/api/users', userData);
+  return response.data.data;
+}
+```
+
+**Axios generic typing** provides compile-time safety for HTTP requests. `axios.get<ApiResponse<User[]>>()` ensures the response data matches expected structure, preventing runtime type errors.
+
+**Promise typing** clarifies async function return values. `Promise<User[]>` immediately communicates what the function eventually provides, enabling proper awaiting and error handling.
+
+## React Context and Providers
+
+### Typed Context for Global State
+
+Context provides type-safe global state management without prop drilling:
+
+```typescript
+interface AuthContextType {
+  user: User | null;
+  login: (credentials: LoginCredentials) => Promise<void>;
+  logout: () => void;
+  loading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within AuthProvider');
+  }
+  return context;
+};
+```
+
+**Typed context** prevents accessing undefined context values and ensures consistent API across the application. The custom hook pattern with error throwing guarantees the context is always properly initialized.
+
+## Advanced Component Patterns
+
+### Generic Components for Reusability
+
+Generic components handle multiple data types while maintaining type safety:
+
+```typescript
+interface DataListProps<T> {
+  items: T[];
+  renderItem: (item: T) => React.ReactNode;
+  emptyMessage?: string;
+}
+
+function DataList<T>({ items, renderItem, emptyMessage }: DataListProps<T>) {
+  if (items.length === 0) {
+    return <div>{emptyMessage || 'No items found'}</div>;
+  }
+  return <div>{items.map((item, index) => <div key={index}>{renderItem(item)}</div>)}</div>;
+}
+```
+
+This pattern eliminates code duplication while preserving type information. `DataList<User>` works with user data, `DataList<Product>` with products - same logic, different types.
+
+**Render props** maintain type safety through the callback chain. The `renderItem` function receives properly typed items, ensuring the rendering logic has access to correct properties.
+
+<Aside type="tip">
+  **Component Evolution**: Start with simple prop interfaces, then add generics and advanced patterns as components become more complex. Early optimization can make simple components unnecessarily complicated.
+</Aside>
+
+TypeScript in React development shines brightest when it prevents common mistakes - wrong prop types, invalid state updates, and incorrect event handling. Focus on these high-impact areas first, then expand typing coverage as your application grows.

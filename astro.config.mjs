@@ -45,15 +45,6 @@ export default defineConfig({
           collapsed: true,
         },
         {
-          label: "TypeScript",
-          items: [
-            { label: "General", link: "typescript/general" },
-            { label: "React with TypeScript", link: "typescript/react" },
-            { label: "Express with TypeScript", link: "typescript/express" },
-          ],
-          collapsed: true,
-        },
-        {
           label: "GitHub Workflows",
           items: [
             { label: "Issues & Pull Requests", link: "github/issues-prs" },
@@ -98,6 +89,15 @@ export default defineConfig({
             },
             { label: "File Uploads", link: "express/file-uploads" },
             { label: "Performance", link: "express/performance-optimization" },
+          ],
+          collapsed: true,
+        },
+        {
+          label: "TypeScript",
+          items: [
+            { label: "General", link: "typescript/general" },
+            { label: "React with TypeScript", link: "typescript/react" },
+            { label: "Express with TypeScript", link: "typescript/express" },
           ],
           collapsed: true,
         },

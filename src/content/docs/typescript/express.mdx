@@ -1,0 +1,258 @@
+---
+title: "TypeScript with Express"
+description: "Building type-safe backend APIs with Express.js and TypeScript patterns"
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+TypeScript transforms Express development by providing compile-time safety for route handlers, middleware, and request/response objects. Understanding proper backend typing patterns prevents runtime errors and improves API reliability.
+
+## Request/Response Architecture
+
+### Understanding Express Type Safety
+
+Express TypeScript typing centers around request and response objects. **Well-typed routes** eliminate parameter mistakes and ensure consistent API responses.
+
+```typescript
+interface CreateUserRequest {
+  name: string;
+  email: string;
+  role?: 'admin' | 'user';
+}
+
+interface UserResponse {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  createdAt: Date;
+}
+```
+
+These interfaces establish clear contracts between client and server. `CreateUserRequest` defines exactly what data the endpoint expects, while `UserResponse` guarantees consistent response structure. The compiler prevents sending incomplete data or returning inconsistent responses.
+
+**Optional properties** like `role?` communicate API flexibility. This indicates the server provides a default value when the field is omitted, making the API more forgiving while maintaining type safety.
+
+### Route Handler Type Strategy
+
+Express route handlers benefit from explicit typing to catch parameter and response errors:
+
+```typescript
+app.post('/users', async (req: Request<{}, UserResponse, CreateUserRequest>, res: Response<UserResponse>) => {
+  const userData = req.body; // TypeScript knows this is CreateUserRequest
+  const newUser = await userService.create(userData);
+  res.json(newUser); // TypeScript ensures UserResponse structure
+});
+```
+
+## Middleware Pattern Excellence
+
+### Type-Safe Middleware Design
+
+Middleware functions handle cross-cutting concerns like authentication and validation. **Proper middleware typing** ensures request modifications are correctly propagated:
+
+```typescript
+interface AuthenticatedRequest extends Request {
+  user?: User;
+}
+
+const authenticate = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+  
+  try {
+    const user = await jwt.verify(token, SECRET);
+    req.user = user; // TypeScript knows req now has user property
+    next();
+  } catch (error) {
+    res.status(401).json({ message: 'Invalid token' });
+  }
+};
+```
+
+**Request extension** through interfaces allows middleware to add properties that subsequent handlers can access safely. The `AuthenticatedRequest` pattern ensures type safety when accessing `req.user` in protected routes.
+
+### Advanced Validation Middleware
+
+Input validation middleware with Zod provides comprehensive type safety and runtime validation:
+
+```typescript
+import { z } from 'zod';
+
+const CreateUserSchema = z.object({
+  name: z.string().min(1).max(100),
+  email: z.string().email(),
+  role: z.enum(['admin', 'user', 'viewer']).optional()
+});
+
+const validateRequest = <T>(schema: z.ZodSchema<T>) => {
+  return (req: Request, res: Response, next: NextFunction) => {
+    const result = schema.safeParse(req.body);
+    if (!result.success) {
+      return res.status(400).json({
+        message: 'Validation failed',
+        errors: result.error.issues.map(issue => ({
+          field: issue.path.join('.'),
+          message: issue.message
+        }))
+      });
+    }
+    
+    req.body = result.data; // Now properly typed and validated
+    next();
+  };
+};
+
+// Usage
+app.post('/users', validateRequest(CreateUserSchema), async (req, res) => {
+  // req.body is now typed as CreateUserRequest and validated
+  const userData = req.body;
+  // Process user creation...
+});
+```
+
+**Schema-based validation** ensures runtime data matches TypeScript types. The middleware automatically handles validation errors and provides clear feedback to clients.
+
+### Environment Variable Validation
+
+Type-safe environment configuration prevents runtime configuration errors:
+
+```typescript
+import { z } from 'zod';
+
+const envSchema = z.object({
+  NODE_ENV: z.enum(['development', 'production', 'test']),
+  PORT: z.string().transform(Number).pipe(z.number().min(1000).max(65535)),
+  DATABASE_URL: z.string().url(),
+  JWT_SECRET: z.string().min(32),
+  REDIS_URL: z.string().url().optional(),
+  API_BASE_URL: z.string().url()
+});
+
+type Environment = z.infer<typeof envSchema>;
+
+const validateEnvironment = (): Environment => {
+  const result = envSchema.safeParse(process.env);
+  if (!result.success) {
+    console.error('❌ Invalid environment variables:');
+    result.error.issues.forEach(issue => {
+      console.error(`- ${issue.path.join('.')}: ${issue.message}`);
+    });
+    process.exit(1);
+  }
+  return result.data;
+};
+
+export const env = validateEnvironment();
+```
+
+**Environment validation** catches configuration errors at startup rather than runtime. This approach prevents deployments with invalid configurations and provides clear error messages.
+
+## Data Transfer Objects (DTOs)
+
+### Understanding DTOs in Express
+
+DTOs define the shape of data crossing application boundaries. They provide a clear contract between layers and enable transformation of internal models for external consumption:
+
+**DTO classes** with constructors enable data transformation and ensure sensitive information doesn't leak to clients. The constructor pattern makes the transformation explicit and type-safe.
+
+**Input DTOs** define exactly what data endpoints accept, while **output DTOs** control what information clients receive. This separation provides security and flexibility.
+
+**DTO transformation** happens at the controller layer, keeping business logic focused on internal models while ensuring API responses follow consistent patterns.
+
+## Database Integration Patterns
+
+### ORM Type Safety
+
+Whether using Prisma, TypeORM, or Mongoose, proper typing ensures database operations remain type-safe:
+
+```typescript
+interface CreateUserData {
+  name: string;
+  email: string;
+  role: UserRole;
+}
+
+interface UserRepository {
+  create(data: CreateUserData): Promise<User>;
+  findById(id: string): Promise<User | null>;
+  findByEmail(email: string): Promise<User | null>;
+  update(id: string, data: Partial<CreateUserData>): Promise<User>;
+}
+```
+
+**Repository interfaces** abstract database implementation details while preserving type information. This pattern enables easy testing with mock implementations and allows switching ORMs without changing business logic.
+
+**Partial types** for updates ensure only provided fields are modified, preventing accidental overwrites of unrelated data.
+
+## Error Handling Architecture
+
+### Typed Error Responses
+
+Consistent error handling improves client-side error processing:
+
+```typescript
+interface ApiError {
+  message: string;
+  code: string;
+  details?: Record<string, string>;
+}
+
+class AppError extends Error {
+  public statusCode: number;
+  public code: string;
+  public details?: Record<string, string>;
+
+  constructor(message: string, statusCode: number, code: string, details?: Record<string, string>) {
+    super(message);
+    this.statusCode = statusCode;
+    this.code = code;
+    this.details = details;
+  }
+}
+```
+
+**Structured errors** provide consistent information across all endpoints. Clients can rely on the error format to display appropriate messages and handle specific error conditions.
+
+**Error codes** enable programmatic error handling. Instead of parsing error messages, clients can check error codes to determine appropriate responses.
+
+## Advanced API Patterns
+
+### Generic Response Wrappers
+
+Consistent response structure improves client-side data handling:
+
+```typescript
+interface ApiResponse<T> {
+  data: T;
+  message: string;
+  success: boolean;
+  timestamp: Date;
+}
+
+const createApiResponse = <T>(data: T, message: string = 'Success'): ApiResponse<T> => ({
+  data,
+  message,
+  success: true,
+  timestamp: new Date()
+});
+```
+
+This pattern ensures all successful responses follow the same structure while preserving data type information. **Generic wrappers** maintain type safety while providing consistent API interfaces.
+
+<Aside type="tip">
+  **Performance Consideration**: TypeScript compilation adds build time but eliminates many runtime errors. The development experience improvements usually outweigh the compilation overhead, especially in larger projects.
+</Aside>
+
+Focus on practical typing that prevents real API bugs - request validation, response consistency, and database safety!
+
+## Further Reading
+
+- [How to setup Express with TypeScript](https://buddywrite.com/b/how-to-setup-typescript-with-nodejs-and-expressjs-v1isai)
+## Resources
+Some interesting ready boilerplates for express + typescript:
+
+- https://github.com/MoussaabBadla/express-starter
+- https://github.com/edwinhern/express-typescript
