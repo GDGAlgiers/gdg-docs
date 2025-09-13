@@ -3,9 +3,10 @@ import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import tailwind from "@astrojs/tailwind";
 
-const site = 'https://docs.gdgalgiers.dev/';
-const ogUrl = new URL('gdg-logo.svg', site).href;
-const ogImageAlt = 'GDG Development Documentation - Comprehensive technical guides and best practices';
+const site = "https://docs.gdgalgiers.dev/";
+const ogUrl = new URL("og-image.jpg", site).href;
+const ogImageAlt =
+  "GDG Development Documentation - Comprehensive technical guides and best practices";
 
 export default defineConfig({
   site,
@@ -23,12 +24,12 @@ export default defineConfig({
       },
       head: [
         {
-          tag: 'meta',
-          attrs: { property: 'og:image', content: ogUrl },
+          tag: "meta",
+          attrs: { property: "og:image", content: ogUrl },
         },
         {
-          tag: 'meta',
-          attrs: { property: 'og:image:alt', content: ogImageAlt },
+          tag: "meta",
+          attrs: { property: "og:image:alt", content: ogImageAlt },
         },
       ],
       sidebar: [
