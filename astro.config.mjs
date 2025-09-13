@@ -1,6 +1,7 @@
 // @ts-check
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
+import starlightThemeGalaxy from "starlight-theme-galaxy";
 import tailwind from "@astrojs/tailwind";
 
 const site = "https://docs.gdgalgiers.dev/";
@@ -12,16 +13,25 @@ export default defineConfig({
   site,
   integrations: [
     starlight({
+      plugins: [starlightThemeGalaxy()],
       title: "GDG Docs",
       description:
         "Comprehensive technical documentation and best practices for modern full-stack development, established by Google Developer Group Algiers",
       logo: {
         src: "./src/assets/gdg-logo.svg",
       },
-      social: {
-        github: "https://github.com/GDGAlgiers",
-        discord: "https://discord.gg/tX2rAAvkxX",
-      },
+      social: [
+        {
+          icon: "github",
+          href: "https://github.com/GDGAlgiers",
+          label: "GitHub",
+        },
+        {
+          icon: "discord",
+          href: "https://discord.gg/tX2rAAvkxX",
+          label: "Discord",
+        },
+      ],
       head: [
         {
           tag: "meta",
