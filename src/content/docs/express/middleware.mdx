@@ -238,6 +238,8 @@ For specific middleware patterns, refer to their dedicated guides:
   <TabItem label="Not Found">
   ```javascript
   // middlewares/notFoundMiddleware.js
+  const { StatusCodes } = require('http-status-codes');
+  
   /**
    * Not Found middleware
    * 
@@ -245,8 +247,8 @@ For specific middleware patterns, refer to their dedicated guides:
    * Should be placed after all route definitions and before the error middleware.
    */
   const notFoundMiddleware = (req, res) => {
-    res.status(404).json({
-      statusCode: 404,
+    res.status(StatusCodes.NOT_FOUND).json({
+      statusCode: StatusCodes.NOT_FOUND,
       message: 'Resource not found',
       path: req.originalUrl,
       timestamp: new Date().toISOString()
@@ -260,13 +262,14 @@ For specific middleware patterns, refer to their dedicated guides:
   <TabItem label="Request Validation">
   ```javascript
   // middlewares/validationMiddleware.js
+  const { StatusCodes } = require('http-status-codes');
   const { validationResult } = require('express-validator');
 
   const validateRequest = (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      return res.status(400).json({
-        statusCode: 400,
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        statusCode: StatusCodes.BAD_REQUEST,
         message: 'Validation failed',
         errors: errors.array().map(error => ({
           field: error.param,

@@ -59,7 +59,7 @@ interface AuthenticatedRequest extends Request {
 const authenticate = async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   const token = req.headers.authorization?.split(' ')[1];
   if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
+    return res.status(StatusCodes.UNAUTHORIZED).json({ message: 'No token provided' });
   }
   
   try {
@@ -67,7 +67,7 @@ const authenticate = async (req: AuthenticatedRequest, res: Response, next: Next
     req.user = user; // TypeScript knows req now has user property
     next();
   } catch (error) {
-    res.status(401).json({ message: 'Invalid token' });
+    res.status(StatusCodes.UNAUTHORIZED).json({ message: 'Invalid token' });
   }
 };
 ```
@@ -91,7 +91,7 @@ const validateRequest = <T>(schema: z.ZodSchema<T>) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const result = schema.safeParse(req.body);
     if (!result.success) {
-      return res.status(400).json({
+      return res.status(StatusCodes.BAD_REQUEST).json({
         message: 'Validation failed',
         errors: result.error.issues.map(issue => ({
           field: issue.path.join('.'),

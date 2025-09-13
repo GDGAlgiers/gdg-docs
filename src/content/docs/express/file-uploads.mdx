@@ -281,6 +281,7 @@ module.exports = { handleUploadError };
   <TabItem label="Controller">
   ```javascript
   // controllers/userController.js
+  const { StatusCodes } = require('http-status-codes');
   const userService = require('../services/userService');
 
   exports.register = async (req, res) => {
@@ -294,8 +295,8 @@ module.exports = { handleUploadError };
       profilePicture 
     });
     
-    return res.status(201).json({
-      statusCode: 201,
+    return res.status(StatusCodes.CREATED).json({
+      statusCode: StatusCodes.CREATED,
       message: 'User registered successfully',
       data: {
         user: {

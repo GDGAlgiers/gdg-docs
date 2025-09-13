@@ -220,7 +220,7 @@ type User = z.infer<typeof UserSchema>;
 app.post('/users', (req, res) => {
   const result = UserSchema.safeParse(req.body);
   if (!result.success) {
-    return res.status(400).json({ errors: result.error.issues });
+    return res.status(StatusCodes.BAD_REQUEST).json({ errors: result.error.issues });
   }
   
   const userData = result.data; // Fully typed User object

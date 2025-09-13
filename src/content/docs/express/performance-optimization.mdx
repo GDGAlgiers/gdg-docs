@@ -194,7 +194,7 @@ const checkCache = (keyFn) => {
     if (cachedData) {
       const parsedData = JSON.parse(cachedData);
 
-      return res.status(200).json({
+      return res.status(StatusCodes.OK).json({
         message: parsedData.message,
         data: parsedData.data,
         statusCode: parsedData.statusCode,
@@ -412,7 +412,7 @@ Not all operations need to be performed synchronously within the request-respons
       });
       
       // User gets this response immediately, regardless of email status
-      res.status(201).json({
+      res.status(StatusCodes.CREATED).json({
         statusCode: 201,
         data: {
           user: {

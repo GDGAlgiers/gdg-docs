@@ -351,6 +351,41 @@ Consider migrating to NestJS when your Express.js project reaches these indicato
 3. **Error Handling**: Use express-async-errors for cleaner async error handling
 4. **Validation**: Validate input at route level, not in controllers
 5. **Configuration**: Centralize all environment-dependent configuration
+6. **HTTP Status Codes**: Always use the `http-status-codes` package for consistent status code management
+
+### HTTP Status Code Management
+
+**Always use the `http-status-codes` package** instead of hardcoded numbers for better maintainability and readability:
+
+```bash
+npm install http-status-codes
+```
+
+```javascript
+// ✅ Good - Using http-status-codes package
+const { StatusCodes } = require('http-status-codes');
+
+// In controllers
+res.status(StatusCodes.OK).json({ data: users });
+res.status(StatusCodes.CREATED).json({ data: newUser });
+res.status(StatusCodes.BAD_REQUEST).json({ message: 'Invalid input' });
+res.status(StatusCodes.NOT_FOUND).json({ message: 'User not found' });
+res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({ message: 'Server error' });
+
+// In error classes
+throw new CustomError(StatusCodes.UNAUTHORIZED, 'Invalid credentials');
+throw new CustomError(StatusCodes.FORBIDDEN, 'Access denied');
+
+// ❌ Bad - Hardcoded status codes
+res.status(StatusCodes.OK).json({ data: users });
+res.status(StatusCodes.NOT_FOUND).json({ message: 'User not found' });
+```
+
+**Benefits of using `http-status-codes`:**
+- **Readability**: `StatusCodes.NOT_FOUND` is clearer than `404`
+- **Maintainability**: Single source of truth for status codes
+- **IDE Support**: Better autocomplete and type checking
+- **Consistency**: Ensures team uses the same status codes across the project
 
 ### Security Practices
 

@@ -680,6 +680,7 @@ Effective database error handling combines multiple approaches:
   <TabItem label="Sequelize">
   ```javascript
   // middleware/error-handler.js
+  const { StatusCodes } = require('http-status-codes');
   const { DatabaseError, UniqueConstraintError, ValidationError } = require('sequelize');
 
   // Combine error logging and handling in one middleware
@@ -694,7 +695,7 @@ Effective database error handling combines multiple approaches:
       
       // Custom handling for specific Sequelize errors
       if (err instanceof UniqueConstraintError) {
-        return res.status(409).json({
+        return res.status(StatusCodes.CONFLICT).json({
           status: 'error',
           message: 'A record with this information already exists',
           details: err.errors.map(e => e.message)
@@ -702,7 +703,7 @@ Effective database error handling combines multiple approaches:
       }
       
       if (err instanceof ValidationError) {
-        return res.status(400).json({
+        return res.status(StatusCodes.BAD_REQUEST).json({
           status: 'error',
           message: 'Validation failed',
           details: err.errors.map(e => e.message)
@@ -711,7 +712,7 @@ Effective database error handling combines multiple approaches:
     }
     
     // Default error response
-    const statusCode = err.statusCode || 500;
+    const statusCode = err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
     res.status(statusCode).json({
       status: 'error',
       message: err.message || 'Internal server error',
@@ -725,6 +726,7 @@ Effective database error handling combines multiple approaches:
   <TabItem label="Mongoose">
   ```javascript
   // middleware/error-handler.js
+  const { StatusCodes } = require('http-status-codes');
   const mongoose = require('mongoose');
 
   // Combine error logging and handling in one middleware
@@ -739,8 +741,8 @@ Effective database error handling combines multiple approaches:
       });
       
       if (err instanceof mongoose.Error.ValidationError) {
-        return res.status(400).json({
-          statusCode: 400,
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          statusCode: StatusCodes.BAD_REQUEST,
           message: 'Validation error',
           path: req.originalUrl,
           timestamp: new Date().toISOString(),
@@ -749,8 +751,8 @@ Effective database error handling combines multiple approaches:
       }
       
       if (err instanceof mongoose.Error.CastError) {
-        return res.status(400).json({
-          statusCode: 400,
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          statusCode: StatusCodes.BAD_REQUEST,
           message: 'Invalid ID format',
           path: req.originalUrl,
           timestamp: new Date().toISOString(),
@@ -759,8 +761,8 @@ Effective database error handling combines multiple approaches:
       }
       
       if (err.code === 11000) { // Duplicate key error
-        return res.status(409).json({
-          statusCode: 409,
+        return res.status(StatusCodes.CONFLICT).json({
+          statusCode: StatusCodes.CONFLICT,
           message: 'Duplicate value error',
           path: req.originalUrl,
           timestamp: new Date().toISOString(),
@@ -770,7 +772,7 @@ Effective database error handling combines multiple approaches:
     }
     
     // Default error response
-    const statusCode = err.statusCode || 500;
+    const statusCode = err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
     res.status(statusCode).json({
       statusCode: statusCode,
       message: err.message || 'Internal server error',
@@ -786,6 +788,7 @@ Effective database error handling combines multiple approaches:
   <TabItem label="Prisma">
   ```javascript
   // middleware/error-handler.js
+  const { StatusCodes } = require('http-status-codes');
   const { PrismaClientKnownRequestError } = require('@prisma/client/runtime');
 
   // Combine error logging and handling in one middleware
@@ -801,16 +804,16 @@ Effective database error handling combines multiple approaches:
       // Handle common Prisma error codes
       switch (err.code) {
         case 'P2002': // Unique constraint violation
-          return res.status(409).json({
-            statusCode: 409,
+          return res.status(StatusCodes.CONFLICT).json({
+            statusCode: StatusCodes.CONFLICT,
             message: 'A record with this information already exists',
             path: req.originalUrl,
             timestamp: new Date().toISOString(),
             fields: err.meta?.target
           });
         case 'P2025': // Record not found
-          return res.status(404).json({
-            statusCode: 404,
+          return res.status(StatusCodes.NOT_FOUND).json({
+            statusCode: StatusCodes.NOT_FOUND,
             message: 'Record not found',
             path: req.originalUrl,
             timestamp: new Date().toISOString()
@@ -821,7 +824,7 @@ Effective database error handling combines multiple approaches:
     }
     
     // Default error response
-    const statusCode = err.statusCode || 500;
+    const statusCode = err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
     res.status(statusCode).json({
       statusCode: statusCode,
       message: err.message || 'Internal server error',

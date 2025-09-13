@@ -17,6 +17,8 @@ For better organization, the custom error class should be placed in a separate u
 
 ```js
 // utils/errorUtils.js
+const { StatusCodes } = require('http-status-codes');
+
 class CustomError extends Error {
   constructor(statusCode, message, isOperational = true, stack = '') {
     super(message);
@@ -31,19 +33,20 @@ class CustomError extends Error {
   }
 }
 
-module.exports = { CustomError };
+module.exports = { CustomError, StatusCodes };
 ```
 
 ### Error Handling Middleware
 
 ```js
 // middlewares/errorMiddleware.js
+const { StatusCodes } = require('http-status-codes');
 const logger = require('../utils/logger');
 
 // Central error handling middleware
 const errorHandler = (err, req, res, next) => {
   // Set default values
-  err.statusCode = err.statusCode || 500;
+  err.statusCode = err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR;
   err.message = err.message || 'Internal Server Error';
   
   // Log the error
@@ -312,7 +315,7 @@ Express.js doesn't handle errors in async functions by default. The best way to 
     try {
       const products = await Product.find();
       
-      res.status(200).json({
+      res.status(StatusCodes.OK).json({
         statusCode: 200,
         data: products,
         message: 'Products retrieved successfully'
@@ -352,7 +355,7 @@ This approach ensures:
 
 ```js
 // services/userService.js
-const { CustomError } = require('../utils/errorUtils');
+const { CustomError, StatusCodes } = require('../utils/errorUtils');
 const User = require('../models/User');
 
 exports.createUser = async (userData) => {
@@ -360,7 +363,7 @@ exports.createUser = async (userData) => {
   const existingUser = await User.findOne({ email: userData.email });
   if (existingUser) {
     // Service directly throws a CustomError
-    throw new CustomError(409, 'User with this email already exists', true);
+    throw new CustomError(StatusCodes.CONFLICT, 'User with this email already exists', true);
   }
   
   // Proceed with user creation if no errors
@@ -378,8 +381,8 @@ exports.createUser = async (req, res) => {
   // No try/catch needed due to express-async-errors
   const user = await userService.createUser(req.body);
   
-  res.status(201).json({
-    statusCode: 201,
+  res.status(StatusCodes.CREATED).json({
+    statusCode: StatusCodes.CREATED,
     data: user,
     message: 'User created successfully'
   });

@@ -92,17 +92,19 @@ exports.verifyRefreshToken = (token) => {
 #### 3. Authentication Middleware
 
 ```javascript
-// middleware/auth.js
-const { verifyAccessToken } = require('../utils/jwt');
+// middleware/authMiddleware.js
+const { StatusCodes } = require('http-status-codes');
+const User = require('../models/User');
+const verifyAccessToken = require('../utils/jwt');
 
-exports.authenticate = async (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   try {
     // Get token from Authorization header
     const authHeader = req.headers.authorization;
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        statusCode: 401,
+      return res.status(StatusCodes.UNAUTHORIZED).json({
+        statusCode: StatusCodes.UNAUTHORIZED,
         message: 'Authentication required',
         error: 'missing_token',
         path: req.originalUrl,
@@ -124,8 +126,8 @@ exports.authenticate = async (req, res, next) => {
     } catch (tokenError) {
       // Specifically identify token expiration errors
       if (tokenError.name === 'TokenExpiredError') {
-        return res.status(401).json({
-          statusCode: 401,
+        return res.status(StatusCodes.UNAUTHORIZED).json({
+          statusCode: StatusCodes.UNAUTHORIZED,
           message: 'Token has expired',
           error: 'token_expired',
           path: req.originalUrl,
@@ -134,8 +136,8 @@ exports.authenticate = async (req, res, next) => {
       }
       
       // Other token verification errors
-      return res.status(401).json({
-        statusCode: 401,
+      return res.status(StatusCodes.UNAUTHORIZED).json({
+        statusCode: StatusCodes.UNAUTHORIZED,
         message: 'Invalid token',
         error: 'invalid_token',
         path: req.originalUrl,
@@ -143,14 +145,11 @@ exports.authenticate = async (req, res, next) => {
       });
     }
   } catch (error) {
-    return res.status(500).json({
-      statusCode: 500,
+    return res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+      statusCode: StatusCodes.INTERNAL_SERVER_ERROR,
       message: 'Internal server error',
       path: req.originalUrl,
       timestamp: new Date().toISOString()
-    });
-  }
-};
 ```
 
 #### 4. Authentication Implementation
@@ -165,6 +164,9 @@ The service layer contains the business logic related to authentication:
   <TabItem label="Register">
   ```javascript
   // services/authService.js
+  const { StatusCodes } = require('http-status-codes');
+  const { CustomError } = require('../utils/errorUtils');
+  
   exports.registerUser = async (userData) => {
     const { email, password, name } = userData;
     
@@ -172,7 +174,7 @@ The service layer contains the business logic related to authentication:
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       // Throw a proper error object instead of a plain object
-      throw new CustomError('User already exists', 409);
+      throw new CustomError('User already exists', StatusCodes.CONFLICT);
     }
     
     // Hash password and create user
@@ -204,12 +206,12 @@ The service layer contains the business logic related to authentication:
     // Find user and validate password
     const user = await User.findOne({ email });
     if (!user) {
-      throw new CustomError('Invalid credentials', 401);
+      throw new CustomError('Invalid credentials', StatusCodes.UNAUTHORIZED);
     }
     
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      throw new CustomError('Invalid credentials', 401);
+      throw new CustomError('Invalid credentials', StatusCodes.UNAUTHORIZED);
     }
     
     // Generate tokens
@@ -228,7 +230,7 @@ The service layer contains the business logic related to authentication:
     // Find user by ID
     const user = await User.findById(userId);
     if (!user) {
-      throw new CustomError('Invalid refresh token', 401);
+      throw new CustomError('Invalid refresh token', StatusCodes.UNAUTHORIZED);
     }
     
     // Generate new access token
@@ -260,6 +262,8 @@ The controller layer handles HTTP requests and responses:
   <TabItem label="Register">
   ```javascript
   // controllers/authController.js
+  const { StatusCodes } = require('http-status-codes');
+  
   exports.register = async (req, res) => {
     try {
       const authData = await authService.registerUser(req.body);
@@ -273,8 +277,8 @@ The controller layer handles HTTP requests and responses:
       });
       
       // Return access token in response
-      return res.status(201).json({
-        statusCode: 201,
+      return res.status(StatusCodes.CREATED).json({
+        statusCode: StatusCodes.CREATED,
         data: {
           user: {
             id: authData.user.id,
@@ -288,8 +292,8 @@ The controller layer handles HTTP requests and responses:
       });
     } catch (error) {
       // Using a custom error class allows for better error handling
-      return res.status(error.statusCode || 500).json({
-        statusCode: error.statusCode || 500,
+      return res.status(error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR).json({
+        statusCode: error.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
         message: error.message || 'Error registering user',
         path: req.originalUrl,
         timestamp: new Date().toISOString()
@@ -315,8 +319,8 @@ The controller layer handles HTTP requests and responses:
       });
       
       // Return access token in response
-      return res.status(200).json({
-        statusCode: 200,
+      return res.status(StatusCodes.OK).json({
+        statusCode: StatusCodes.OK,
         data: {
           user: {
             id: authData.user.id,
@@ -329,8 +333,8 @@ The controller layer handles HTTP requests and responses:
         message: 'Login successful'
       });
     } catch (error) {
-      return res.status(error.status || 500).json({
-        statusCode: error.status || 500,
+      return res.status(error.status || StatusCodes.INTERNAL_SERVER_ERROR).json({
+        statusCode: error.status || StatusCodes.INTERNAL_SERVER_ERROR,
         message: error.message || 'Error logging in',
         path: req.originalUrl
       });
@@ -348,7 +352,7 @@ The controller layer handles HTTP requests and responses:
       const refreshToken = req.cookies.refreshToken;
       
       if (!refreshToken) {
-        return res.status(401).json({
+        return res.status(StatusCodes.UNAUTHORIZED).json({
           statusCode: 401,
           message: 'Refresh token not found',
           error: 'missing_refresh_token',
@@ -364,7 +368,7 @@ The controller layer handles HTTP requests and responses:
         const { accessToken } = await authService.refreshUserToken(decoded.id);
         
         // Return new access token
-        return res.status(200).json({
+        return res.status(StatusCodes.OK).json({
           statusCode: 200,
           data: { accessToken },
           message: 'Token refreshed successfully'
@@ -375,7 +379,7 @@ The controller layer handles HTTP requests and responses:
           // Clear the expired refresh token
           res.clearCookie('refreshToken');
           
-          return res.status(401).json({
+          return res.status(StatusCodes.UNAUTHORIZED).json({
             statusCode: 401,
             message: 'Refresh token has expired, please login again',
             error: 'refresh_token_expired',
@@ -383,7 +387,7 @@ The controller layer handles HTTP requests and responses:
           });
         }
         
-        return res.status(401).json({
+        return res.status(StatusCodes.UNAUTHORIZED).json({
           statusCode: 401,
           message: 'Invalid refresh token',
           error: 'invalid_refresh_token',
@@ -408,7 +412,7 @@ The controller layer handles HTTP requests and responses:
     // Clear refresh token cookie
     res.clearCookie('refreshToken');
     
-    return res.status(200).json({
+    return res.status(StatusCodes.OK).json({
       statusCode: 200,
       message: 'Logged out successfully'
     });
@@ -526,7 +530,7 @@ exports.authorize = (...allowedRoles) => {
   return (req, res, next) => {
     // Check if user exists and has a role
     if (!req.user || !req.user.role) {
-      return res.status(403).json({
+      return res.status(StatusCodes.FORBIDDEN).json({
         statusCode: 403,
         message: 'Forbidden: Access denied',
         path: req.originalUrl
@@ -535,7 +539,7 @@ exports.authorize = (...allowedRoles) => {
     
     // Check if user's role is allowed
     if (!allowedRoles.includes(req.user.role)) {
-      return res.status(403).json({
+      return res.status(StatusCodes.FORBIDDEN).json({
         statusCode: 403,
         message: 'Forbidden: Insufficient permissions',
         path: req.originalUrl
