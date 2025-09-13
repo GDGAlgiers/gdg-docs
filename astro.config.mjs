@@ -3,9 +3,12 @@ import starlight from "@astrojs/starlight";
 import tailwind from "@astrojs/tailwind";
 
 export default defineConfig({
+  site: "https://docs.gdgalgiers.dev", // Replace with your actual domain
   integrations: [
     starlight({
       title: "GDG Docs",
+      description:
+        "Comprehensive technical documentation and best practices for modern full-stack development, established by Google Developer Group Algiers",
       logo: {
         src: "./src/assets/gdg-logo.svg",
       },
@@ -13,6 +16,52 @@ export default defineConfig({
         github: "https://github.com/GDGAlgiers",
         discord: "https://discord.gg/tX2rAAvkxX",
       },
+      head: [
+        // OpenGraph meta tags
+        {
+          tag: "meta",
+          attrs: {
+            property: "og:image",
+            content: "/gdg-logo.svg", // This will use the logo from public folder
+          },
+        },
+        {
+          tag: "meta",
+          attrs: {
+            property: "og:image:width",
+            content: "1200",
+          },
+        },
+        {
+          tag: "meta",
+          attrs: {
+            property: "og:image:height",
+            content: "630",
+          },
+        },
+        {
+          tag: "meta",
+          attrs: {
+            property: "og:image:type",
+            content: "image/svg+xml",
+          },
+        },
+        // Twitter Card meta tags
+        {
+          tag: "meta",
+          attrs: {
+            name: "twitter:card",
+            content: "summary_large_image",
+          },
+        },
+        {
+          tag: "meta",
+          attrs: {
+            name: "twitter:image",
+            content: "/gdg-logo.svg",
+          },
+        },
+      ],
       sidebar: [
         {
           label: "Overview",
@@ -123,14 +172,6 @@ export default defineConfig({
               label: "Common Issues & Debugging",
               link: "flutter/common-issues-debugging",
             },
-          ],
-          collapsed: true,
-        },
-        {
-          label: "Workflows",
-          items: [
-            { label: "Frontend", link: "workflows/frontend" },
-            { label: "Backend", link: "workflows/backend" },
           ],
           collapsed: true,
         },
