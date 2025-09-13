@@ -3,9 +3,7 @@ title: "Navigation & Routing"
 description: "Understanding different navigation approaches in Flutter and implementing effective routing strategies."
 ---
 
-import { Aside, Code, FileTree, Card, CardGrid, Steps, Tabs } from '@astrojs/starlight/components';
-
----
+import { Aside, Code, FileTree, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
 Navigation and routing are fundamental aspects of any mobile application, defining how users move between screens and how the app maintains its navigation state. Flutter offers multiple approaches to handle navigation, each with its own strengths and use cases.
 
@@ -13,38 +11,30 @@ Navigation and routing are fundamental aspects of any mobile application, defini
   **Pro tip:** A well-implemented navigation system improves user experience and makes your codebase more maintainable. Take time to plan your navigation strategy before implementing it.
 </Aside>
 
----
-
 ## Navigation Approaches in Flutter
 
 Flutter provides several ways to handle navigation and routing, from simple imperative APIs to more complex declarative approaches:
 
-<CardGrid>
-  <Card title="Navigator 1.0">
-    The original imperative navigation API. Simple to use but limited for complex navigation patterns.
-  </Card>
-  <Card title="Navigator 2.0">
-    Declarative API offering more control and better web support, but with a steeper learning curve.
-  </Card>
-  <Card title="GoRouter">
-    Third-party package that simplifies Navigator 2.0 while maintaining its power.
-  </Card>
-  <Card title="Auto Route">
-    Code generation package that reduces boilerplate for complex navigation scenarios.
-  </Card>
-</CardGrid>
+**Navigator 1.0**: The original imperative navigation API that's simple to use but limited for complex navigation patterns. Best suited for straightforward apps with basic navigation needs.
 
----
+**Navigator 2.0**: Declarative API offering more control and better web support, but with a steeper learning curve. Provides comprehensive routing capabilities for complex applications.
+
+**GoRouter**: Third-party package that simplifies Navigator 2.0 while maintaining its power. Offers the best balance between simplicity and functionality for most applications.
+
+**Auto Route**: Code generation package that reduces boilerplate for complex navigation scenarios. Ideal for large applications with many routes and complex navigation patterns.
 
 ## Navigator 1.0 vs Navigator 2.0
 
 <Tabs>
-  <Tabs label="Navigator 1.0">
+  <TabItem label="Navigator 1.0">
     ### Navigator 1.0 (Imperative)
-    - Push/pop-based navigation model
-    - Simple and intuitive for basic navigation
-    - Less boilerplate code for simple apps
-    - Limited support for deep linking
+    
+    Navigator 1.0 provides a straightforward approach to navigation:
+    
+    - **Push/pop-based navigation model**: Simple stack-based navigation that's intuitive to understand
+    - **Simple and intuitive for basic navigation**: Minimal learning curve for developers new to Flutter
+    - **Less boilerplate code for simple apps**: Quick implementation for straightforward navigation flows
+    - **Limited support for deep linking**: Challenges when implementing complex URL-based navigation
 
     <Code code={`// Direct navigation
 Navigator.of(context).push(
@@ -53,14 +43,17 @@ Navigator.of(context).push(
 
 // Named route navigation
 Navigator.of(context).pushNamed('/details', arguments: item);`} lang="dart" />
-  </Tabs>
+  </TabItem>
 
-  <Tabs label="Navigator 2.0">
+  <TabItem label="Navigator 2.0">
     ### Navigator 2.0 (Declarative)
-    - Pages-based declarative approach
-    - Better deep linking and web URL support
-    - More complex to implement but more powerful
-    - Suitable for advanced navigation patterns
+    
+    Navigator 2.0 offers more sophisticated navigation capabilities:
+    
+    - **Pages-based declarative approach**: Navigation state is represented as a list of pages
+    - **Better deep linking and web URL support**: Comprehensive support for URL-based navigation
+    - **More complex to implement but more powerful**: Higher learning curve but greater flexibility
+    - **Suitable for advanced navigation patterns**: Handles complex scenarios like nested navigation and custom transitions
 
     <Code code={`class MyApp extends StatelessWidget {
   @override
@@ -71,15 +64,14 @@ Navigator.of(context).pushNamed('/details', arguments: item);`} lang="dart" />
     );
   }
 }`} lang="dart" />
-  </Tabs>
+  </TabItem>
 </Tabs>
-
----
 
 ## Named Routes vs Direct Navigation
 
-<Card title="Named Routes">
-  <Code code={`// Define routes
+### Named Routes Approach
+
+<Code code={`// Define routes
 MaterialApp(
   routes: {
     '/': (context) => HomeScreen(),
@@ -90,29 +82,27 @@ MaterialApp(
 
 // Navigate to a named route
 Navigator.of(context).pushNamed('/details');`} lang="dart" />
-  
-  **When to Use:**
-  - For consistent navigation paths across the app
-  - When you need a centralized routing configuration
-  - For simple navigation between fixed screens
-</Card>
 
-<Card title="Direct Navigation">
-  <Code code={`// Direct navigation with MaterialPageRoute
+**When to Use Named Routes:**
+- For consistent navigation paths across the app
+- When you need a centralized routing configuration
+- For simple navigation between fixed screens
+- When building apps with predictable navigation patterns
+
+### Direct Navigation Approach
+
+<Code code={`// Direct navigation with MaterialPageRoute
 Navigator.of(context).push(
   MaterialPageRoute(
     builder: (context) => DetailsScreen(item: selectedItem),
   ),
 );`} lang="dart" />
-  
-  **When to Use:**
-  - When passing complex data between screens
-  - For dynamic destination screens
-  - For custom transition animations
-  - For contextual navigation within a feature
-</Card>
 
----
+**When to Use Direct Navigation:**
+- When passing complex data between screens
+- For dynamic destination screens
+- For custom transition animations
+- For contextual navigation within a feature
 
 ## Recommended Approach: GoRouter
 
@@ -148,8 +138,6 @@ MaterialApp.router(
   routerConfig: _router,
 );`} lang="dart" title="GoRouter Setup" />
 
----
-
 ## State Management During Navigation
 
 Managing state during navigation can be challenging. Here are strategies for handling state across navigation boundaries:
@@ -166,7 +154,7 @@ Managing state during navigation can be challenging. Here are strategies for han
 </Steps>
 
 <Tabs>
-  <Tabs label="Constructor Parameters">
+  <TabItem label="Constructor Parameters">
     <Code code={`// Passing data via constructor
 Navigator.of(context).push(
   MaterialPageRoute(
@@ -187,9 +175,9 @@ class ProductDetailsScreen extends StatelessWidget {
     // Use product data here
   }
 }`} lang="dart" />
-  </Tabs>
+  </TabItem>
 
-  <Tabs label="BLoC Approach">
+  <TabItem label="BLoC Approach">
     <Code code={`// Access BLoC across navigation boundaries
 void navigateToDetails() {
   // BLoC is provided at a higher level in the widget tree
@@ -213,9 +201,9 @@ class ProductDetailsScreen extends StatelessWidget {
     );
   }
 }`} lang="dart" />
-  </Tabs>
+  </TabItem>
 
-  <Tabs label="GoRouter Parameters">
+  <TabItem label="GoRouter Parameters">
     <Code code={`// GoRouter with parameters
 GoRoute(
   path: '/product/:id',
@@ -235,7 +223,7 @@ GoRoute(
 
 // Navigate with parameters
 context.go('/product/123?reviews=true');`} lang="dart" />
-  </Tabs>
+  </TabItem>
 </Tabs>
 
 ---
@@ -244,20 +232,23 @@ context.go('/product/123?reviews=true');`} lang="dart" />
 
 Deep linking allows users to navigate directly to specific content within your app from external sources.
 
-<CardGrid>
-  <Card title="Key Components">
-    - **URI Schemes**: Custom schemes like `myapp://` for app-specific links
-    - **Universal Links (iOS)/App Links (Android)**: Regular web URLs that open your app
-    - **Route Mapping**: Translating external URLs to internal navigation paths
-  </Card>
-  
-  <Card title="When to Implement">
-    - **Content Sharing**: When users need to share specific content from your app
-    - **Marketing Campaigns**: For directing users to specific features or promotions
-    - **Notifications**: To route users to the right screen from push notifications
-    - **Cross-App Integration**: When other apps need to link to your app content
-  </Card>
-</CardGrid>
+### Key Components
+
+**URI Schemes**: Custom schemes like `myapp://` for app-specific links that provide direct access to your application from other apps or web browsers.
+
+**Universal Links (iOS)/App Links (Android)**: Regular web URLs that open your app when installed, or fall back to the web version when the app isn't available.
+
+**Route Mapping**: Translating external URLs to internal navigation paths, ensuring seamless integration between external links and your app's navigation structure.
+
+### When to Implement Deep Linking
+
+**Content Sharing**: When users need to share specific content from your app with others, allowing direct navigation to shared items.
+
+**Marketing Campaigns**: For directing users to specific features or promotions directly from email campaigns, social media, or advertisements.
+
+**Notifications**: To route users to the right screen from push notifications, providing contextual navigation based on notification content.
+
+**Cross-App Integration**: When other apps need to link to your app content, enabling ecosystem integration and improved user experience.
 
 <Code code={`// Deep link configuration with GoRouter
 final _router = GoRouter(
@@ -295,8 +286,6 @@ final _router = GoRouter(
     </array>
   </dict>
 </array>`} lang="xml" title="Deep Linking Configuration" />
-
----
 
 ## Navigation Architecture
 
@@ -358,37 +347,37 @@ class ProductRoutes {
   ];
 }`} lang="dart" title="Structured Navigation Code" />
 
----
-
 ## Best Practices
 
-<Aside type="tip">
-  ### Navigation Best Practices
-  
-  - ✅ **Define route constants** to avoid hard-coded strings
-  - ✅ **Pass minimum required data** between screens
-  - ✅ **Separate navigation logic** from UI components
-  - ✅ **Handle navigation errors** gracefully with error screens
-  - ✅ **Test navigation flows** thoroughly, including deep links
-</Aside>
+### Navigation Best Practices
+
+**Define route constants** to avoid hard-coded strings throughout your application. This approach prevents typos and makes refactoring easier when routes need to change.
+
+**Pass minimum required data** between screens to keep navigation lightweight and maintainable. Avoid passing entire object hierarchies when only specific properties are needed.
+
+**Separate navigation logic** from UI components to maintain clean architecture and make navigation flows easier to test and modify independently.
+
+**Handle navigation errors** gracefully with error screens and fallback routes. This ensures users always have a way to recover from unexpected navigation states.
+
+**Test navigation flows** thoroughly, including deep links and edge cases. Navigation bugs can be particularly frustrating for users and difficult to debug in production.
+
+### Common Mistakes to Avoid
 
 <Aside type="caution">
-  ### Common Mistakes to Avoid
+  **Avoid these common navigation pitfalls:**
   
-  - ❌ **Passing entire object trees** between screens
-  - ❌ **Deeply nested navigation** that's hard to manage
-  - ❌ **Inconsistent navigation patterns** across the app
-  - ❌ **Ignoring the back stack** and creating confusing navigation paths
+  - **Passing entire object trees** between screens - this creates tight coupling and performance issues
+  - **Deeply nested navigation** that's hard to manage - keep navigation hierarchies as flat as practical  
+  - **Inconsistent navigation patterns** across the app - establish and follow consistent patterns
+  - **Ignoring the back stack** and creating confusing navigation paths - always consider how users navigate backward
 </Aside>
-
----
 
 ## Navigation with State Management
 
 Integrating navigation with state management is crucial for a seamless user experience:
 
 <Tabs>
-  <Tabs label="BLoC Navigation">
+  <TabItem label="BLoC Navigation">
     <Code code={`// Navigation controlled by BLoC
 class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
   NavigationBloc() : super(NavigationInitial()) {
@@ -405,16 +394,16 @@ class NavigationBloc extends Bloc<NavigationEvent, NavigationState> {
 BlocListener<NavigationBloc, NavigationState>(
   listener: (context, state) {
     if (state is NavigationDetails) {
-      context.go('/details/\${state.id}');  // Escaped string template
+      context.go('/details/\${state.id}');
     } else if (state is NavigationHome) {
       context.go('/');
     }
   },
   child: YourWidget(),
 )`} lang="dart" />
-  </Tabs>
+  </TabItem>
 
-  <Tabs label="Provider Navigation">
+  <TabItem label="Provider Navigation">
     <Code code={`// Navigation service with Provider
 class NavigationService {
   final GoRouter router;
@@ -422,7 +411,7 @@ class NavigationService {
   NavigationService(this.router);
   
   void navigateToDetails(String id) {
-    router.go('/details/$id');
+    router.go('/details/\$id');
   }
   
   void navigateToHome() {
@@ -438,10 +427,8 @@ Provider.value(
 // Use in widgets
 final navService = context.read<NavigationService>();
 navService.navigateToDetails('123');`} lang="dart" />
-  </Tabs>
+  </TabItem>
 </Tabs>
-
----
 
 ## See Also
 
@@ -449,5 +436,3 @@ navService.navigateToDetails('123');`} lang="dart" />
 2. [Navigator 2.0 Introduction](https://medium.com/flutter/learning-flutters-new-navigation-and-routing-system-7c9068155ade) – Deep dive into Flutter's declarative routing
 3. [State Management](../state-management) – How to manage state effectively in Flutter
 4. [Deep Linking in Flutter](https://docs.flutter.dev/development/ui/navigation/deep-linking) – Official Flutter documentation on deep linking
-
----

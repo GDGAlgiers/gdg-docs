@@ -3,14 +3,14 @@ title: "API Integration & Data Handling"
 description: "Best practices for secure and efficient API communication in Flutter applications, including error handling and data serialization."
 ---
 
-import { Aside, Code, FileTree, Card, CardGrid, Steps, Tabs } from '@astrojs/starlight/components';
+import { Aside, Code, FileTree, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
 ---
 
 Effective API integration is essential for modern Flutter applications that rely on backend services. Implementing secure, efficient, and resilient communication patterns ensures your app delivers a seamless user experience while protecting sensitive data.
 
-<Aside type="tip">
-  **Pro tip:** Plan your API integration strategy early in development, focusing on security, error handling, and efficient data serialization to create a robust foundation for your app.
+<Aside type="tip" title="API Integration Strategy">
+Plan your API integration strategy early in development, focusing on security, error handling, and efficient data serialization to create a robust foundation for your app.
 </Aside>
 
 ---
@@ -19,49 +19,49 @@ Effective API integration is essential for modern Flutter applications that rely
 
 Flutter offers several libraries for API communication, each with distinct advantages. The two most popular options are:
 
-<Card title="HTTP vs Dio Comparison">
-  <Tabs>
-    <Tabs label="HTTP Package">
-      ### HTTP Package
-      Flutter's basic HTTP client package.
-      
-      **Advantages:**
-      - Simple API with minimal boilerplate
-      - Part of Flutter's core packages
-      - Lightweight with few dependencies
-      
-      **Limitations:**
-      - Basic functionality only
-      - Manual configuration for advanced features
-      - Limited built-in error handling
-      
-      <Code code={`// pubspec.yaml
+### HTTP vs Dio Comparison
+
+<Tabs>
+  <TabItem label="HTTP Package">
+    ### HTTP Package
+    Flutter's basic HTTP client package.
+    
+    **Advantages:**
+    - Simple API with minimal boilerplate
+    - Part of Flutter's core packages
+    - Lightweight with few dependencies
+    
+    **Limitations:**
+    - Basic functionality only
+    - Manual configuration for advanced features
+    - Limited built-in error handling
+    
+    <Code code={`// pubspec.yaml
 dependencies:
   http: ^1.1.0`} lang="yaml" />
-    </Tabs>
+  </TabItem>
+  
+  <TabItem label="Dio Package">
+    ### Dio Package
+    Feature-rich HTTP client for Flutter.
     
-    <Tabs label="Dio Package">
-      ### Dio Package
-      Feature-rich HTTP client for Flutter.
-      
-      **Advantages:**
-      - Interceptors for request/response handling
-      - Built-in request cancellation
-      - Form data and file upload support
-      - Automatic request retries
-      - Download tracking
-      - Better error handling
-      
-      **Limitations:**
-      - Slightly larger package size
-      - May be overkill for simple API needs
-      
-      <Code code={`// pubspec.yaml
+    **Advantages:**
+    - Interceptors for request/response handling
+    - Built-in request cancellation
+    - Form data and file upload support
+    - Automatic request retries
+    - Download tracking
+    - Better error handling
+    
+    **Limitations:**
+    - Slightly larger package size
+    - May be overkill for simple API needs
+    
+    <Code code={`// pubspec.yaml
 dependencies:
   dio: ^5.3.2`} lang="yaml" />
-    </Tabs>
-  </Tabs>
-</Card>
+  </TabItem>
+</Tabs>
 
 ---
 
@@ -69,21 +69,21 @@ dependencies:
 
 Implementing a structured API client is essential for maintainable code. We recommend using Dio with a repository pattern:
 
-<Card title="API Client Structure">
-  <FileTree>
-  - lib
-    - core
-      - api
-        - api_client.dart      # Core API client with Dio configuration
-        - api_endpoints.dart   # Constant endpoint definitions
-        - api_interceptors.dart # Custom interceptors
-    - features
-      - feature_1
-        - data
-          - repositories
-            - feature_1_repository.dart # Feature-specific API calls
-  </FileTree>
-</Card>
+### Recommended Project Structure
+
+<FileTree>
+- lib
+  - core
+    - api
+      - api_client.dart      # Core API client with Dio configuration
+      - api_endpoints.dart   # Constant endpoint definitions
+      - api_interceptors.dart # Custom interceptors
+  - features
+    - feature_1
+      - data
+        - repositories
+          - feature_1_repository.dart # Feature-specific API calls
+</FileTree>
 
 ### Base API Client
 
@@ -279,8 +279,9 @@ class ProductRepository {
 
 Dio's interceptor system enables powerful request/response processing and global error handling:
 
-<Card title="Essential Interceptors">
-  <Code code={`// lib/core/api/api_interceptors.dart
+### Essential Interceptors
+
+<Code code={`// lib/core/api/api_interceptors.dart
 import 'package:dio/dio.dart';
 import '../auth/secure_storage_service.dart';
 import 'dart:developer' as developer;
@@ -414,7 +415,6 @@ class ErrorInterceptor extends Interceptor {
   }
 }
 `} lang="dart" title="API Interceptors" />
-</Card>
 
 ---
 
@@ -422,8 +422,9 @@ class ErrorInterceptor extends Interceptor {
 
 Robust error handling is crucial for a good user experience. Implement these strategies:
 
-<Card title="API Error Handling Strategies">
-  <Code code={`// lib/core/api/api_error.dart
+### API Error Handling Strategies
+
+<Code code={`// lib/core/api/api_error.dart
 class ApiException implements Exception {
   final String message;
   final int? statusCode;
@@ -480,7 +481,6 @@ Exception _handleError(dynamic error) {
   }
   return ApiException(message: error.toString());
 }`} lang="dart" title="API Error Handling" />
-</Card>
 
 ### Retry Mechanism
 
@@ -723,8 +723,9 @@ bool _shouldShowRetryButton(ApiFailure failure) {
 
 ## Secure Storage for API Keys & Tokens
 
-<Card title="Secure Storage Implementation">
-  <Code code={`// pubspec.yaml
+### Secure Storage Implementation
+
+<Code code={`// pubspec.yaml
 dependencies:
   flutter_secure_storage: ^8.0.0`} lang="yaml" title="pubspec.yaml" />
 
@@ -791,7 +792,6 @@ class SecureStorageService {
     await _storage.deleteAll();
   }
 }`} lang="dart" title="Secure Storage Service" />
-</Card>
 
 ### Using Secure Storage with API Client
 
@@ -821,8 +821,9 @@ class ApiClient {
 
 Implementing app signature validation enhances API security by ensuring requests come from your legitimate app:
 
-<Card title="App Signature Validation">
-  <Code code={`// pubspec.yaml
+### Implementation
+
+<Code code={`// pubspec.yaml
 dependencies:
   package_info_plus: ^4.0.2
   crypto: ^3.0.3
@@ -888,9 +889,7 @@ class AppSignatureService {
   }
 }`} lang="dart" title="App Signature Generation" />
 
-  <Aside type="caution">
-    ### Security Note
-    
+<Aside type="caution" title="Security Note">
     Hardcoding API secrets in your app is not recommended as they can be extracted through reverse engineering.
     
     For stronger security:
@@ -898,76 +897,16 @@ class AppSignatureService {
     2. Consider certificate pinning (see below)
     3. Use tamper detection mechanisms
   </Aside>
-</Card>
-
-### Certificate Pinning
-
-<Code code={`// lib/core/security/certificate_pinning.dart
-import 'package:dio/dio.dart';
-import 'package:dio/io.dart';
-import 'dart:io';
-
-class CertificatePinningInterceptor {
-  static void setupPinning(Dio dio) {
-    // SHA-256 hash of your server's public key
-    final serverCertificateHash = [
-      'sha256/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', // Replace with your certificate hash
-    ];
-    
-    // Create HTTP client with certificate validation
-    final httpClient = HttpClient();
-    httpClient.badCertificateCallback = (X509Certificate cert, String host, int port) {
-      // Extract the certificate's public key hash
-      final certPem = cert.pem;
-      final sha256Hash = 'sha256/' + base64.encode(sha256.convert(utf8.encode(certPem)).bytes);
-      
-      // Verify if the certificate matches our pinned certificate
-      return serverCertificateHash.contains(sha256Hash);
-    };
-    
-    // Set this client for Dio
-    (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () => httpClient;
-  }
-}`} lang="dart" title="Certificate Pinning" />
-
-### Adding Signature Headers to API Requests
-
-<Code code={`// In your API interceptor
-class SignatureInterceptor extends Interceptor {
-  @override
-  Future<void> onRequest(
-    RequestOptions options,
-    RequestInterceptorHandler handler,
-  ) async {
-    // Add signature headers to every request
-    final signatureHeaders = await AppSignatureService.getApiSignatureHeaders();
-    options.headers.addAll(signatureHeaders);
-    
-    return handler.next(options);
-  }
-}
-
-// In your API client constructor
-ApiClient._internal() {
-  _dio = Dio(/* ... */);
-  
-  // Add signature interceptor
-  _dio.interceptors.add(SignatureInterceptor());
-  
-  // Certificate pinning
-  CertificatePinningInterceptor.setupPinning(_dio);
-}`} lang="dart" title="Using Signature Headers" />
-
----
 
 ## Data Serialization
 
 Proper data serialization ensures efficient conversion between API JSON data and Dart objects:
 
-<Card title="Data Serialization Approaches">
-  <Tabs>
-    <Tabs label="Manual Serialization">
-      <Code code={`// lib/features/products/data/models/product_model.dart
+### Data Serialization Approaches
+
+<Tabs>
+  <TabItem label="Manual Serialization">
+    <Code code={`// lib/features/products/data/models/product_model.dart
 class Product {
   final String id;
   final String name;
@@ -1016,9 +955,9 @@ class Product {
       - For simple models with few fields
       - When you want full control over serialization logic
       - For learning purposes to understand how serialization works
-    </Tabs>
-    
-    <Tabs label="json_serializable">
+  </TabItem>
+  
+  <TabItem label="json_serializable">
       <Code code={`// pubspec.yaml
 dependencies:
   json_annotation: ^4.8.1
@@ -1073,9 +1012,9 @@ flutter pub run build_runner build --delete-conflicting-outputs`} lang="bash" ti
       - For medium to complex models
       - When you need to maintain clean model classes
       - For projects with many model classes
-    </Tabs>
-    
-    <Tabs label="freezed">
+  </TabItem>
+  
+  <TabItem label="freezed">
       <Code code={`// pubspec.yaml
 dependencies:
   freezed_annotation: ^2.4.1
@@ -1118,9 +1057,8 @@ flutter pub run build_runner build --delete-conflicting-outputs`} lang="bash" ti
       - When you need immutable data classes
       - When you need pattern matching
       - For comprehensive model generation with minimal boilerplate
-    </Tabs>
-  </Tabs>
-</Card>
+  </TabItem>
+</Tabs>
 
 ### Handling Nested Objects and Lists
 
@@ -1179,65 +1117,57 @@ class ProductCategory {
 
 ### JSON Serialization Best Practices
 
-<Card title="JSON Serialization Best Practices">
-  <Steps>
-    1. **Use Consistent Naming Conventions**
-       Clearly map API snake_case to Dart camelCase using @JsonKey.
-    
-    2. **Handle Null Values Properly**
-       Make non-nullable fields required in constructors and provide defaults for nullable fields.
+<Steps>
+  1. **Use Consistent Naming Conventions**
+     Clearly map API snake_case to Dart camelCase using @JsonKey.
+  
+  2. **Handle Null Values Properly**
+     Make non-nullable fields required in constructors and provide defaults for nullable fields.
     
     3. **Type Safety First**
        Always convert dynamic values to proper types with validation.
     
     4. **Custom Converters for Complex Types**
        Use fromJson/toJson helpers for dates, enums, and custom types.
-    
-    5. **Prefer Code Generation**
-       Use json_serializable or freezed to minimize manual serialization errors.
-  </Steps>
-</Card>
-
-<Aside type="tip">
-  ### Pro Tips for Data Serialization
   
-  - ✅ Create base model classes with common serialization patterns
-  - ✅ Write unit tests for your serialization logic
-  - ✅ Use [QuickType](https://app.quicktype.io/) to quickly generate model classes from JSON samples
-  - ✅ Consider nullable fields carefully in your models
-  - ✅ Validate incoming API data to prevent runtime errors
-</Aside>
+  5. **Prefer Code Generation**
+     Use json_serializable or freezed to minimize manual serialization errors.
+</Steps>
+
+### Pro Tips for Data Serialization
+  
+  - Create base model classes with common serialization patterns
+  - Write unit tests for your serialization logic
+  - Use [QuickType](https://app.quicktype.io/) to quickly generate model classes from JSON samples
+  - Consider nullable fields carefully in your models
+  - Validate incoming API data to prevent runtime errors
 
 ---
 
 ## API Integration Best Practices Summary
 
-<Aside type="tip">
-  ### Best Practices Checklist
+### Best Practices Checklist
   
-  - ✅ **Use Dio for advanced API features** and interceptors
-  - ✅ **Implement retry mechanisms** for transient network failures
-  - ✅ **Store sensitive data** in secure storage
-  - ✅ **Implement certificate pinning** for critical APIs
-  - ✅ **Use code generation** for data serialization
-  - ✅ **Handle errors gracefully** in the UI
-  - ✅ **Structure API clients** using repository pattern
-  - ✅ **Validate API responses** before parsing
-  - ✅ **Implement proper token refresh** logic
-  - ✅ **Monitor API performance** using logging interceptors
-</Aside>
+  - **Use Dio for advanced API features** and interceptors
+  - **Implement retry mechanisms** for transient network failures
+  - **Store sensitive data** in secure storage
+  - **Implement certificate pinning** for critical APIs
+  - **Use code generation** for data serialization
+  - **Handle errors gracefully** in the UI
+  - **Structure API clients** using repository pattern
+  - **Validate API responses** before parsing
+  - **Implement proper token refresh** logic
+  - **Monitor API performance** using logging interceptors
 
-<Aside type="caution">
-  ### Common Mistakes to Avoid
+### Common Mistakes to Avoid
   
-  - ❌ **Hardcoding API keys** in source code
-  - ❌ **Not handling connection errors** properly
-  - ❌ **Using too many global interceptors** that slow down requests
-  - ❌ **Blocking the UI thread** during API calls
-  - ❌ **Not caching API responses** for frequently used data
-  - ❌ **Ignoring API versioning** in your client code
-  - ❌ **Skipping proper error handling** in API repositories
-</Aside>
+  - **Hardcoding API keys** in source code
+  - **Not handling connection errors** properly
+  - **Using too many global interceptors** that slow down requests
+  - **Blocking the UI thread** during API calls
+  - **Not caching API responses** for frequently used data
+  - **Ignoring API versioning** in your client code
+  - **Skipping proper error handling** in API repositories
 
 ---
 

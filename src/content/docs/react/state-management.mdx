@@ -459,111 +459,9 @@ function Counter() {
 
 ---
 
-## 4. Performance Optimization
-
-### Memoization with useMemo and useCallback
-
-Use these hooks strategically to prevent unnecessary calculations and re-renders:
-
-```jsx
-// ExpensiveComponent.jsx
-import { useMemo, useCallback, useState } from 'react';
-
-export default function ProductList({ products, onProductSelect }) {
-  const [filter, setFilter] = useState('');
-  
-  // Memoize expensive calculations
-  const filteredProducts = useMemo(() => {
-    console.log('Filtering products'); // Will only run when products or filter changes
-    return products.filter(p => 
-      p.name.toLowerCase().includes(filter.toLowerCase())
-    );
-  }, [products, filter]);
-  
-  // Memoize callbacks passed to child components
-  const handleProductClick = useCallback((productId) => {
-    console.log('Product selected');
-    onProductSelect(productId);
-  }, [onProductSelect]);
-  
-  return (
-    <div>
-      <input 
-        type="text" 
-        value={filter} 
-        onChange={(e) => setFilter(e.target.value)}
-        placeholder="Filter products..."
-      />
-      <ul>
-        {filteredProducts.map(product => (
-          <li 
-            key={product.id} 
-            onClick={() => handleProductClick(product.id)}
-          >
-            {product.name}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-```
-
-<Aside type="caution">
-  Don't overuse memoization. Only apply it when:
-  - You're computing expensive values
-  - You're passing callbacks to optimized child components
-  - You notice performance issues in dev tools
-</Aside>
-
-### React Compiler
-
-The React Compiler is an emerging build-time tool that can automatically optimize your components. It effectively acts as a replacement for manually writing `useMemo` and `useCallback` by analyzing your code during build time and applying memoization under the hood. This reduces boilerplate and ensures performance optimizations are consistently applied.
-
-<Aside type="note">
-    The React Compiler is still in its early stages but promises significant improvements in rendering performance without the manual overhead. For more information, refer to the [official React documentation](https://react.dev/learn/react-compiler).
-</Aside>
-
----
-
-## 5. Asynchronous State Management with TanStack Query
+## 4. Asynchronous State Management with TanStack Query
 
 TanStack Query v5 (formerly React Query) simplifies fetching, caching, and synchronizing server state:
-
-```jsx
-// Todos.jsx
-import { useQuery, useMutation } from '@tanstack/react-query';
-import axios from 'axios';
-
-function TodoList() {  
-  // Fetch todos
-  const { 
-    data: todos = [], 
-    isPending, 
-    error 
-  } = useQuery({
-    queryKey: ['todos'],
-    queryFn: () => axios.get('/api/todos').then(res => res.data),
-  });
-  
-  if (isPending) return <div>Loading...</div>;
-  if (error) return <div>Error: {error.message}</div>;
-  
-  return (
-    <div>
-      <h2>My Todos ({todos.length})</h2>  
-      {/* Todo list */}
-      <ul>
-        {todos.map((todo) => (
-          <li key={todo.id}>
-            {todo.title}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-```
 
 ### Key TanStack Query Features
 
@@ -578,70 +476,11 @@ For more details on its benefits, see the [API Integration](/react/api-integrati
 
 ---
 
-## 6. Form State Management
+## 5. Form State Management
 
 Handling form state efficiently is vital for user experience and application performance.
 
-<Tabs>
-  <TabItem label="React Hook Form">
-  ```jsx
-  import { useForm } from 'react-hook-form';
-
-  function SimpleForm() {
-    const { register, handleSubmit, formState: { errors } } = useForm();
-    
-    const onSubmit = data => console.log(data);
-    
-    return (
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <input {...register('name', { required: 'Name is required' })} />
-        {errors.name && <p>{errors.name.message}</p>}
-        
-        <input type="email" {...register('email', { required: true })} />
-        {errors.email && <p>Email is required</p>}
-        
-        <button type="submit">Submit</button>
-      </form>
-    );
-  }
-  ```
-
-  React Hook Form uses uncontrolled components with refs for better performance.
-  </TabItem>
-
-  <TabItem label="Formik">
-  ```jsx
-  import { Formik, Form, Field, ErrorMessage } from 'formik';
-
-  function SimpleForm() {
-    return (
-      <Formik
-        initialValues={{ name: '', email: '' }}
-        validate={values => {
-          const errors = {};
-          if (!values.name) errors.name = 'Required';
-          if (!values.email) errors.email = 'Required';
-          return errors;
-        }}
-        onSubmit={(values) => console.log(values)}
-      >
-        <Form>
-          <Field name="name" />
-          <ErrorMessage name="name" component="p" />
-          
-          <Field type="email" name="email" />
-          <ErrorMessage name="email" component="p" />
-          
-          <button type="submit">Submit</button>
-        </Form>
-      </Formik>
-    );
-  }
-  ```
-
-  Formik provides a more declarative API with built-in helpers for form state management.
-  </TabItem>
-</Tabs>
+Some of two most popular libraries for managing form state are React Hook Form and Formik, React Hook Form uses uncontrolled components with refs for better performance, while   Formik provides a more declarative API with built-in helpers for form state management.
 
 <Aside type="tip">
   For detailed implementations including validation, complex forms, and best practices, see our [Forms & Validation](/react/forms-validation) guide.

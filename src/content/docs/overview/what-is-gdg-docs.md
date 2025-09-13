@@ -1,29 +1,31 @@
 ---
 title: What is GDG Docs?
-description: GDG Docs inroduction
+description: GDG Docs introduction
 ---
 
 Welcome to the official documentation site for the Development Department of our Computer Science Club!
 
-This website is designed to serve as the central hub for everything related to our club's technical activities, projects, and resources. Whether you're a new member looking to get started or a seasoned contributor, this documentation will guide you through our processes and provide valuable insights into our initiatives.
+This website serves as the central hub for everything related to our club's technical activities, development practices, and educational resources. Whether you're a new member looking to get started or a seasoned contributor, this documentation provides comprehensive guidance for modern web development.
 
 ### What You'll Find Here
 
-- **Guidelines for Collaboration:** Learn how to contribute effectively to our projects, from coding standards to version control practices.
-- **Department Insights:** Get to know the structure of the development department, its goals, and the technologies we use.
+- **Development Guidelines:** Comprehensive coding standards, best practices, and collaboration workflows for React, Express, Flutter, and TypeScript projects.
+- **Technical Resources:** In-depth guides covering API integration, authentication, state management, database design, and deployment strategies.
+- **GitHub Workflows:** Streamlined processes for issues, pull requests, branching strategies, and contribution guidelines.
+- **Common Techniques:** Practical troubleshooting guides, debugging tools, and development environment setup.
 
 ### Who Is This For?
 
 This documentation is for:
 
-- **Members of the Development Department:** To work efficiently.
-- **New Club Members:** To familiarize themselves with the department's work and find ways to contribute.
-- **External Collaborators:** To understand our club's approach to development.
+- **Development Team Members:** To follow consistent standards and efficient workflows.
+- **New Contributors:** To quickly understand our technical stack and contribution processes.
+- **Students & Learners:** To access professional-grade development practices and real-world patterns.
 
 ### Our Mission
 
-Our mission is to empower students with technical knowledge and real-world skills by working together on impactful projects. Through this documentation site, we aim to provide clarity and streamline communication, ensuring that everyone can contribute effectively.
+Our mission is to empower students and developers with practical technical knowledge and industry-standard development skills. Through this comprehensive documentation, we provide clear guidance on modern web technologies, ensuring everyone can contribute effectively to professional-quality projects.
 
 ---
 
-Take some time to explore the site and get acquainted with its contents. If you have any questions or suggestions, feel free to reach out to the department managers that you can find in the [community Discord server](https://discord.gg/tX2rAAvkxX)
+Explore the technical guides and development workflows to get started. For questions or suggestions, reach out to the department managers in our [community Discord server](https://discord.gg/tX2rAAvkxX).

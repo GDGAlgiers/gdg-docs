@@ -3,47 +3,29 @@ title: "Project Structure"
 description: "A structured approach to organizing Flutter projects using feature-driven architecture and MVVM pattern."
 ---
 
-import { Aside, Code, FileTree, Card, CardGrid, Steps, Tabs } from '@astrojs/starlight/components';
+import { Aside, Code, FileTree, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
 <Aside>
   A well-organized project structure is key to maintaining scalability, readability, and ease of collaboration in Flutter applications. By following a structured approach, developers can ensure modularity and maintainability.  
   **Related Guide**: [Flutter State Management](../state-management)
 </Aside>
 
----
-
 ## Feature-Driven Architecture
 
 Feature-Driven Architecture (FDA) structures Flutter projects around self-contained features, each handling its UI, business logic, and state management. This ensures a modular, scalable, and maintainable codebase.
 
----
+### Why Feature-Driven Architecture?
 
-## Why Feature-Driven Architecture?
+Feature-driven architecture provides several key benefits for Flutter development:
 
-<CardGrid>
-  <Card title="Modularity">
-    Features are self-contained and reusable.
-  </Card>
-  <Card title="Scalability">
-    New features can be added without disrupting existing ones.
-  </Card>
-  <Card title="Separation of Concerns">
-    Clear division between UI, logic, and data layers.
-  </Card>
-  <Card title="Improved Collaboration">
-    Teams can work on features independently.
-  </Card>
-  <Card title="Easier Testing & Maintenance">
-    Isolated features simplify debugging and testing.
-  </Card>
-  <Card title="Faster Onboarding for New Developers">
-    Features are self-contained, making it easier for new developers to understand and contribute.
-  </Card>
-</CardGrid>
+- **Modularity**: Features are self-contained and reusable across different parts of the application
+- **Scalability**: New features can be added without disrupting existing functionality  
+- **Separation of Concerns**: Clear division between UI, logic, and data layers prevents code mixing
+- **Improved Collaboration**: Teams can work on features independently without conflicts
+- **Easier Testing & Maintenance**: Isolated features simplify debugging and unit testing
+- **Faster Onboarding**: Self-contained features make it easier for new developers to understand the codebase
 
-This structure helps developers build maintainable and efficient Flutter apps.
-
----
+This structure helps developers build maintainable and efficient Flutter applications that can grow with business requirements.
 
 ## Getting Started
 
@@ -66,8 +48,6 @@ This structure helps developers build maintainable and efficient Flutter apps.
 <Aside type="tip">
   For developers using VSCode, the [Flutter Feature Scaffolding](https://marketplace.visualstudio.com/items?itemName=KiritchoukC.flutter-clean-architecture) extension can automate feature folder creation.
 </Aside>
-
----
 
 ## Suggested Folder Structure
 
@@ -141,13 +121,14 @@ Data flows from the Domain Layer (API/DB) through the Logic Layer (state process
 ## Layer Breakdown
 
 <Tabs>
-  <Tabs label="Domain Layer">
-    <Card title="Domain Layer">
-      - **Models**: Define data structures (e.g., `UserModel`).  
-      - **Providers**: Handle API/database communication.  
-      - **Repositories**: Bridge between providers and business logic.  
-      **Related**: [Clean Architecture in Flutter](https://resocoder.com/flutter-clean-architecture-tdd/)  
-    </Card>
+  <TabItem label="Domain Layer">
+    ### Domain Layer
+    
+    The domain layer handles data and business logic:
+    
+    - **Models**: Define data structures and entities (e.g., `UserModel`)
+    - **Providers**: Handle API/database communication and external data sources
+    - **Repositories**: Bridge between providers and business logic, abstracting data access
 
     ### Domain Layer Code Examples
 
@@ -186,13 +167,15 @@ class UserRepository {
     return UserModel.fromJson(userData);
   }
 }`} lang="dart" title="User Repository" />
-  </Tabs>
+  </TabItem>
 
-  <Tabs label="Logic Layer">
-    <Card title="Logic Layer">
-      - **Cubits (ViewModel Layer)**: Manage state transitions efficiently.  
-      - **States**: Immutable state classes (e.g., `UserLoaded`, `UserError`).  
-    </Card>
+  <TabItem label="Logic Layer">
+    ### Logic Layer
+    
+    The logic layer manages state and business operations:
+    
+    - **Cubits (ViewModel Layer)**: Manage state transitions efficiently using the BLoC pattern
+    - **States**: Immutable state classes that represent different application states (e.g., `UserLoaded`, `UserError`)
 
     ### Logic Layer Code Examples
 
@@ -225,15 +208,16 @@ class UserCubit extends Cubit<UserState> {
     }
   }
 }`} lang="dart" title="User Cubit" />
-  </Tabs>
+  </TabItem>
 
-  <Tabs label="Presentation Layer">
-    <Card title="Presentation Layer">
-      - **Screens**: Full-page UIs (e.g., `UserProfileScreen`).  
-      - **Fragments**: Reusable screen sections (e.g., `ProfileHeaderFragment`).  
-      - **Widgets**: Atomic UI components (e.g., `UserAvatar`).  
-      **Related**: [Flutter UI Best Practices](https://medium.com/@expertappdevs/performance-best-practices-in-flutter-4579a7a265da)  
-    </Card>
+  <TabItem label="Presentation Layer">
+    ### Presentation Layer
+    
+    The presentation layer handles all UI components and user interactions:
+    
+    - **Screens**: Full-page UIs that represent complete application views (e.g., `UserProfileScreen`)
+    - **Fragments**: Reusable screen sections that can be composed into larger views (e.g., `ProfileHeaderFragment`)
+    - **Widgets**: Atomic UI components that provide specific functionality (e.g., `UserAvatar`)
 
     ### Presentation Layer Code Examples
 
@@ -285,50 +269,32 @@ class UserAvatar extends StatelessWidget {
     );
   }
 }`} lang="dart" title="User Avatar Widget" />
-  </Tabs>
+  </TabItem>
 </Tabs>
-
----
 
 ## Applying the MVVM Pattern with Cubits
 
 The **MVVM (Model-View-ViewModel)** pattern separates concerns, ensuring better maintainability and testability. **Cubits** (from the BLoC pattern) handle state management efficiently by maintaining immutable states.
 
-<CardGrid>
-  <Card title="ViewModel Layer">
-    Implemented via Cubits that handle state transitions and business logic.
-  </Card>
-  <Card title="View Layer">
-    Widgets observe Cubit states and react accordingly to state changes.
-  </Card>
-</CardGrid>
+**ViewModel Layer**: Implemented via Cubits that handle state transitions and business logic. Cubits serve as the bridge between the UI and data layers, processing user actions and emitting appropriate states.
 
----
+**View Layer**: Widgets observe Cubit states and react accordingly to state changes. This reactive approach ensures the UI automatically updates when data changes, maintaining consistency across the application.
 
 ## Performance Considerations
 
-This architecture impacts performance in several ways:
+This architecture impacts performance in several key areas:
 
-<CardGrid>
-  <Card title="Memory Usage">
-    Feature separation prevents unnecessary loading of unused components.
-  </Card>
-  <Card title="Build Time">
-    Cubits rebuild only the specific widgets that depend on changed states, avoiding full UI rebuilds.
-  </Card>
-  <Card title="Tree Shaking">
-    Properly structured code allows the Dart compiler to optimize away unused code.
-  </Card>
-  <Card title="Load Time">
-    Consider lazy-loading features that aren't needed during initial app startup.
-  </Card>
-</CardGrid>
+**Memory Usage**: Feature separation prevents unnecessary loading of unused components. Each feature loads independently, reducing initial memory footprint and allowing for better resource management.
+
+**Build Time**: Cubits rebuild only the specific widgets that depend on changed states, avoiding full UI rebuilds. This selective rebuilding improves application responsiveness and reduces unnecessary computations.
+
+**Tree Shaking**: Properly structured code allows the Dart compiler to optimize away unused code during build time, resulting in smaller app bundles and faster load times.
+
+**Load Time**: Consider lazy-loading features that aren't needed during initial app startup. This approach reduces initial bundle size and improves time-to-interactive metrics.
 
 <Aside type="tip">
-  **Optimization Tip**: Use `const` constructors for stateless widgets to leverage Flutter's widget tree optimization.
+  **Optimization Tip**: Use `const` constructors for stateless widgets to leverage Flutter's widget tree optimization and reduce unnecessary widget rebuilds.
 </Aside>
-
----
 
 ## Migrating Existing Projects
 
@@ -356,35 +322,30 @@ This architecture impacts performance in several ways:
   **Migration Strategy**: Keep the app functional throughout the process by maintaining interoperability between old and new architecture components.
 </Aside>
 
----
-
 ## Best Practices
 
-### 1. Dependency Injection
+### Dependency Injection
 
-    Keep dependencies managed efficiently using a service locator like GetIt.
+Keep dependencies managed efficiently using a service locator like GetIt. This ensures loose coupling between components and makes testing easier by allowing dependency mocking.
 
-### 2. Modularity
+### Modularity
 
-    Keep features self-contained and avoid unnecessary dependencies between features.
+Keep features self-contained and avoid unnecessary dependencies between features. Each feature should be able to function independently, with shared functionality placed in the `shared` folder.
 
-### 3. Testing
+### Testing Strategy
 
-    Keep dependencies managed efficiently using a service locator like GetIt.
-    
+Structure your code to support comprehensive testing at all layers. Unit test your Cubits and repositories, widget test your UI components, and integration test complete user flows.
+
 <Aside type="caution">
   ### Avoid These Common Mistakes
   
-  - **Placing business logic inside widgets** – Always separate concerns.
-  - **Failing to emit distinct Cubit states** – Ensure states are immutable.
-  - **Overusing singletons in dependency injection** – Use lazy singletons wisely.
+  - **Placing business logic inside widgets** – Always separate concerns by keeping logic in Cubits
+  - **Failing to emit distinct Cubit states** – Ensure states are immutable and properly differentiated
+  - **Overusing singletons in dependency injection** – Use lazy singletons wisely to avoid memory issues
 </Aside>
 
----
+## See Also
 
-## **See Also**
-1. [State Management Fundamentals](../state-management) – Learn how to manage complex states effectively.  
-2. [Feature-Driven Development in Flutter](https://codewithandrea.com/articles/flutter-project-structure/) – Comprehensive guide to feature-first Flutter architecture.
-3. [Flutter Official Documentation](https://docs.flutter.dev) – Stay updated with the latest Flutter best practices.
-
----
+1. [State Management Fundamentals](../state-management) – Learn how to manage complex states effectively  
+2. [Feature-Driven Development in Flutter](https://codewithandrea.com/articles/flutter-project-structure/) – Comprehensive guide to feature-first Flutter architecture
+3. [Flutter Official Documentation](https://docs.flutter.dev) – Stay updated with the latest Flutter best practices
