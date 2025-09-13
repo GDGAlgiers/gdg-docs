@@ -34,6 +34,13 @@ export default defineConfig({
       ],
       head: [
         {
+          tag: "script",
+          attrs: {
+            src: "/_vercel/insights/script.js",
+            defer: true,
+          },
+        },
+        {
           tag: "meta",
           attrs: { property: "og:image", content: ogUrl },
         },
