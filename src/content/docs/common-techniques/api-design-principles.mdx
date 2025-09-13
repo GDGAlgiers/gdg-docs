@@ -234,7 +234,7 @@ Define a consistent response structure for all endpoints:
   },
   "message": "Users retrieved successfully",
   "meta": {
-    // Pagination, count, etc. (when needed)
+    // Pagination, count, etc. (optional)
     "totalCount": 150,
     "page": 2,
     "limit": 20
@@ -245,7 +245,8 @@ Define a consistent response structure for all endpoints:
 {
   "statusCode": 400,
   "message": "Invalid user data provided",
-  "path": "/api/v1/users"
+  "path": "/api/v1/users",
+  "timestamp": "2023-07-25T15:30:45.123Z"
 }
 ```
 

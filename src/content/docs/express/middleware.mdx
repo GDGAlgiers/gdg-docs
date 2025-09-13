@@ -229,168 +229,12 @@ module.exports = app;
 
 ### Custom Middleware Implementation
 
+For specific middleware patterns, refer to their dedicated guides:
+
+- **Authentication Middleware**: See [Authentication & Security](../authentication-security) guide
+- **Error Handling & Logging Middlewares**: See [Error Handling & Logging](../error-handling) guide  
+
 <Tabs>
-  <TabItem label="Authentication">
-  ```javascript
-  // middlewares/authMiddleware.js
-  const jwt = require('jsonwebtoken');
-
-  const authMiddleware = (req, res, next) => {
-    try {
-      // Get token from the Authorization header
-      const authHeader = req.headers.authorization;
-      
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({
-          statusCode: 401,
-          message: 'No token provided',
-          path: req.originalUrl
-        });
-      }
-      
-      // Extract the token
-      const token = authHeader.split(' ')[1];
-      
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      
-      // Add user data to request
-      req.user = decoded;
-      
-      next();
-    } catch (error) {
-      if (error.name === 'TokenExpiredError') {
-        return res.status(401).json({
-          statusCode: 401,
-          message: 'Token expired',
-          error: 'token_expired',
-          path: req.originalUrl
-        });
-      }
-      
-      return res.status(401).json({
-        statusCode: 401,
-        message: 'Invalid token',
-        path: req.originalUrl
-      });
-    }
-  };
-
-  module.exports = authMiddleware;
-  ```
-  </TabItem>
-
-  <TabItem label="Logging">
-  ```javascript
-  // middlewares/loggerMiddleware.js
-  const { v4: uuidv4 } = require('uuid');
-  const logger = require('../utils/logger');
-
-  const loggerMiddleware = (req, res, next) => {
-    // Generate a unique ID for this request
-    req.id = uuidv4();
-    
-    // Log request details
-    logger.info({
-      id: req.id,
-      method: req.method,
-      url: req.originalUrl,
-      ip: req.ip,
-      userAgent: req.headers['user-agent']
-    });
-    
-    // Track response time
-    const start = Date.now();
-    
-    // Override end method to log response details
-    const originalEnd = res.end;
-    res.end = function() {
-      const responseTime = Date.now() - start;
-      
-      // Log response details
-      logger.info({
-        id: req.id,
-        statusCode: res.statusCode,
-        responseTime: `${responseTime}ms`
-      });
-      
-      originalEnd.apply(res, arguments);
-    };
-    
-    next();
-  };
-
-  module.exports = loggerMiddleware;
-  ```
-  
-  <Aside>
-    This custom logger middleware is more comprehensive than Morgan. It assigns a unique ID to each request, logs detailed request information, tracks response time, and logs the completion of each request. Use this instead of Morgan when you need more detailed logging or want to integrate with a structured logging system.
-  </Aside>
-  </TabItem>
-
-  <TabItem label="Error Handling">
-  ```javascript
-  // middlewares/errorMiddleware.js
-  const logger = require('../utils/logger');
-
-  // Custom error class for API errors
-  class CustomError extends Error {
-    constructor(statusCode, message, isOperational = true, stack = '') {
-      super(message);
-      this.statusCode = statusCode;
-      this.isOperational = isOperational;
-      
-      if (stack) {
-        this.stack = stack;
-      } else {
-        Error.captureStackTrace(this, this.constructor);
-      }
-    }
-
-    /**
-     * The stack trace provides information about where an error occurred in your code.
-     * It contains the sequence of function calls that led to the error, helping with debugging.
-     * 
-     * The isOperational flag helps distinguish between:
-     * - Operational errors (true): Expected errors like validation failures, wrong input, etc.
-     * - Programming errors (false): Bugs, syntax errors, or other unexpected issues
-     * 
-     * This distinction allows handling operational errors gracefully while possibly crashing
-     * the application for critical programming errors that need immediate attention.
-     */
-  }
-
-  // Error middleware
-  const errorMiddleware = (err, req, res, next) => {
-    // Default error values
-    err.statusCode = err.statusCode || 500;
-    err.message = err.message || 'Internal Server Error';
-    
-    // Log error
-    logger.error({
-      id: req.id,
-      statusCode: err.statusCode,
-      message: err.message,
-      stack: err.stack,
-      isOperational: err.isOperational || false
-    });
-    
-    // Send response
-    res.status(err.statusCode).json({
-      statusCode: err.statusCode,
-      message: err.message,
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-      path: req.originalUrl
-    });
-  };
-
-  module.exports = { 
-    CustomError,
-    errorMiddleware 
-  };
-  ```
-  </TabItem>
-
   <TabItem label="Not Found">
   ```javascript
   // middlewares/notFoundMiddleware.js
@@ -404,7 +248,8 @@ module.exports = app;
     res.status(404).json({
       statusCode: 404,
       message: 'Resource not found',
-      path: req.originalUrl
+      path: req.originalUrl,
+      timestamp: new Date().toISOString()
     });
   };
 
@@ -427,7 +272,8 @@ module.exports = app;
           field: error.param,
           message: error.msg
         })),
-        path: req.originalUrl
+        path: req.originalUrl,
+        timestamp: new Date().toISOString()
       });
     }
     next();

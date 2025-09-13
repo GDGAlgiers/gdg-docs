@@ -417,6 +417,85 @@ function CheckoutForm() {
   As your component grows, consider extracting state management logic into custom hooks. This improves reusability and keeps your components focused on rendering.
 </Aside>
 
+#### Proper Keys for List State
+
+When managing lists in state, proper `key` props are essential for React to efficiently update the DOM and preserve component state correctly.
+
+**❌ Never use array index as key:**
+
+```jsx
+function TodoList() {
+  const [todos, setTodos] = useState([]);
+  
+  return (
+    <ul>
+      {todos.map((todo, index) => (
+        <li key={index}> {/* ❌ Index keys cause problems */}
+          <input type="checkbox" checked={todo.completed} />
+          <span>{todo.text}</span>
+          <input type="text" defaultValue={todo.note} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+**Problems with index keys:**
+- **Lost form state**: When items are reordered, input values get mixed up
+- **Performance issues**: React can't optimize updates properly  
+- **Wrong updates**: Component state gets attached to wrong items
+
+**✅ Always use stable, unique identifiers:**
+
+```jsx
+function TodoList() {
+  const [todos, setTodos] = useState([]);
+  
+  const addTodo = (text) => {
+    setTodos(prev => [...prev, {
+      id: crypto.randomUUID(), // Generate unique ID
+      text,
+      completed: false,
+      note: ''
+    }]);
+  };
+  
+  return (
+    <ul>
+      {todos.map((todo) => (
+        <li key={todo.id}> {/* ✅ Stable unique key */}
+          <input type="checkbox" checked={todo.completed} />
+          <span>{todo.text}</span>
+          <input type="text" defaultValue={todo.note} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+**Generating keys for list state:**
+
+```jsx
+// When adding items to state, always include a unique ID
+const addItem = (itemData) => {
+  const newItem = {
+    id: crypto.randomUUID(), // or use nanoid, Date.now(), etc.
+    ...itemData,
+    createdAt: new Date()
+  };
+  setItems(prev => [...prev, newItem]);
+};
+
+// For data without IDs, create composite keys (if truly unique)
+const key = `${item.userId}-${item.timestamp}-${item.type}`;
+```
+
+<Aside type="caution">
+  **Never use random values** like `Math.random()` or `Date.now()` as keys in the render method. These change on every render and force React to recreate DOM nodes unnecessarily.
+</Aside>
+
 ---
 
 ## 3. External State Libraries

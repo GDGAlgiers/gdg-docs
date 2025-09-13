@@ -375,7 +375,7 @@ For most projects, a structured organization of database-related files is essent
   Prisma uses a different approach where all models are defined in a single `schema.prisma` file instead of separate model files. This schema file is used to generate the Prisma client with strongly-typed queries.
 </Aside>
 
-### MongoDB Models with Mongoose
+### Creating Database Models
 
 <Tabs>
   <TabItem label="MongoDB">
@@ -449,7 +449,7 @@ For most projects, a structured organization of database-related files is essent
   module.exports = User;
   ```
   </TabItem>
-  <TabItem label="PostgreSQL">
+  <TabItem label="Sequelize">
   ```javascript
   // db/models/postgresql/user.model.js
   const { DataTypes } = require('sequelize');
@@ -740,24 +740,30 @@ Effective database error handling combines multiple approaches:
       
       if (err instanceof mongoose.Error.ValidationError) {
         return res.status(400).json({
-          status: 'error',
+          statusCode: 400,
           message: 'Validation error',
+          path: req.originalUrl,
+          timestamp: new Date().toISOString(),
           details: Object.values(err.errors).map(e => e.message)
         });
       }
       
       if (err instanceof mongoose.Error.CastError) {
         return res.status(400).json({
-          status: 'error',
+          statusCode: 400,
           message: 'Invalid ID format',
+          path: req.originalUrl,
+          timestamp: new Date().toISOString(),
           details: `Cannot cast ${err.value} to ${err.kind}`
         });
       }
       
       if (err.code === 11000) { // Duplicate key error
         return res.status(409).json({
-          status: 'error',
+          statusCode: 409,
           message: 'Duplicate value error',
+          path: req.originalUrl,
+          timestamp: new Date().toISOString(),
           details: `A record with this ${Object.keys(err.keyValue)} already exists`
         });
       }
@@ -766,8 +772,10 @@ Effective database error handling combines multiple approaches:
     // Default error response
     const statusCode = err.statusCode || 500;
     res.status(statusCode).json({
-      status: 'error',
+      statusCode: statusCode,
       message: err.message || 'Internal server error',
+      path: req.originalUrl,
+      timestamp: new Date().toISOString(),
       ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
     });
   }
@@ -794,14 +802,18 @@ Effective database error handling combines multiple approaches:
       switch (err.code) {
         case 'P2002': // Unique constraint violation
           return res.status(409).json({
-            status: 'error',
+            statusCode: 409,
             message: 'A record with this information already exists',
+            path: req.originalUrl,
+            timestamp: new Date().toISOString(),
             fields: err.meta?.target
           });
         case 'P2025': // Record not found
           return res.status(404).json({
-            status: 'error',
-            message: 'Record not found'
+            statusCode: 404,
+            message: 'Record not found',
+            path: req.originalUrl,
+            timestamp: new Date().toISOString()
           });
         default:
           // Handle other Prisma errors
@@ -811,8 +823,10 @@ Effective database error handling combines multiple approaches:
     // Default error response
     const statusCode = err.statusCode || 500;
     res.status(statusCode).json({
-      status: 'error',
+      statusCode: statusCode,
       message: err.message || 'Internal server error',
+      path: req.originalUrl,
+      timestamp: new Date().toISOString(),
       ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
     });
   }

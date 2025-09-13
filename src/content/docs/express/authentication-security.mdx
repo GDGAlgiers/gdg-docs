@@ -105,7 +105,8 @@ exports.authenticate = async (req, res, next) => {
         statusCode: 401,
         message: 'Authentication required',
         error: 'missing_token',
-        path: req.originalUrl
+        path: req.originalUrl,
+        timestamp: new Date().toISOString()
       });
     }
     
@@ -127,7 +128,8 @@ exports.authenticate = async (req, res, next) => {
           statusCode: 401,
           message: 'Token has expired',
           error: 'token_expired',
-          path: req.originalUrl
+          path: req.originalUrl,
+          timestamp: new Date().toISOString()
         });
       }
       
@@ -136,14 +138,16 @@ exports.authenticate = async (req, res, next) => {
         statusCode: 401,
         message: 'Invalid token',
         error: 'invalid_token',
-        path: req.originalUrl
+        path: req.originalUrl,
+        timestamp: new Date().toISOString()
       });
     }
   } catch (error) {
     return res.status(500).json({
       statusCode: 500,
       message: 'Internal server error',
-      path: req.originalUrl
+      path: req.originalUrl,
+      timestamp: new Date().toISOString()
     });
   }
 };
@@ -287,7 +291,8 @@ The controller layer handles HTTP requests and responses:
       return res.status(error.statusCode || 500).json({
         statusCode: error.statusCode || 500,
         message: error.message || 'Error registering user',
-        path: req.originalUrl
+        path: req.originalUrl,
+        timestamp: new Date().toISOString()
       });
     }
   };

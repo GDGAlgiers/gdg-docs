@@ -116,94 +116,14 @@ const LoginForm = () => {
 - `navigate(-1)` goes back in history
 - `navigate(1)` goes forward in history
 
-## Private Routes
+## Protected Routes
 
-Private routes protect pages that require authentication. We'll use React Context to share authentication state across the app.
+For implementing authentication and protecting routes, see the [Authentication & Security](./authentication-security) guide which covers:
 
-### Context-Based Approach (Recommended)
-
-This approach provides a clean, reusable pattern for protecting routes throughout your application.
-
-#### Private Route Component
-
-```jsx
-// components/PrivateRoute.jsx
-import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@contexts/AuthContext';
-
-const PrivateRoute = ({ children }) => {
-  const { user, loading } = useAuth(); // Get auth state from context
-  const location = useLocation(); // Current page location
-
-  // Show loading while checking authentication
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  // If not logged in, redirect to login with return URL
-  if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  // User is authenticated, show the protected content
-  return children;
-};
-
-export default PrivateRoute;
-```
-
-**How it works:**
-- Checks if user is authenticated via context
-- Shows loading state while checking
-- Redirects to login if not authenticated, saving the current location
-- Renders protected content if authenticated
-
-### Using Private Routes
-
-Here's how to integrate private routes into your application structure:
-
-```jsx
-// App.js
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import PrivateRoute from './components/PrivateRoute';
-import HomePage from './pages/HomePage';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import ProfilePage from './pages/ProfilePage';
-
-function App() {
-  return (
-    <AuthProvider> {/* Wrap entire app with auth context */}
-      <BrowserRouter>
-        <Routes>
-          {/* Public routes - anyone can access */}
-          <Route path="/" element={<HomePage />} />
-          <Route path="/login" element={<LoginPage />} />
-          
-          {/* Protected routes - require authentication */}
-          <Route path="/dashboard" element={
-            <PrivateRoute>
-              <DashboardPage />
-            </PrivateRoute>
-          } />
-          
-          <Route path="/profile" element={
-            <PrivateRoute>
-              <ProfilePage />
-            </PrivateRoute>
-          } />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
-  );
-}
-```
-**Key Points:**
-- Wrap your app with `AuthProvider` to share authentication state
-- Public routes don't need `PrivateRoute` wrapper
-- Protected routes are wrapped with `PrivateRoute` component
-- Users will be redirected to login if they try to access protected routes while unauthenticated
+- Setting up authentication context
+- Protected route components with role-based access control
+- Login/logout flows
+- JWT token management
 
 ## Dynamic Routing & Parameters
 
@@ -289,63 +209,6 @@ const ProductLayout = () => {
   );
 };
 ```
-
-## Route Guards & Permissions
-
-For applications with different user roles, you might need more granular access control beyond simple authentication.
-
-### Role-Based Route Protection
-
-```jsx
-// hooks/usePermissions.js
-import { useAuth } from '@contexts/AuthContext';
-
-export const usePermissions = () => {
-  const { user } = useAuth();
-
-  const hasRole = (role) => {
-    return user?.roles?.includes(role);
-  };
-
-  const hasPermission = (permission) => {
-    return user?.permissions?.includes(permission);
-  };
-
-  return { hasRole, hasPermission };
-};
-```
-
-```jsx
-// components/RoleRoute.jsx
-import { Navigate } from 'react-router-dom';
-import { usePermissions } from '@hooks/usePermissions';
-
-const RoleRoute = ({ children, requiredRole }) => {
-  const { hasRole } = usePermissions();
-
-  // Check if user has the required role
-  if (!hasRole(requiredRole)) {
-    return <Navigate to="/unauthorized" replace />;
-  }
-
-  return children;
-};
-
-// Usage - Protect admin routes
-<Route path="/admin" element={
-  <PrivateRoute>
-    <RoleRoute requiredRole="admin">
-      <AdminDashboard />
-    </RoleRoute>
-  </PrivateRoute>
-} />
-```
-
-**How it works:**
-- `usePermissions` hook checks user roles/permissions
-- `RoleRoute` component validates required role before rendering
-- Users without proper permissions are redirected to unauthorized page
-- Can be combined with `PrivateRoute` for double protection
 
 ## Best Practices
 
