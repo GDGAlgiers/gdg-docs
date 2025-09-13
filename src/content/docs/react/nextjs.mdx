@@ -1,0 +1,531 @@
+---
+title: "Next.js Guide"
+description: "A comprehensive guide to building modern React applications with Next.js 15+, covering App Router, Server Components, data fetching, and TanStack Query integration."
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+**Next.js** is a production-ready React framework that provides server-side rendering, static site generation, and many other features out of the box. This guide focuses on Next.js 15+ with the modern App Router.
+
+**When to use Next.js?**
+  - Need SEO and faster initial page loads
+  - Want built-in optimization (images, fonts, scripts)
+  - Building full-stack applications with API routes
+  - Want file-based routing and automatic code splitting
+
+---
+
+## Why We Use Next.js at GDG Algiers
+
+At GDG Algiers, we choose Next.js for several of our projects because:
+
+- **SEO Requirements**: Our event websites, blogs, and documentation sites need excellent search engine visibility
+- **Performance**: Initial page loads are significantly faster with SSR/SSG compared to client-side React
+- **Full-Stack Capability**: API routes eliminate the need for separate backend services for simple applications
+- **Developer Experience**: Built-in optimizations, TypeScript support, and excellent tooling out of the box
+- **Deployment Simplicity**: Seamless deployment to Vercel, Netlify, or any Node.js hosting platform
+
+**When we use Next.js vs React:**
+- **Next.js**: Marketing sites, blogs, documentation, e-commerce, dashboards with SEO needs
+- **React SPA**: Admin panels, internal tools, highly interactive apps where SEO isn't critical
+
+## App Router vs Pages Router
+
+Next.js evolved from the Pages Router to the more powerful App Router. Here's what you need to know:
+
+<Tabs>
+  <TabItem label="App Router (Recommended)">
+  ```tsx
+  // app/page.tsx
+  export default function HomePage() {
+    return <h1>Welcome to Next.js 15!</h1>;
+  }
+  ```
+  ```tsx
+  // app/about/page.tsx
+  export default function AboutPage() {
+    return <h1>About Us</h1>;
+  }
+  ```
+  ```tsx
+  // app/layout.tsx
+  // Root layout
+  export default function RootLayout({
+    children,
+  }: {
+    children: React.ReactNode;
+  }) {
+    return (
+      <html lang="en">
+        <body>{children}</body>
+      </html>
+    );
+  }
+  ```
+  
+  **Benefits:**
+  - Server Components by default
+  - Improved performance and SEO
+  - Better developer experience
+  - More flexible layouts
+  </TabItem>
+
+  <TabItem label="Pages Router (Legacy)">
+  ```tsx
+  // pages/index.tsx 
+  export default function HomePage() {
+    return <h1>Welcome to Next.js!</h1>;
+  }
+  ```
+  ```tsx
+  // pages/about.tsx
+  export default function AboutPage() {
+    return <h1>About Us</h1>;
+  }
+  ```
+  ```tsx
+  // pages/_app.tsx
+  // App wrapper
+  export default function App({ Component, pageProps }) {
+    return <Component {...pageProps} />;
+  }
+  ```
+  
+  **Still works but:**
+  - Client-side rendering by default
+  - Less optimized bundle sizes
+  - Limited layout flexibility
+  </TabItem>
+</Tabs>
+
+<Aside type="caution">
+  You can gradually migrate from Pages Router to App Router. Both can coexist in the same project during migration.
+</Aside>
+
+---
+
+## Server Components vs Client Components
+
+Next.js 15+ introduces React Server Components by default, enabling better performance and SEO.
+
+### Server Components (Default)
+
+Server Components run on the server and are great for data fetching and SEO:
+
+```tsx
+// app/products/page.tsx
+// Server Component (no 'use client' needed)
+import { getProducts } from '@/lib/api';
+
+export default async function ProductsPage() {
+  // This runs on the server - direct database access possible
+  const products = await getProducts();
+  
+  return (
+    <div>
+      <h1>Products</h1>
+      {products.map(product => (
+        <div key={product.id}>
+          <h2>{product.name}</h2>
+          <p>${product.price}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+**Server Components are perfect for:**
+- Data fetching from databases or APIs
+- Rendering static content
+- Heavy computations
+- Using environment variables securely
+
+### Client Components
+
+Add `'use client'` when you need browser features or interactivity:
+
+```tsx
+// AddToCart.tsx
+'use client'; // Required directive
+
+import { useState } from 'react';
+
+export default function AddToCartButton({ productId }) {
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const handleAddToCart = async () => {
+    setIsLoading(true);
+    try {
+      await fetch('/api/cart', {
+        method: 'POST',
+        body: JSON.stringify({ productId }),
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  return (
+    <button onClick={handleAddToCart} disabled={isLoading}>
+      {isLoading ? 'Adding...' : 'Add to Cart'}
+    </button>
+  );
+}
+```
+
+**Client Components are needed for:**
+- Event handlers (onClick, onChange, onSubmit)
+- State and effects (useState, useEffect)
+- Browser APIs (localStorage, geolocation)
+- Interactive libraries
+
+<Aside type="caution">
+  When you mark a component as 'use client', all its children become client components too. Keep client boundaries as low as possible.
+</Aside>
+
+---
+
+## Data Fetching
+
+Next.js offers multiple rendering strategies, each with different performance and user experience characteristics:
+
+### Rendering Strategies Explained
+
+- **SSG (Static Site Generation)**: Pages are built at build time and served as static files. Best for content that doesn't change frequently (blogs, documentation)
+- **SSR (Server-Side Rendering)**: Pages are rendered on the server for each request. Best for personalized content or frequently changing data
+- **ISR (Incremental Static Regeneration)**: Combines benefits of SSG and SSR - static pages that can be updated in the background. Perfect for content that updates periodically
+
+### Basic Server-Side Data Fetching
+
+```tsx
+// app/users/page.tsx
+async function getUsers() {
+  const res = await fetch('https://api.example.com/users', {
+    cache: 'force-cache', // Cache indefinitely (SSG behavior)
+  });
+  
+  if (!res.ok) {
+    throw new Error('Failed to fetch users');
+  }
+  
+  return res.json();
+}
+
+export default async function UsersPage() {
+  const users = await getUsers();
+  
+  return (
+    <div>
+      <h1>Users ({users.length})</h1>
+      {users.map(user => (
+        <div key={user.id}>
+          <h3>{user.name}</h3>
+          <p>{user.email}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+### Cache Control Options
+
+```tsx
+// Static Site Generation (SSG) - Built at build time, cached indefinitely
+// Perfect for: blogs, documentation, marketing pages
+fetch('https://api.example.com/posts', {
+  cache: 'force-cache'
+});
+
+// Server-Side Rendering (SSR) - Rendered on each request
+// Perfect for: user dashboards, personalized content, real-time data
+fetch('https://api.example.com/user-profile', {
+  cache: 'no-store'
+});
+
+// Incremental Static Regeneration (ISR) - Static with background updates
+// Perfect for: product catalogs, news sites, content that updates periodically
+fetch('https://api.example.com/products', {
+  next: { revalidate: 60 } // Revalidate every 60 seconds
+});
+
+// On-demand revalidation - Trigger updates when content changes
+fetch('https://api.example.com/posts', {
+  next: { tags: ['posts'] } // Can be revalidated using revalidateTag('posts')
+});
+```
+
+---
+
+## TanStack Query with Next.js
+
+TanStack Query works excellently with Next.js for client-side data management while leveraging server-side rendering.
+
+### Server State Hydration
+
+Server State Hydration is a powerful pattern that combines server-side data fetching with client-side state management. Here's how it works:
+
+1. **Server prefetches data** during SSR/SSG
+2. **Data is serialized** and sent to the client
+3. **TanStack Query hydrates** the cache with server data
+4. **Client takes over** for subsequent interactions
+
+This eliminates loading states on initial render while maintaining the benefits of client-side caching.
+
+```tsx
+// app/posts/page.tsx
+// Server Component
+import { dehydrate, QueryClient } from '@tanstack/react-query';
+import { HydrationBoundary } from '@tanstack/react-query';
+import PostsList from './posts-list';
+
+async function getPosts() {
+  const res = await fetch('https://api.example.com/posts');
+  return res.json();
+}
+
+export default async function PostsPage() {
+  const queryClient = new QueryClient();
+  
+  // Prefetch data on server - this runs during SSR
+  await queryClient.prefetchQuery({
+    queryKey: ['posts'],
+    queryFn: getPosts,
+  });
+
+  return (
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <PostsList />
+    </HydrationBoundary>
+  );
+}
+```
+
+```tsx
+// posts-list.tsx
+// Client Component
+'use client';
+
+import { useQuery } from '@tanstack/react-query';
+
+export default function PostsList() {
+  // This query starts with server data, no loading state on initial render
+  const { data: posts, isLoading, error } = useQuery({
+    queryKey: ['posts'],
+    queryFn: () => fetch('/api/posts').then(res => res.json()),
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+  });
+
+  // isLoading will be false on initial render due to hydration
+  if (isLoading) return <div>Loading posts...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+
+  return (
+    <div>
+      {posts.map(post => (
+        <article key={post.id}>
+          <h2>{post.title}</h2>
+          <p>{post.excerpt}</p>
+        </article>
+      ))}
+    </div>
+  );
+}
+```
+
+**Benefits of this pattern:**
+- No loading spinners on initial page load
+- SEO-friendly content is immediately available
+- Client-side caching for smooth navigation
+- Background refetching for data freshness
+
+---
+
+## Essential Features
+
+### Image Optimization
+
+Next.js Image component automatically optimizes images:
+
+```tsx
+import Image from 'next/image';
+
+export default function ProfilePage() {
+  return (
+    <div>
+      {/* Basic optimized image */}
+      <Image
+        src="/profile.jpg"
+        alt="Profile picture"
+        width={300}
+        height={300}
+        priority // Load immediately for above-the-fold images
+      />
+      
+      {/* Responsive image that fills container */}
+      <div style={{ position: 'relative', width: '100%', height: '400px' }}>
+        <Image
+          src="/hero.jpg"
+          alt="Hero image"
+          fill
+          style={{ objectFit: 'cover' }}
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        />
+      </div>
+    </div>
+  );
+}
+```
+
+### API Routes
+
+```tsx
+// app/api/users/route.ts
+import { NextResponse } from 'next/server';
+
+// GET /api/users
+export async function GET() {
+  try {
+    const users = await getUsersFromDatabase();
+    return NextResponse.json(users);
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to fetch users' },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/users
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const newUser = await createUser(body);
+    return NextResponse.json(newUser, { status: 201 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Failed to create user' },
+      { status: 500 }
+    );
+  }
+}
+```
+
+### Middleware
+
+Middleware is the **recommended approach for protected routes** in Next.js because it runs at the edge before any rendering occurs, making it more efficient than component-level authentication checks.
+
+**Why middleware for authentication?**
+- **Performance**: Redirects happen before page rendering, saving server resources
+- **Security**: No risk of protected content being briefly visible before redirect
+- **Consistency**: Single place to handle authentication logic across your entire app
+- **Edge optimization**: Runs at CDN edge locations for faster response times
+
+```tsx
+// middleware.ts (in project root)
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+
+export function middleware(request: NextRequest) {
+  // Check authentication for protected routes
+  const token = request.cookies.get('auth-token')?.value;
+  const isAuthPage = request.nextUrl.pathname.startsWith('/login');
+  const isProtectedRoute = request.nextUrl.pathname.startsWith('/dashboard');
+  
+  // Redirect to login if accessing protected route without token
+  if (isProtectedRoute && !token) {
+    return NextResponse.redirect(new URL('/login', request.url));
+  }
+  
+  // Redirect to dashboard if logged in user tries to access login page
+  if (isAuthPage && token) {
+    return NextResponse.redirect(new URL('/dashboard', request.url));
+  }
+  
+  return response;
+}
+
+export const config = {
+  matcher: [
+    // Match all paths except static files and API routes
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
+};
+```
+
+---
+
+## Production Configuration
+
+### next.config.js
+
+```javascript
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  // Image optimization settings
+  images: {
+    domains: ['example.com', 'cdn.example.com'],
+    formats: ['image/webp', 'image/avif'],
+  },
+  
+  // Enable compression
+  compress: true,
+};
+
+module.exports = nextConfig;
+```
+
+---
+
+## Best Practices
+
+### When to Use What
+
+- **Server Components**: Data fetching, static content, SEO-critical pages
+- **Client Components**: Interactive features, forms, state management
+- **API Routes**: Backend logic, database operations, third-party integrations
+- **Middleware**: Authentication, redirects, request/response modification
+
+### Performance Tips
+
+- Use the `next/image` component for all images
+- Implement proper caching strategies based on data freshness needs
+- Keep client boundaries low in your component tree
+- Use dynamic imports for heavy components
+- Monitor Core Web Vitals with Next.js Analytics
+
+### Common Patterns
+
+```tsx
+// Combining Server and Client Components
+export default async function ProductPage({ params }) {
+  // Server Component - fetch data
+  const product = await getProduct(params.id);
+  
+  return (
+    <div>
+      <h1>{product.name}</h1>
+      <p>{product.description}</p>
+      
+      {/* Client Component for interactivity */}
+      <AddToCartButton productId={product.id} />
+      <ProductReviews productId={product.id} />
+    </div>
+  );
+}
+```
+
+<Aside type="tip">
+  **Development tip**: Use `next dev` with the `--turbo` flag for faster hot reloading during development.
+</Aside>
+
+Next.js 15+ with App Router provides a solid foundation for building fast, SEO-friendly React applications. The combination of Server Components, optimized data fetching, and tools like TanStack Query creates an excellent developer experience while maintaining great performance.
+
+---
+
+**Useful Resources:**
+- [Next.js Documentation](https://nextjs.org/docs)
+- [Common Next.js Mistakes every developer makes at the beginning](https://www.youtube.com/watch?v=5QP0mvrJkiY) - Very recommended to watch
+- [App Router Migration Guide](https://nextjs.org/docs/app/building-your-application/upgrading/app-router-migration)
+- [TanStack Query + Next.js](https://tanstack.com/query/latest/docs/framework/react/guides/ssr)

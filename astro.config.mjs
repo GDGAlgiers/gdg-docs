@@ -70,6 +70,7 @@ export default defineConfig({
               link: "react/authentication-security",
             },
             { label: "Performance", link: "react/performance" },
+            { label: "Next.js", link: "react/nextjs" },
           ],
           collapsed: true,
         },
