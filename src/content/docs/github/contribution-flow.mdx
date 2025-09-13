@@ -103,6 +103,122 @@ git merge main
 - Keep PRs small and reviewable
 - Don't mix different types of changes
 
+## Conflict Resolution & Avoidance
+
+### Preventing Conflicts
+
+**Best practices to avoid conflicts:**
+- Pull from main frequently (at least daily)
+- Keep branches short-lived (merge within 2-3 days)
+- Communicate with team about file changes
+- Use clear commit messages
+
+```bash
+# Daily routine to avoid conflicts
+git checkout main
+git pull origin main
+git checkout yourname/feature/current-work
+git merge main  # or git rebase main for cleaner history
+```
+
+### When Conflicts Happen
+
+**Step-by-step conflict resolution:**
+
+1. **Fetch latest changes:**
+```bash
+git checkout main
+git pull origin main
+git checkout yourname/feature/conflicted-branch
+git merge main
+```
+
+2. **Git will show conflict markers:**
+```javascript
+// Example conflict in a file
+<<<<<<< HEAD
+const apiUrl = 'https://api.staging.example.com';
+=======
+const apiUrl = 'https://api.production.example.com';
+>>>>>>> main
+```
+
+3. **Resolve conflicts manually:**
+```javascript
+// Choose the correct version or combine both
+const apiUrl = process.env.NODE_ENV === 'production' 
+  ? 'https://api.production.example.com'
+  : 'https://api.staging.example.com';
+```
+
+4. **Complete the merge:**
+```bash
+git add .
+git commit -m "Resolve merge conflict in api configuration"
+git push origin yourname/feature/conflicted-branch
+```
+
+### Common Conflict Scenarios
+
+<Tabs>
+  <TabItem label="Package.json">
+  ```bash
+  # When multiple people add dependencies
+  # Always accept both changes and remove duplicates manually
+  git checkout --theirs package.json
+  npm install  # or yarn install
+  git add package.json package-lock.json
+  ```
+  </TabItem>
+  
+  <TabItem label="Same File Edit">
+  ```bash
+  # When editing same lines in a file
+  # 1. Look at both changes
+  # 2. Decide which is correct or combine them
+  # 3. Remove conflict markers (<<<, ===, >>>)
+  # 4. Test the changes work
+  ```
+  </TabItem>
+  
+  <TabItem label="File Rename/Move">
+  ```bash
+  # When file is renamed/moved in different branches
+  # 1. Choose the correct location
+  # 2. Make sure imports are updated
+  # 3. Delete the duplicate file if exists
+  git add .
+  git rm old-file-name.js  # if needed
+  ```
+  </TabItem>
+</Tabs>
+
+### If You're Stuck
+
+**When conflicts seem overwhelming:**
+
+1. **Reset and try again:**
+```bash
+git merge --abort  # Cancel the merge
+git checkout main
+git pull origin main
+# Start over with fresh approach
+```
+
+2. **Ask for help:**
+- Share your screen with a teammate
+- Use GitHub's conflict resolution interface
+- Create a new branch and cherry-pick specific commits
+
+3. **Use VS Code merge tools:**
+- Install Git Graph extension
+- Use built-in merge conflict resolver
+- Visual diff makes conflicts easier to understand
+
+<Aside type="caution">
+  **Important**: Always test your code after resolving conflicts. Conflicts can break functionality even when Git thinks they're resolved correctly.
+</Aside>
+
 ## Common Scenarios
 
 ### Working on Same Feature:
