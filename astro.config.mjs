@@ -1,9 +1,14 @@
+// @ts-check
 import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import tailwind from "@astrojs/tailwind";
 
+const site = 'https://docs.gdgalgiers.dev/';
+const ogUrl = new URL('gdg-logo.svg', site).href;
+const ogImageAlt = 'GDG Development Documentation - Comprehensive technical guides and best practices';
+
 export default defineConfig({
-  site: "https://docs.gdgalgiers.dev", // Replace with your actual domain
+  site,
   integrations: [
     starlight({
       title: "GDG Docs",
@@ -17,49 +22,13 @@ export default defineConfig({
         discord: "https://discord.gg/tX2rAAvkxX",
       },
       head: [
-        // OpenGraph meta tags
         {
-          tag: "meta",
-          attrs: {
-            property: "og:image",
-            content: "/gdg-logo.svg", // This will use the logo from public folder
-          },
+          tag: 'meta',
+          attrs: { property: 'og:image', content: ogUrl },
         },
         {
-          tag: "meta",
-          attrs: {
-            property: "og:image:width",
-            content: "1200",
-          },
-        },
-        {
-          tag: "meta",
-          attrs: {
-            property: "og:image:height",
-            content: "630",
-          },
-        },
-        {
-          tag: "meta",
-          attrs: {
-            property: "og:image:type",
-            content: "image/svg+xml",
-          },
-        },
-        // Twitter Card meta tags
-        {
-          tag: "meta",
-          attrs: {
-            name: "twitter:card",
-            content: "summary_large_image",
-          },
-        },
-        {
-          tag: "meta",
-          attrs: {
-            name: "twitter:image",
-            content: "/gdg-logo.svg",
-          },
+          tag: 'meta',
+          attrs: { property: 'og:image:alt', content: ogImageAlt },
         },
       ],
       sidebar: [
