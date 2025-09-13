@@ -4,7 +4,7 @@ import starlight from "@astrojs/starlight";
 import tailwind from "@astrojs/tailwind";
 
 const site = "https://docs.gdgalgiers.dev/";
-const ogUrl = new URL("og-image.jpg", site).href;
+const ogUrl = new URL("gdg-docs-og-1.png", site).href;
 const ogImageAlt =
   "GDG Development Documentation - Comprehensive technical guides and best practices";
 
