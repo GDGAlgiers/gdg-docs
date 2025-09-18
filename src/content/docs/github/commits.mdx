@@ -45,7 +45,7 @@ git commit -m "fix(payment): handle failed transactions"
 # File-specific changes
 git commit -m "docs(readme): add installation guide"
 git commit -m "test(api): add user endpoint tests"
-```
+```f
 
 ## Real Examples from Our Workflow
 
@@ -170,6 +170,41 @@ update
 </Aside>
 
 Keep it simple and be consistent! Your future self (and teammates) will thank you!
+
+## AI-Powered Commit Message Generation
+
+VS Code can automatically generate conventional commit messages for your changes using GitHub Copilot (requires a paid GitHub plan). This feature analyzes your staged changes and suggests appropriate commit messages that follow conventional commit standards.
+
+### How to Use:
+
+1. **Stage Your Changes**: Add the files you want to commit to the staging area
+2. **Open Source Control**: Navigate to the Source Control panel in VS Code
+3. **Generate Message**: Click the sparkle icon (✨) next to the commit message box
+4. **Review & Commit**: VS Code will analyze your changes and suggest a conventional commit message
+
+![VS Code commit message generation interface](/commit-generation.png)
+
+### Generated Result:
+
+The AI will create properly formatted conventional commits based on your actual code changes:
+
+![Example of AI-generated conventional commit message](/generateed-commit.png)
+
+<Aside type="tip">
+  **GitHub Copilot Benefits**: 
+  - Analyzes your actual code changes to suggest relevant commit types
+  - Automatically follows conventional commit format
+  - Saves time while maintaining consistency
+  - Learns from your project's commit history patterns
+</Aside>
+
+### When This Feature is Most Helpful:
+- **Large Changes**: When you have multiple files with different types of changes
+- **Complex Refactoring**: AI can identify the main purpose of your refactoring
+- **Learning**: Great for teams new to conventional commits
+- **Consistency**: Ensures all team members follow the same format
+
+Remember: Always review the generated message to ensure it accurately describes your changes!
 
 ## Further Reading
 
