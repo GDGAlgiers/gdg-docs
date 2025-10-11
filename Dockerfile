@@ -14,9 +14,6 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Set site URL for local development
-ENV ASTRO_SITE=http://localhost:8080/
-
 # Build the application
 RUN npm run build
 

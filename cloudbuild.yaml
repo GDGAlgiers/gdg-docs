@@ -21,6 +21,12 @@ steps:
     - '--platform'
     - 'managed'
     - '--allow-unauthenticated'
+    - '--port'
+    - '8080'
+    - '--memory'
+    - '512Mi'
+    - '--set-env-vars'
+    - 'ASTRO_SITE=https://docs.gdgalgiers.dev/'
 
 images:
   - 'gcr.io/erudite-marker-465011-c6/gdg-docs:latest'
