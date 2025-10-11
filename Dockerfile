@@ -21,6 +21,6 @@ COPY . .
 # Build the Astro site
 RUN npm run build
 
-# Serve the built files
-EXPOSE 3000
-CMD ["serve", "-s", "dist", "-l", "3000"]
+# Serve the built files on the port Cloud Run provides
+EXPOSE 8080
+CMD ["sh", "-c", "serve -s dist -l ${PORT:-8080}"]
