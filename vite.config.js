@@ -9,12 +9,16 @@ export default defineConfig({
     host: true,
     port: 8080,
     strictPort: true,
-    // Disable host checking completely
+    // Completely disable host validation
+    allowedHosts: 'all',
     disableHostCheck: true,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
+    // Custom middleware to bypass host checks
+    configure: (server) => {
+      server.middlewares.use((req, res, next) => {
+        // Remove host validation
+        delete req.headers.host;
+        next();
+      });
+    }
   }
 });

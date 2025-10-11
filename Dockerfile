@@ -14,12 +14,17 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Set environment variables to bypass host checking
+ENV VITE_HOST=true
+ENV VITE_ALLOWED_HOSTS=all
+ENV NODE_ENV=production
+
 # Build the application
 RUN npm run build
 
 # Expose port 8080
 EXPOSE 8080
 
-# Use Astro's preview server which handles routing correctly
-CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "8080", "--disable-host-check"]
+# Use custom preview script for production
+CMD ["npm", "run", "preview-prod"]
 
