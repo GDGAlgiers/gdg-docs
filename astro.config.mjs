@@ -14,10 +14,10 @@ export default defineConfig({
   site,
   vite: {
     server: {
-      allowedHosts: ['gdg-docs-426637717447.us-central1.run.app'],
+      allowedHosts: true,
     },
     preview: {
-      allowedHosts: ['gdg-docs-426637717447.us-central1.run.app'],
+      allowedHosts: true,
     }
   },
   integrations: [

@@ -1,9 +1,16 @@
 #!/bin/sh
-# Start script for the container
+# Start script for the container with host bypass
 
-# Use PORT environment variable if set, otherwise default to 8080
-PORT=${PORT:-8080}
+# Set environment variables to bypass host checking
+export VITE_ALLOWED_HOSTS=all
+export ASTRO_TELEMETRY_DISABLED=1
+export HOST=0.0.0.0
+export PORT=8080
 
-echo "Starting server on port $PORT"
-# Use astro preview instead of serve for better routing
-npx astro preview --port $PORT --host 0.0.0.0
+echo "Starting Astro preview server with ALL hosts allowed..."
+echo "VITE_ALLOWED_HOSTS=$VITE_ALLOWED_HOSTS"
+echo "HOST=$HOST"
+echo "PORT=$PORT"
+
+# Use astro preview with explicit allowed hosts bypass
+exec npx astro preview --host 0.0.0.0 --port 8080
