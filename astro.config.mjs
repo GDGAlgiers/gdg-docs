@@ -4,7 +4,8 @@ import starlight from "@astrojs/starlight";
 import starlightThemeGalaxy from "starlight-theme-galaxy";
 import tailwind from "@astrojs/tailwind";
 
-const site = "https://docs.gdgalgiers.dev/";
+// Use environment variable or default to production URL
+const site = process.env.ASTRO_SITE || "https://docs.gdgalgiers.dev/";
 const ogUrl = new URL("gdg-docs-og-1.png", site).href;
 const ogImageAlt =
   "GDG Development Documentation - Comprehensive technical guides and best practices";

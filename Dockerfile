@@ -1,26 +1,28 @@
-# Use Alpine and install Node.js manually
 FROM alpine:3.21
-
-WORKDIR /app
 
 # Install Node.js and npm
 RUN apk add --no-cache nodejs npm
+
+WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci
 
-# Install serve globally for serving static files
-RUN npm install -g serve
-
-# Copy all source files
+# Copy source code
 COPY . .
 
-# Build the Astro site
+# Set site URL for local development
+ENV ASTRO_SITE=http://localhost:8080/
+
+# Build the application
 RUN npm run build
 
-# Serve the built files on the port Cloud Run provides
+# Expose port 8080
 EXPOSE 8080
-CMD ["sh", "-c", "serve -s dist -l ${PORT:-8080}"]
+
+# Use Astro's preview server which handles routing correctly
+CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "8080"]
+
