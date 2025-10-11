@@ -30,12 +30,9 @@ ENV HOST=0.0.0.0
 # Build the application
 RUN npm run build
 
-# Install serve globally for serving static files
-RUN npm install -g serve
-
 # Expose port 8080
 EXPOSE 8080
 
-# Use serve with SPA fallback - NO HOST RESTRICTIONS
-CMD ["serve", "-s", "dist", "-l", "8080", "--single"]
+# Use the production preview script
+CMD ["npm", "run", "preview-prod"]
 
