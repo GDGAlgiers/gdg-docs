@@ -21,5 +21,5 @@ RUN npm run build
 EXPOSE 8080
 
 # Use Astro's preview server which handles routing correctly
-CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "8080", "--disable-host-check"]
 
