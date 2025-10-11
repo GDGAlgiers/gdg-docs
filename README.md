@@ -59,3 +59,27 @@ We welcome contributions from all members! See our [CONTRIBUTING.md](./CONTRIBUT
 
 - [Starlight](https://starlight.astro.build/) - The documentation framework
 - [Astro](https://astro.build/) - The web framework for content-driven websites
+
+## Docker
+
+This repository includes a Dockerfile that builds the Astro site and serves the generated static files with nginx.
+
+Build the image:
+
+```bash
+docker build -t gdg-docs:latest .
+```
+
+Run the container:
+
+```bash
+docker run --rm -p 8080:80 gdg-docs:latest
+```
+
+Alternatively use docker-compose for local development (it rebuilds before starting):
+
+```bash
+docker-compose up --build
+```
+
+The site will be available at http://localhost:8080
