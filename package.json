@@ -7,6 +7,7 @@
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "preview-prod": "astro preview --host 0.0.0.0 --port 8080 --allowed-hosts gdg-docs-426637717447.us-central1.run.app,docs.gdgalgiers.dev",
     "astro": "astro"
   },
   "dependencies": {

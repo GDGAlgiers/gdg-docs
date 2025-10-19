@@ -4,8 +4,9 @@ import starlight from "@astrojs/starlight";
 import starlightThemeGalaxy from "starlight-theme-galaxy";
 import tailwind from "@astrojs/tailwind";
 
-const site = "https://docs.gdgalgiers.dev/";
-const ogUrl = new URL("gdg-docs-og-1.png", site).href;
+// Use environment variable or default to undefined for dynamic site detection
+const site = process.env.ASTRO_SITE;
+const ogUrl = site ? new URL("gdg-docs-og-1.png", site).href : "/gdg-docs-og-1.png";
 const ogImageAlt =
   "GDG Development Documentation - Comprehensive technical guides and best practices";
 
@@ -14,6 +15,14 @@ const GA_ID = process.env.PUBLIC_GA_ID;
 
 export default defineConfig({
   site,
+  vite: {
+    server: {
+      allowedHosts: true,
+    },
+    preview: {
+      allowedHosts: true,
+    }
+  },
   integrations: [
     starlight({
       plugins: [starlightThemeGalaxy()],
