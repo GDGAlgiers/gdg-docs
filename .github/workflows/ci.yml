@@ -1,4 +1,4 @@
-name: Build and Deploy
+name: Build and Deploy to Cloud Run
 
 on:
   push:
@@ -6,19 +6,106 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  PROJECT_ID: erudite-marker-465011-c6
+  SERVICE_NAME: gdg-docs
+  REGION: us-central1
+  IMAGE_NAME: gcr.io/erudite-marker-465011-c6/gdg-docs
+
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
     
     - name: Build Docker image
-      run: docker build -t gdg-docs:latest .
+      run: docker build -t ${{ env.IMAGE_NAME }}:${{ github.sha }} -t ${{ env.IMAGE_NAME }}:latest .
       
     - name: Test Docker image
       run: |
-        docker run -d --name test-container -p 8080:8080 gdg-docs:latest
-        sleep 10
+        docker run -d --name test-container -p 8080:8080 ${{ env.IMAGE_NAME }}:latest
+        sleep 15
         curl -f http://localhost:8080 || exit 1
         docker stop test-container
+        docker rm test-container
+    
+    - name: Save image for deployment
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: docker save ${{ env.IMAGE_NAME }}:${{ github.sha }} > gdg-docs.tar
+    
+    - name: Upload image artifact
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: actions/upload-artifact@v4
+      with:
+        name: docker-image
+        path: gdg-docs.tar
+        retention-days: 1
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Download image artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: docker-image
+    
+    - name: Load Docker image
+      run: docker load < gdg-docs.tar
+    
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+    
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+    
+    - name: Configure Docker for GCR
+      run: gcloud auth configure-docker
+    
+    - name: Push image to GCR
+      run: |
+        docker push ${{ env.IMAGE_NAME }}:${{ github.sha }}
+        docker push ${{ env.IMAGE_NAME }}:latest
+    
+    - name: Deploy to Cloud Run
+      run: |
+        gcloud run deploy ${{ env.SERVICE_NAME }} \
+          --image ${{ env.IMAGE_NAME }}:${{ github.sha }} \
+          --region ${{ env.REGION }} \
+          --platform managed \
+          --allow-unauthenticated \
+          --port 8080 \
+          --memory 512Mi \
+          --set-env-vars "ASTRO_SITE=https://docs.gdgalgiers.dev"
+    
+    - name: Get service URL
+      run: |
+        SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+          --region ${{ env.REGION }} \
+          --format 'value(status.url)')
+        echo "Service deployed to: $SERVICE_URL"
+        echo "SERVICE_URL=$SERVICE_URL" >> $GITHUB_ENV
+    
+    - name: Create deployment summary
+      run: |
+        echo "## 🚀 Deployment Successful!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Service:** ${{ env.SERVICE_NAME }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Region:** ${{ env.REGION }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Image:** ${{ env.IMAGE_NAME }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "**URL:** ${{ env.SERVICE_URL }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Custom domain: https://docs.gdgalgiers.dev" >> $GITHUB_STEP_SUMMARY
