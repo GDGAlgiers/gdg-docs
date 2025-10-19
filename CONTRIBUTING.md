@@ -1,58 +1,209 @@
 # Contributing to GDG Docs
 
-Thank you for your interest in contributing to GDG Docs! This document outlines the guidelines for contributing to our documentation project.
+Thank you for your interest in contributing to GDG Docs! We're excited to have you join our community of developers working to create comprehensive, high-quality documentation.
 
-## 🤝 How to Contribute
+Whether you're fixing a typo, adding a new guide, or improving existing content, your contributions help developers worldwide. This guide will help you get started.
 
-1. **Fork the repository** & clone it to your local machine.
-2. **Create an issue** or check existing issues to pick a task.
-3. **Create a branch** using the naming convention:
+## Table of Contents
+
+- [Code of Conduct](#code-of-conduct)
+- [Getting Started](#getting-started)
+- [How to Contribute](#how-to-contribute)
+- [Pull Request Process](#pull-request-process)
+- [Documentation Guidelines](#documentation-guidelines)
+- [Writing Style Guide](#writing-style-guide)
+- [Code Examples](#code-examples)
+- [Review Process](#review-process)
+- [Need Help?](#need-help)
+
+## Code of Conduct
+
+By participating in this project, you agree to maintain a respectful, inclusive, and collaborative environment. We expect all contributors to:
+
+- Be respectful and considerate in communication
+- Welcome newcomers and help them get started
+- Accept constructive criticism gracefully
+- Focus on what's best for the community
+- Show empathy towards other community members
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18 or higher
+- npm, yarn, or pnpm
+- Git
+- A GitHub account
+- Basic knowledge of Markdown/MDX
+
+### Setting Up Your Development Environment
+
+1. **Fork the repository** on GitHub
+
+2. **Clone your fork** locally:
+
+   ```bash
+   git clone https://github.com/YOUR-USERNAME/gdg-docs.git
+   cd gdg-docs
    ```
-   <your-name>/<framework>/<task>
+
+3. **Add upstream remote**:
+
+   ```bash
+   git remote add upstream https://github.com/GDGAlgiers/gdg-docs.git
    ```
-   Example: `khalil/react/state-management`
-4. Work on your branch and commit regularly.
-5. **Open a Pull Request (PR)** once your task is completed.
-6. A **co-manager** will review your PR and suggest any necessary changes.
-7. After approval, the PR will be merged!
 
-## 🔄 Pull Request Guidelines
+4. **Install dependencies**:
 
-When opening a PR:
+   ```bash
+   npm install
+   ```
 
-- ✅ Ensure the PR title follows: `[Framework] - Task Description`
-  - Example: `[React] - State Management Docs`
-- ✅ Provide a clear description of changes
-- ✅ Reference the issue number (if applicable)
-- ✅ Keep PRs focused (avoid including unrelated changes)
+5. **Start the development server**:
 
-## 📌 Issues & Project Management
+   ```bash
+   npm run dev
+   ```
 
-- Issues will be created for each major documentation task
-- Tasks are managed via **GitHub Projects**, where progress will be tracked
-- Assignments will be clearly defined in the issue descriptions
+6. **Open your browser** to `http://localhost:4321`
 
-## 📝 Documentation Guidelines
+### Keeping Your Fork Up to Date
+
+Before starting new work, sync with the upstream repository:
+
+```bash
+git checkout main
+git fetch upstream
+git merge upstream/main
+git push origin main
+```
+
+## How to Contribute
+
+### Types of Contributions We Welcome
+
+- **Documentation Improvements**: Fix typos, clarify explanations, add missing information
+- **New Guides**: Add documentation for new topics or technologies
+- **Code Examples**: Contribute practical, production-ready code examples
+- **Issue Reports**: Report bugs, broken links, or outdated content
+- **Suggestions**: Propose new topics or improvements to existing content
+
+### Finding Something to Work On
+
+1. **Check existing issues**: Browse [open issues](https://github.com/GDGAlgiers/gdg-docs/issues) labeled with `good first issue` or `help wanted`
+2. **Create a new issue**: If you have an idea, create an issue to discuss it first (use the issue template in `.github/` as a guide)
+3. **Ask questions**: Join our [Discord](https://discord.gg/tX2rAAvkxX) if you need guidance
+
+### Branch Naming Convention
+
+Create descriptive branch names following this pattern:
+
+```
+<category>/<description>
+```
+
+**Example**:
+
+- `react/state-management-guide`
+
+## Pull Request Process
+
+### Before Submitting a PR
+
+1. **Test your changes** locally - ensure the dev server runs without errors
+2. **Check for typos** and formatting issues
+3. **Verify all links** work correctly
+4. **Review your own changes** in the browser
+5. **Update relevant documentation** if you've changed file structures
+
+### PR Title Format
+
+Use clear, descriptive titles following this format:
+
+```
+[Category] - Brief description of changes
+```
+
+**Examples**:
+
+- `[React] - Add advanced state management patterns`
+- `[Express] - Update authentication security guide`
+- `[Fix] - Correct typos in Flutter navigation docs`
+
+### PR Description Template
+
+When opening a PR, you can use the PR template in `.github/` and adjust as needed. Make sure to:
+
+**Link your PR to an issue** for automatic closure when merged:
+
+- Use `Closes #123` or `Fixes #123` in the PR description
+- This will automatically close the related issue when your PR is merged
+
+Simple Example:
+
+```markdown
+## Description
+
+Brief description of what this PR does
+
+## Type of Change
+
+- [ ] New documentation
+- [ ] Documentation improvement
+- [ ] Bug fix (typo, broken link, etc.)
+- [ ] Code example update
+- [ ] Other (please describe)
+
+## Related Issue
+
+Closes #issue-number (if applicable)
+
+## Checklist
+
+- [ ] I've tested my changes locally
+- [ ] All links work correctly
+- [ ] Code examples are tested and functional
+- [ ] Content follows the style guide
+- [ ] I've updated relevant sections
+- [ ] No spelling or grammar errors
+
+## Screenshots (if applicable)
+
+Add screenshots showing your changes
+```
+
+### Review and Merge
+
+1. A **co-manager** will review your PR when possible
+2. Address any **requested changes** promptly
+3. Once approved, your PR will be **merged** into main
+4. Your contribution will be **deployed** automatically
+
+## Documentation Guidelines
 
 ### Document Structure
 
 Each documentation page should follow this general structure:
 
 1. **Title and Description**
+
    - Clear, concise title
    - Brief description of what the document covers
 
 2. **Introduction/Overview**
+
    - The first section can be a general overview of the topic
    - You can directly start with an introduction that explains the basics
    - Explain why it's important and when to use the described patterns/techniques
 
 3. **Main Content**
+
    - Divide into logical sections with clear headings
    - Use code examples to illustrate concepts
    - Explain both the "how" and "why" of best practices
 
 4. **Best Practices & Common Pitfalls**
+
    - Do's and don'ts
    - Common mistakes and how to avoid them
 
@@ -62,25 +213,37 @@ Each documentation page should follow this general structure:
 
 ### Writing Style Guidelines
 
-- **Be concise**: Keep explanations clear and to the point
+- **Be concise and clear**: Get to the point quickly, avoid unnecessary jargon
 - **Use active voice**: "React renders components" instead of "Components are rendered by React"
-- **Code examples**: Include practical, real-world examples
-- **Explain why**: Don't just describe what to do, explain why it's important
-- **Consistency**: Maintain consistent terminology throughout
-- **Accessibility**: Write for developers of various experience levels
+- **Write for all levels**: Assume basic programming knowledge, but explain framework-specific concepts
+- **Explain the "why"**: Don't just describe what to do, explain why it's important
+- **Be consistent**: Use the same terminology throughout the documentation
+- **Use present tense**: "This function returns" not "This function will return"
+- **Avoid assumptions**: Don't assume readers know advanced concepts
 
-### Code Examples
+### Tone and Voice
 
-- Include imports in examples
-- Use meaningful variable/component names
-- Add comments to explain complex logic
-- Show both good and bad examples where appropriate
-- Ensure syntax highlighting by specifying the language in code blocks
+- **Professional yet friendly**: Strike a balance between authoritative and approachable
+- **Encouraging**: Help readers feel confident they can learn this
+- **Direct**: Use "you" to address the reader directly
+- **Humble**: Acknowledge when topics are complex or have trade-offs
 
+## Code Examples
+
+All code examples should be:
+
+- **Tested and functional**: Don't include untested code
+- **Production-ready**: Show real-world patterns, not oversimplified demos, but still not those very long code snippets that they become unreadable and hard to digest
+- **Well-commented**: Explain complex logic with inline comments
+- **Complete**: Include necessary imports and context
+- **Properly formatted**: Use consistent indentation and style
+- **Language-tagged**: Always specify the language for syntax highlighting
 
 ### Formatting with Starlight
 
-Our documentation is built using [Starlight](https://starlight.astro.build/), which means you should:
+Our documentation uses [Starlight](https://starlight.astro.build/), which provides powerful components for documentation.
+
+#### Required Frontmatter
 
 - Use Markdown (`.md`) or MDX (`.mdx`) for documentation files
 - Add proper frontmatter to each file:
@@ -88,178 +251,106 @@ Our documentation is built using [Starlight](https://starlight.astro.build/), wh
 ```yaml
 ---
 title: "Your Page Title"
-description: "A brief description of the document content"
+description: "A clear, concise description (used for SEO and page previews)"
 ---
 ```
 
-- Utilize Starlight components when appropriate:
-  - `Aside` for notes, tips, cautions
-  - `Tabs` for alternative implementations
-  - `Steps` for sequential instructions
-  - `FileTree` for directory structures
-  - `Card` or `CardGrid` for visually separated content sections (use sparingly)
+#### Starlight Components
 
-Example using Starlight components:
+Use these components to enhance documentation:
 
-```mdx
-import { Aside, Card, CardGrid } from '@astrojs/starlight/components';
+**Aside Component** - For notes, tips, cautions, and warnings
 
-<Aside type="tip">
-  This is a helpful tip for React developers.
-</Aside>
+**Tabs Component** - For showing alternative implementations
 
-<CardGrid>
-  <Card title="Getting Started" icon="rocket">
-    Begin with the basics of React state management.
-  </Card>
-  <Card title="Advanced Patterns" icon="setting">
-    Learn about complex state patterns.
-  </Card>
-</CardGrid>
-```
+**FileTree Component** - For showing directory structures
 
-## 🔍 Review Process
+**Steps Component** - For sequential instructions
 
-1. **Initial Review**: Co-managers will review your PR for:
-   - Content quality and accuracy
-   - Adherence to documentation structure
-   - Code example quality
-   - Writing style and clarity
-   - Proper use of markdown and Starlight components
+**Card and CardGrid** - Use sparingly for highlighting key concepts
 
-2. **Feedback**: You may receive feedback requesting changes or clarifications
+## Review Process
 
-3. **Approval and Merge**: Once approved, your content will be merged into the main documentation
+### What Reviewers Look For
 
-## 📋 Documentation Templates
+1. **Content Quality**
 
-### New Framework/Tool Documentation
+   - Accurate and up-to-date information
+   - Clear explanations and logical flow
+   - Appropriate depth for the topic
 
-```markdown
----
-title: "[Tool/Framework] Overview"
-description: "A comprehensive guide to [Tool/Framework] best practices, common patterns, and implementation tips"
----
+2. **Code Examples**
 
-import { Aside, Tabs, TabItem, FileTree } from '@astrojs/starlight/components';
+   - Tested and functional
+   - Follow best practices
+   - Include proper error handling
+   - Use consistent naming conventions
 
-[Tool/Framework] is a powerful technology that enables developers to [main purpose/benefit]. This documentation will help you understand how to use it effectively in your projects.
+3. **Writing Quality**
 
-### When to Use [Tool/Framework]
+   - Clear, concise language
+   - Proper grammar and spelling
+   - Consistent tone and style
+   - Appropriate use of technical terms
 
-[Tool/Framework] is particularly useful when:
-- Building applications that require [specific feature]
-- Working with [specific context or scenario]
-- Solving [specific problem]
+4. **Formatting**
+   - Proper use of Markdown/MDX
+   - Correct Starlight component usage
+   - Consistent heading hierarchy
+   - Working links and references
 
-## Key Concepts
+## Best Practices for Contributors
 
-### Core Principle 1
+### Do's
 
-Explanation of the first fundamental concept with examples.
+- **Read existing documentation** to understand our style and standards
+- **Start small** if you're new - fix typos or improve existing content
+- **Ask questions** in issues or Discord before starting large contributions
+- **Test thoroughly** before submitting
+- **Keep PRs focused** - one topic or fix per PR
+- **Write clear commit messages** following conventional commit format
+- **Be patient** with the review process
 
-```javascript
-// src/examples/example1.js
-import { something } from '[tool/framework]';
+### Don'ts
 
-function basicExample() {
-  // Implementation details
-  return result;
-}
+- **Don't plagiarize** - write original content or properly attribute sources
+- **Don't submit untested code** - always verify examples work
+- **Don't make unrelated changes** in a single PR
+- **Don't ignore feedback** from reviewers
+- **Don't submit AI-generated content** without thorough review and testing
+- **Don't copy-paste** from other documentation without permission
 
+## Need Help?
 
-### Core Principle 2
+### Getting Support
 
-Explanation of the second fundamental concept.
+- **Discord**: Join our [community Discord](https://discord.gg/tX2rAAvkxX) for quick help
+- **GitHub Issues**: Create an issue with the `question` label
+- **Discussions**: Use GitHub Discussions for general questions
+- **Email**: Reach out to the GDG Algiers team
 
-## Implementation Patterns
+### Useful Resources
 
-### Pattern 1: [Common Implementation Pattern]
+- [Starlight Documentation](https://starlight.astro.build/)
+- [Astro Documentation](https://docs.astro.build/)
+- [MDX Documentation](https://mdxjs.com/)
+- [Markdown Guide](https://www.markdownguide.org/)
 
-Detailed explanation of how to implement this pattern.
+## Thank You!
 
-```js
-// src/patterns/pattern1.js
-import { feature } from '[tool/framework]';
+Every contribution, no matter how small, makes GDG Docs better for developers of the whole community. We appreciate your time and effort in helping build this resource.
 
-// Implementation code
+Your contributions help:
 
-
-### Pattern 2: [Alternative Implementation Pattern]
-
-When and why you might choose this alternative approach.
-
-## Comparing [Tool/Framework] Options
-
-| Feature | Option A | Option B | Option C |
-|---------|----------|----------|----------|
-| Performance | High | Medium | Low |
-| Bundle Size | 12KB | 22KB | 5KB |
-| Learning Curve | Steep | Moderate | Easy |
-| Community Support | Active | Growing | Limited |
-
-## Best Practices
-
-### Do's and Don'ts
-
-✅ **DO** follow this recommended practice
-```javascript
-// src/examples/good-practice.js
-// Good implementation example
-
-
-❌ **DON'T** make this common mistake
-```javascript
-// src/examples/bad-practice.js
-// Problematic implementation
-
-
-### Common Pitfalls
-
-<Aside type="caution">
-  Watch out for [common issue] when implementing [specific feature].
-</Aside>
-
-## Troubleshooting
-
-Solutions for common errors and issues you might encounter.
-
-## Conclusion
-
-[Tool/Framework] provides powerful capabilities for [summary of main benefits]. By following the patterns and practices outlined in this guide, you can avoid common pitfalls and create maintainable, efficient implementations.
-
-When deciding whether to use [Tool/Framework] in your project, consider:
-1. Your application's specific requirements
-2. Your team's familiarity with the technology
-3. Long-term maintenance considerations
-
-## Further Reading / See Also
-
-- [Official Documentation](https://example.com)
-- [Helpful Tutorial](https://example.com/tutorial)
-- [GitHub Repository](https://github.com/example/repo)
-- [Community Forum](https://example.com/forum)
-```
-
-## 🚀 Getting Started with Starlight
-
-If you're new to Starlight:
-
-1. **Install dependencies**:
-   ```bash
-   npm install
-   ```
-
-2. **Start the development server**:
-   ```bash
-   npm run dev
-   ```
-
-3. **Preview your changes** at `http://localhost:4321`
-
-4. **Build the documentation** (optional):
-   ```bash
-   npm run build
-   ```
+- **Students** learning new technologies
+- **Professionals** solving real-world problems
+- **Teams** maintaining consistent standards
+- **The community** growing stronger together
 
 Happy contributing! 🎉
+
+---
+
+<p align="center">
+  <i>Questions? Reach out on <a href="https://discord.gg/tX2rAAvkxX">Discord</a> or open an issue!</i>
+</p>

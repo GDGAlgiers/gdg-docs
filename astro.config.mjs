@@ -6,11 +6,9 @@ import tailwind from "@astrojs/tailwind";
 
 // Use environment variable or default to undefined for dynamic site detection
 const site = process.env.ASTRO_SITE;
-const ogUrl = site ? new URL("gdg-docs-og-1.png", site).href : "/gdg-docs-og-1.png";
+const ogUrl = site ? new URL("gdg-docs-og.png", site).href : "/gdg-docs-og.png";
 const ogImageAlt =
   "GDG Development Documentation - Comprehensive technical guides and best practices";
-
-// Get Google Analytics ID from environment variables
 const GA_ID = process.env.PUBLIC_GA_ID;
 
 export default defineConfig({
@@ -21,7 +19,7 @@ export default defineConfig({
     },
     preview: {
       allowedHosts: true,
-    }
+    },
   },
   integrations: [
     starlight({
