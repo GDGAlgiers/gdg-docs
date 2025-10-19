@@ -31,3 +31,28 @@
   --sl-color-gray-7: #f5f6f8;
   --sl-color-black: #ffffff;
 }
+
+/* EQUAL HEIGHT CARDS WITH BOTTOM ALIGNED LINKS */
+.card {
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.card .body {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  gap: 0 !important;
+}
+
+.card .body > div:first-child {
+  flex: 1 !important;
+  margin: 0 !important;
+}
+
+.card .body > p:last-child {
+  margin: 0 !important;
+  margin-top: 1rem !important;
+  padding: 0 !important;
+}
