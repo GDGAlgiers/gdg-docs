@@ -9,6 +9,9 @@ const ogUrl = new URL("gdg-docs-og-1.png", site).href;
 const ogImageAlt =
   "GDG Development Documentation - Comprehensive technical guides and best practices";
 
+// Get Google Analytics ID from environment variables
+const GA_ID = process.env.PUBLIC_GA_ID;
+
 export default defineConfig({
   site,
   integrations: [
@@ -33,12 +36,22 @@ export default defineConfig({
         },
       ],
       head: [
+        // Google Analytics
         {
           tag: "script",
           attrs: {
-            src: "/_vercel/insights/script.js",
-            defer: true,
+            src: `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`,
+            async: true,
           },
+        },
+        {
+          tag: "script",
+          content: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_ID}');
+          `,
         },
         {
           tag: "meta",
