@@ -14,13 +14,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Make start script executable
-RUN chmod +x start.sh
-
 # Set environment variables to bypass host checking
 ENV VITE_ALLOWED_HOSTS=all
 ENV VITE_HOST=true
-ENV VITE_ALLOWED_HOSTS=all
 ENV NODE_ENV=production
 ENV VITE_HMR_HOST=0.0.0.0
 ENV VITE_PREVIEW_HOST=0.0.0.0
@@ -39,4 +35,3 @@ EXPOSE 8080
 
 # Use the production preview script
 CMD ["npm", "run", "preview-prod"]
-

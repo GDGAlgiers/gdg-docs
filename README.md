@@ -128,10 +128,7 @@ Build and run using Docker:
 docker build -t gdg-docs:latest .
 
 # Run the container
-docker run -p 8080:80 gdg-docs:latest
-
-# Or use docker-compose
-docker-compose up --build
+docker run -p 8080:8080 gdg-docs:latest
 ```
 
 The site will be available at `http://localhost:8080`
