@@ -27,6 +27,10 @@ ENV VITE_PREVIEW_HOST=0.0.0.0
 ENV ASTRO_TELEMETRY_DISABLED=1
 ENV HOST=0.0.0.0
 
+# Add build argument for Google Analytics
+ARG PUBLIC_GA_ID
+ENV PUBLIC_GA_ID=${PUBLIC_GA_ID}
+
 # Build the application
 RUN npm run build
 
