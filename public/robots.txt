@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://docs.gdgalgiers.dev/sitemap-index.xml
+
+# Crawl-delay for polite crawlers
+Crawl-delay: 1
+
+# Disallow admin or build directories if they exist
+Disallow: /.astro/
+Disallow: /dist/

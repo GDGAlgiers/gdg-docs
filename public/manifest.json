@@ -1,0 +1,17 @@
+{
+  "name": "GDG Docs",
+  "short_name": "GDG Docs",
+  "description": "Comprehensive technical documentation and best practices for modern full-stack development",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#4285F4",
+  "icons": [
+    {
+      "src": "/gdg-logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

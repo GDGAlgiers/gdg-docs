@@ -3,9 +3,10 @@ import { defineConfig } from "astro/config";
 import starlight from "@astrojs/starlight";
 import starlightThemeGalaxy from "starlight-theme-galaxy";
 import tailwind from "@astrojs/tailwind";
+import sitemap from "@astrojs/sitemap";
 
-// Use environment variable or default to undefined for dynamic site detection
-const site = process.env.ASTRO_SITE;
+// Site configuration
+const site = process.env.ASTRO_SITE || "https://docs.gdgalgiers.dev";
 const ogUrl = site ? new URL("gdg-docs-og.png", site).href : "/gdg-docs-og.png";
 const ogImageAlt =
   "GDG Development Documentation - Comprehensive technical guides and best practices";
@@ -60,6 +61,19 @@ export default defineConfig({
             gtag('config', '${GA_ID}');
           `,
         },
+        // Open Graph / Facebook
+        {
+          tag: "meta",
+          attrs: { property: "og:type", content: "website" },
+        },
+        {
+          tag: "meta",
+          attrs: { property: "og:site_name", content: "GDG Docs" },
+        },
+        {
+          tag: "meta",
+          attrs: { property: "og:locale", content: "en_US" },
+        },
         {
           tag: "meta",
           attrs: { property: "og:image", content: ogUrl },
@@ -67,6 +81,55 @@ export default defineConfig({
         {
           tag: "meta",
           attrs: { property: "og:image:alt", content: ogImageAlt },
+        },
+        {
+          tag: "meta",
+          attrs: { property: "og:image:width", content: "1200" },
+        },
+        {
+          tag: "meta",
+          attrs: { property: "og:image:height", content: "630" },
+        },
+        // Twitter Card
+        {
+          tag: "meta",
+          attrs: { name: "twitter:card", content: "summary_large_image" },
+        },
+        {
+          tag: "meta",
+          attrs: { name: "twitter:image", content: ogUrl },
+        },
+        {
+          tag: "meta",
+          attrs: { name: "twitter:image:alt", content: ogImageAlt },
+        },
+        {
+          tag: "meta",
+          attrs: { name: "twitter:site", content: "@GDGAlgiers" },
+        },
+        {
+          tag: "meta",
+          attrs: { name: "twitter:creator", content: "@GDGAlgiers" },
+        },
+        {
+          tag: "meta",
+          attrs: { name: "author", content: "Google Developer Group Algiers" },
+        },
+        {
+          tag: "meta",
+          attrs: {
+            name: "keywords",
+            content:
+              "GDG Algiers, documentation, React, Express.js, Flutter, TypeScript, web development, mobile development, coding best practices, software development, technical guides",
+          },
+        },
+        {
+          tag: "meta",
+          attrs: { name: "theme-color", content: "#4285F4" },
+        },
+        {
+          tag: "link",
+          attrs: { rel: "manifest", href: "/manifest.json" },
         },
       ],
       sidebar: [
@@ -188,5 +251,6 @@ export default defineConfig({
     tailwind({
       applyBaseStyles: false,
     }),
+    sitemap(),
   ],
 });
