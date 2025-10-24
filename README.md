@@ -1,6 +1,28 @@
 # GDG Docs
 
-> A comprehensive, community-driven documentation platform providing standardized best practices, coding guidelines, and production-ready patterns for modern web and mobile development.
+[![Contributors][contributors-shield]][contributors-url]
+[![Forks][forks-shield]][forks-url]
+[![Stargazers][stars-shield]][stars-url]
+[![MIT License][license-shield]][license-url]
+
+<!-- PROJECT LOGO -->
+<br />
+<p align="center">
+   <a href="https://github.com/GDGAlgiers/gdg-docs"><img src="/public/gdg-docs.png" height="400" width="400" style="border-radius:50%"></a>
+  <h3 align="center">GDG Docs</h3>
+  <p align="center">
+    A comprehensive, community-driven documentation platform providing standardized best practices, coding guidelines, and production-ready patterns for modern web and mobile development.
+    <br />
+    <a href="https://docs.gdgalgiers.dev"><strong>Explore the docs »</strong></a>
+    <br />
+    <br />
+    <a href="https://github.com/GDGAlgiers/gdg-docs/issues">Report Bug</a>
+    ·
+    <a href="https://github.com/GDGAlgiers/gdg-docs/issues">Request Guide</a>
+  </p>
+</p>
+
+---
 
 [![Astro](https://img.shields.io/badge/Astro-FF5D01?style=for-the-badge&logo=astro&logoColor=white)](https://astro.build/)
 [![Starlight](https://img.shields.io/badge/Starlight-8B5CF6?style=for-the-badge&logo=astro&logoColor=white)](https://starlight.astro.build/)
@@ -8,10 +30,6 @@
 [![MDX](https://img.shields.io/badge/MDX-1B1F24?style=for-the-badge&logo=mdx&logoColor=white)](https://mdxjs.com/)
 
 [![Built with Starlight](https://astro.badg.es/v2/built-with-starlight/tiny.svg)](https://starlight.astro.build)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Contributions Welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](./CONTRIBUTING.md)
-
-GDG Docs is an open-source initiative by [GDG Algiers](https://gdgalgiers.dev) that provides high-quality, standardized documentation for developers. Our goal is to create a centralized knowledge hub covering best practices, common pitfalls, and practical workflows for the technologies we use every day.
 
 ---
 
