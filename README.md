@@ -176,6 +176,16 @@ The site will be available at `http://localhost:8080`
 
 This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
 
+<!-- MARKDOWN LINKS & IMAGES -->
+[contributors-shield]: https://img.shields.io/github/contributors/GDGAlgiers/gdg-docs.svg?style=for-the-badge
+[contributors-url]: https://github.com/GDGAlgiers/gdg-docs/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/GDGAlgiers/gdg-docs.svg?style=for-the-badge
+[forks-url]: https://github.com/GDGAlgiers/gdg-docs/network/members
+[stars-shield]: https://img.shields.io/github/stars/GDGAlgiers/gdg-docs.svg?style=for-the-badge
+[stars-url]: https://github.com/GDGAlgiers/gdg-docs/stargazers
+[license-shield]: https://img.shields.io/github/license/GDGAlgiers/gdg-docs.svg?style=for-the-badge
+[license-url]: https://github.com/GDGAlgiers/gdg-docs/blob/main/LICENSE
+
 ---
 
 ## Acknowledgments
