@@ -44,6 +44,32 @@ export default defineConfig({
         },
       ],
       head: [
+        // Favicon - Multiple formats for better compatibility
+        {
+          tag: "link",
+          attrs: { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+        },
+        {
+          tag: "link",
+          attrs: {
+            rel: "icon",
+            type: "image/png",
+            sizes: "32x32",
+            href: "/gdg-logo.svg",
+          },
+        },
+        {
+          tag: "link",
+          attrs: {
+            rel: "apple-touch-icon",
+            sizes: "180x180",
+            href: "/gdg-logo.svg",
+          },
+        },
+        {
+          tag: "link",
+          attrs: { rel: "shortcut icon", href: "/favicon.svg" },
+        },
         // Google Analytics
         {
           tag: "script",
@@ -68,7 +94,10 @@ export default defineConfig({
         },
         {
           tag: "meta",
-          attrs: { property: "og:site_name", content: "GDG Docs" },
+          attrs: {
+            property: "og:site_name",
+            content: "GDG Docs - GDG Algiers",
+          },
         },
         {
           tag: "meta",
@@ -81,14 +110,6 @@ export default defineConfig({
         {
           tag: "meta",
           attrs: { property: "og:image:alt", content: ogImageAlt },
-        },
-        {
-          tag: "meta",
-          attrs: { property: "og:image:width", content: "1200" },
-        },
-        {
-          tag: "meta",
-          attrs: { property: "og:image:height", content: "630" },
         },
         // Twitter Card
         {
@@ -111,9 +132,25 @@ export default defineConfig({
           tag: "meta",
           attrs: { name: "twitter:creator", content: "@GDGAlgiers" },
         },
+        // Additional SEO
+        {
+          tag: "meta",
+          attrs: { name: "application-name", content: "GDG Docs" },
+        },
+        {
+          tag: "meta",
+          attrs: { name: "apple-mobile-web-app-title", content: "GDG Docs" },
+        },
         {
           tag: "meta",
           attrs: { name: "author", content: "Google Developer Group Algiers" },
+        },
+        {
+          tag: "meta",
+          attrs: {
+            name: "publisher",
+            content: "Google Developer Group Algiers",
+          },
         },
         {
           tag: "meta",
@@ -130,6 +167,50 @@ export default defineConfig({
         {
           tag: "link",
           attrs: { rel: "manifest", href: "/manifest.json" },
+        },
+        // JSON-LD Structured Data for Google Rich Results
+        {
+          tag: "script",
+          attrs: { type: "application/ld+json" },
+          content: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            name: "Google Developer Group Algiers",
+            alternateName: "GDG Algiers",
+            url: "https://docs.gdgalgiers.dev",
+            logo: "https://docs.gdgalgiers.dev/gdg-logo.svg",
+            image: "https://docs.gdgalgiers.dev/gdg-docs.png",
+            description:
+              "Comprehensive documentation and best practices for React, Express.js, Flutter, and modern web development from Google Developer Group Algiers.",
+            sameAs: [
+              "https://github.com/GDGAlgiers",
+              "https://twitter.com/GDGAlgiers",
+              "https://gdgalgiers.dev",
+            ],
+          }),
+        },
+        {
+          tag: "script",
+          attrs: { type: "application/ld+json" },
+          content: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            name: "GDG Docs",
+            alternateName: "GDG Algiers Documentation",
+            url: "https://docs.gdgalgiers.dev",
+            description:
+              "Technical documentation and coding guidelines for React, Express.js, Flutter development.",
+            publisher: {
+              "@type": "Organization",
+              name: "Google Developer Group Algiers",
+              logo: {
+                "@type": "ImageObject",
+                url: "https://docs.gdgalgiers.dev/gdg-logo.svg",
+                width: "512",
+                height: "512",
+              },
+            },
+          }),
         },
       ],
       sidebar: [

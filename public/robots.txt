@@ -9,4 +9,5 @@ Crawl-delay: 1
 
 # Disallow admin or build directories if they exist
 Disallow: /.astro/
+Disallow: /_astro/
 Disallow: /dist/
