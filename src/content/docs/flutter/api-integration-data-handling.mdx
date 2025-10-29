@@ -36,15 +36,27 @@ Flutter offers several libraries for API communication, each with distinct advan
     
     **Use Case:** Best for small apps with basic API requirements and minimal complexity.
 
+    **Add to your pubspec.yaml:**
+
     <Code code={`dependencies:
+  http: ^1.1.0`} lang="yaml" />
 
-http: ^1.1.0
+    **Basic usage example:**
 
-// Basic usage
+    <Code code={`// Making a simple GET request with authentication
 final response = await http.get(
-Uri.parse('https://api.example.com/users'),
-headers: {'Authorization': 'Bearer $token'},
-);`} lang="yaml" />
+  Uri.parse('https://api.example.com/users'),
+  headers: {
+    'Authorization': 'Bearer \$token',
+  },
+);
+
+// Check response status
+if (response.statusCode == 200) {
+  // Parse the response body
+  final data = jsonDecode(response.body);
+  print('Users: \$data');
+}`} lang="dart" />
 
   </TabItem>
   
@@ -60,62 +72,78 @@ headers: {'Authorization': 'Bearer $token'},
     
     **Use Case:** Recommended for production apps requiring robust API communication and advanced features.
 
+    **Add to your pubspec.yaml:**
+
     <Code code={`dependencies:
+  dio: ^5.3.2`} lang="yaml" />
 
-dio: ^5.3.2
+    **Advanced usage with interceptors:**
 
-// Advanced usage with interceptors
+    <Code code={`// Create Dio instance with interceptors
 final dio = Dio()
-..interceptors.add(AuthInterceptor())
-..interceptors.add(LoggingInterceptor());`} lang="yaml" />
+  ..interceptors.add(AuthInterceptor())  // Automatically adds auth tokens
+  ..interceptors.add(LoggingInterceptor());  // Logs all requests/responses
+
+// Making a request
+final response = await dio.get('/users');`} lang="dart" />
 
   </TabItem>
 </Tabs>
 
 ## API Client Architecture
 
-Implementing a structured API client is essential for maintainable code. We recommend using Dio with a repository pattern:
+Structure your API client using a repository pattern for better maintainability and testing. This approach separates network logic from business logic, making your code more testable and easier to maintain.
 
-### Recommended Project Structure
+### Project Structure
 
 <FileTree>
 - lib
   - core
     - api
-      - api_client.dart      # Core API client with Dio configuration
-      - api_endpoints.dart   # Constant endpoint definitions
-      - api_interceptors.dart # Custom interceptors
+      - api_client.dart      # Core Dio configuration
+      - api_endpoints.dart   # Route constants
+      - api_interceptors.dart # Auth, logging, error handling
   - features
-    - feature_1
-      - data
+    - user_profile
+      - domain
         - repositories
-          - feature_1_repository.dart # Feature-specific API calls
+          - user_repository.dart # Feature-specific API calls
 </FileTree>
 
 ### Base API Client Setup
+
+The API client is the foundation of your network layer. It configures Dio with base settings and adds interceptors for cross-cutting concerns like authentication and logging.
 
 <Code
   code={`// lib/core/api/api_client.dart
 class ApiClient {
   late Dio _dio;
+  
+  // Singleton pattern ensures one instance across the app
   static final ApiClient _instance = ApiClient._internal();
   factory ApiClient() => _instance;
   
   ApiClient._internal() {
-    _dio = Dio(BaseOptions(
-      baseUrl: AppConfig.apiBaseUrl,
-      connectTimeout: const Duration(seconds: 30),
-      headers: {'Content-Type': 'application/json'},
-    ));
+    // Configure Dio with base settings
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: AppConfig.apiBaseUrl,  // Base URL from config
+        connectTimeout: const Duration(seconds: 30),  // Connection timeout
+        headers: {
+          'Content-Type': 'application/json',  // Default content type
+        },
+      ),
+    );
     
-    // Add interceptors
+    // Add interceptors in order of execution
     _dio.interceptors.addAll([
-      AuthInterceptor(),
-      LoggingInterceptor(),
-      ErrorInterceptor(),
+      AuthInterceptor(),      // Handles authentication tokens
+      LoggingInterceptor(),   // Logs requests/responses for debugging
+      ErrorInterceptor(),     // Converts errors to ApiFailure
     ]);
   }
   
+  // Expose Dio instance for making requests
   Dio get dio => _dio;
 }`}
   lang="dart"
@@ -124,65 +152,89 @@ class ApiClient {
 
 ### Essential Interceptors
 
+Interceptors allow you to intercept and modify requests/responses globally. They're perfect for adding authentication headers, logging, and error handling.
+
 <Code code={`// lib/core/api/api_interceptors.dart
+
+// Authentication Interceptor - Adds auth token to every request
 class AuthInterceptor extends Interceptor {
   @override
   Future<void> onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
+    // Retrieve token from secure storage
     final token = await SecureStorage().getAccessToken();
+    
+    // Add token to request headers if available
     if (token != null) {
-      options.headers['Authorization'] = 'Bearer $token';
+      options.headers['Authorization'] = 'Bearer \$token';
     }
+    
+    // Continue with the request
     handler.next(options);
   }
 }
 
+// Error Interceptor - Converts DioException to ApiFailure
 class ErrorInterceptor extends Interceptor {
-@override
-void onError(DioException err, ErrorInterceptorHandler handler) {
-final apiError = ApiFailure.fromDioException(err);
-handler.next(err);
-}
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    // Convert to structured error
+    final apiError = ApiFailure.fromDioException(err);
+    
+    // Continue with error handling
+    handler.next(err);
+  }
 }`} lang="dart" title="Core Interceptors" />
 
 ---
 
 ## Error Handling Strategy
 
-Implement comprehensive error handling to provide users with meaningful feedback:
+Implement comprehensive error handling to provide users with meaningful feedback. Structured error classes make it easier to handle different error scenarios consistently across your app.
 
 ### Structured Error Classes
 
+Create a hierarchy of error classes to represent different API failure scenarios. This approach makes error handling more predictable and testable.
+
 <Code code={`// lib/core/api/api_failure.dart
+
+// Base class for all API failures
 abstract class ApiFailure {
   final String message;
   final int? statusCode;
   
   const ApiFailure(this.message, this.statusCode);
   
+  // Factory constructor to convert DioException to ApiFailure
   factory ApiFailure.fromDioException(DioException error) {
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
         return ConnectionTimeout();
+        
       case DioExceptionType.badResponse:
         return ServerError(error.response?.statusCode);
+        
       default:
         return UnexpectedError(error.message);
     }
   }
 }
 
+// Specific error types for different scenarios
 class ConnectionTimeout extends ApiFailure {
-const ConnectionTimeout() : super('Connection timeout', null);
+  const ConnectionTimeout() : super('Connection timeout', null);
 }
 
 class ServerError extends ApiFailure {
-const ServerError(int? statusCode) : super('Server error', statusCode);
+  const ServerError(int? statusCode) 
+      : super('Server error', statusCode);
 }`} lang="dart" title="Error Handling Classes" />
 
 ### Repository Implementation
+
+Repositories encapsulate API calls for specific features. They handle the conversion between API responses and domain models, and translate exceptions into structured failures.
 
 <Code
   code={`// lib/features/user_profile/domain/repositories/user_repository.dart
@@ -191,21 +243,30 @@ class UserRepository {
   
   UserRepository(this._apiClient);
   
+  // Fetch user by ID
   Future<User> getUser(String userId) async {
     try {
+      // Make API request
       final response = await _apiClient.dio.get('/users/\$userId');
+      
+      // Parse response to domain model
       return User.fromJson(response.data);
     } catch (e) {
+      // Convert any error to ApiFailure
       throw ApiFailure.fromException(e);
     }
   }
   
+  // Update user information
   Future<User> updateUser(User user) async {
     try {
+      // Send updated user data
       final response = await _apiClient.dio.put(
         '/users/\${user.id}',
-        data: user.toJson(),
+        data: user.toJson(),  // Convert model to JSON
       );
+      
+      // Return updated user
       return User.fromJson(response.data);
     } catch (e) {
       throw ApiFailure.fromException(e);
@@ -220,30 +281,42 @@ class UserRepository {
 
 ## Secure Storage for Authentication
 
-Protect sensitive data like tokens and API keys using secure storage:
+Protect sensitive data like tokens and API keys using secure storage. The `flutter_secure_storage` package encrypts data before storing it on the device.
+
+**Add the dependency:**
 
 <Code code={`dependencies:
-  flutter_secure_storage: ^9.0.0
+  flutter_secure_storage: ^9.0.0`} lang="yaml" />
 
-// lib/core/storage/secure_storage.dart
+**Implement secure storage service:**
+
+<Code code={`// lib/core/storage/secure_storage.dart
 class SecureStorage {
-static const \_storage = FlutterSecureStorage(
-aOptions: AndroidOptions(encryptedSharedPreferences: true),
-);
-
-// Token management
-Future<void> saveAccessToken(String token) async {
-await \_storage.write(key: 'access_token', value: token);
-}
-
-Future<String?> getAccessToken() async {
-return await \_storage.read(key: 'access_token');
-}
-
-Future<void> deleteAllTokens() async {
-await \_storage.delete(key: 'access_token');
-await \_storage.delete(key: 'refresh_token');
-}
+  // Initialize secure storage with platform-specific options
+  static const _storage = FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,  // Use encrypted shared preferences
+    ),
+  );
+  
+  // Save access token securely
+  Future<void> saveAccessToken(String token) async {
+    await _storage.write(
+      key: 'access_token',
+      value: token,
+    );
+  }
+  
+  // Retrieve access token
+  Future<String?> getAccessToken() async {
+    return await _storage.read(key: 'access_token');
+  }
+  
+  // Delete all authentication tokens (logout)
+  Future<void> deleteAllTokens() async {
+    await _storage.delete(key: 'access_token');
+    await _storage.delete(key: 'refresh_token');
+  }
 }`} lang="dart" title="Secure Token Storage" />
 
 <Aside type="caution">
@@ -256,35 +329,40 @@ await \_storage.delete(key: 'refresh_token');
 
 ## Data Serialization Approaches
 
-Choose the right serialization approach based on your project's complexity:
+Choose the right serialization approach based on your project's complexity. Serialization converts JSON data from APIs into Dart objects and vice versa.
 
 <Tabs>
   <TabItem label="Manual Serialization">
     ### Manual JSON Handling
     
-    Simple approach for small models with few fields:
+    Simple approach for small models with few fields. You have full control over the serialization logic.
 
     <Code code={`class User {
-
-final String id;
-final String name;
-final String email;
-
-User({required this.id, required this.name, required this.email});
-
-factory User.fromJson(Map<String, dynamic> json) {
-return User(
-id: json['id'],
-name: json['name'],
-email: json['email'],
-);
-}
-
-Map<String, dynamic> toJson() => {
-'id': id,
-'name': name,
-'email': email,
-};
+  final String id;
+  final String name;
+  final String email;
+  
+  User({
+    required this.id,
+    required this.name,
+    required this.email,
+  });
+  
+  // Convert JSON to User object
+  factory User.fromJson(Map<String, dynamic> json) {
+    return User(
+      id: json['id'],
+      name: json['name'],
+      email: json['email'],
+    );
+  }
+  
+  // Convert User object to JSON
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'email': email,
+  };
 }`} lang="dart" />
 
     **When to Use:** Simple models, learning purposes, or when you need full control over serialization logic.
@@ -294,34 +372,54 @@ Map<String, dynamic> toJson() => {
   <TabItem label="json_serializable">
     ### Code Generation (Recommended)
     
-    Automated serialization with code generation:
+    Automated serialization with code generation. Reduces boilerplate and minimizes serialization errors.
+
+    **Add dependencies:**
 
     <Code code={`dependencies:
-
-json_annotation: ^4.8.1
+  json_annotation: ^4.8.1
 
 dev_dependencies:
-build_runner: ^2.3.3
-json_serializable: ^6.7.1
+  build_runner: ^2.3.3
+  json_serializable: ^6.7.1`} lang="yaml" />
 
-// Model with annotations
+    **Create model with annotations:**
+
+    <Code code={`import 'package:json_annotation/json_annotation.dart';
+
+// Include generated file
+part 'user.g.dart';
+
 @JsonSerializable()
 class User {
-final String id;
-final String name;
-
-@JsonKey(name: 'email_address')
-final String email;
-
-User({required this.id, required this.name, required this.email});
-
-factory User.fromJson(Map<String, dynamic> json) => _\$UserFromJson(json);
-Map<String, dynamic> toJson() => _\$UserToJson(this);
+  final String id;
+  final String name;
+  
+  // Map API field name to Dart property
+  @JsonKey(name: 'email_address')
+  final String email;
+  
+  User({
+    required this.id,
+    required this.name,
+    required this.email,
+  });
+  
+  // Generated fromJson method
+  factory User.fromJson(Map<String, dynamic> json) => 
+      _\$UserFromJson(json);
+  
+  // Generated toJson method
+  Map<String, dynamic> toJson() => _\$UserToJson(this);
 }`} lang="dart" />
 
-    <Code code={`# Generate serialization code
+    **Generate serialization code:**
 
-flutter pub run build_runner build`} lang="bash" />
+    <Code code={`# Run code generation
+flutter pub run build_runner build
+
+# Watch for changes (development)
+flutter pub run build_runner watch`} lang="bash" />
 
     **When to Use:** Medium to large projects with multiple models that need consistent serialization patterns.
 
@@ -330,26 +428,43 @@ flutter pub run build_runner build`} lang="bash" />
   <TabItem label="freezed">
     ### Immutable Data Classes
     
-    Comprehensive code generation with immutability:
+    Comprehensive code generation with immutability. Perfect for complex applications requiring pattern matching and immutable data structures.
+
+    **Add dependencies:**
 
     <Code code={`dependencies:
-
-freezed_annotation: ^2.4.1
+  freezed_annotation: ^2.4.1
 
 dev_dependencies:
-freezed: ^2.4.2
-json_serializable: ^6.7.1
+  freezed: ^2.4.2
+  json_serializable: ^6.7.1
+  build_runner: ^2.3.3`} lang="yaml" />
+
+    **Create immutable model:**
+
+    <Code code={`import 'package:freezed_annotation/freezed_annotation.dart';
+
+// Include generated files
+part 'user.freezed.dart';
+part 'user.g.dart';
 
 @freezed
-class User with \_\$User {
-const factory User({
-required String id,
-required String name,
-required String email,
-}) = \_User;
-
-factory User.fromJson(Map<String, dynamic> json) => \_\$UserFromJson(json);
+class User with _\$User {
+  const factory User({
+    required String id,
+    required String name,
+    required String email,
+  }) = _User;
+  
+  // Generated fromJson method
+  factory User.fromJson(Map<String, dynamic> json) => 
+      _\$UserFromJson(json);
 }`} lang="dart" />
+
+    **Generate code:**
+
+    <Code code={`# Run code generation
+flutter pub run build_runner build --delete-conflicting-outputs`} lang="bash" />
 
     **When to Use:** Complex applications requiring immutable data classes, pattern matching, and comprehensive model generation.
 
@@ -360,38 +475,60 @@ factory User.fromJson(Map<String, dynamic> json) => \_\$UserFromJson(json);
 
 ## Handling API Errors in UI
 
-Create user-friendly error handling in your UI components:
+Create user-friendly error handling in your UI components. The UI should gracefully handle different error states and provide users with clear feedback and recovery options.
 
 <Code code={`// In your BLoC or Cubit
 class UserCubit extends Cubit<UserState> {
   final UserRepository _repository;
   
+  UserCubit(this._repository) : super(UserInitial());
+  
   Future<void> loadUser(String userId) async {
+    // Emit loading state
     emit(UserLoading());
+    
     try {
+      // Fetch user from repository
       final user = await _repository.getUser(userId);
+      
+      // Emit success state with data
       emit(UserLoaded(user));
     } on ApiFailure catch (failure) {
+      // Emit error state with message
       emit(UserError(failure.message));
     }
   }
 }
 
-// In your UI
+// In your UI widget
 BlocBuilder<UserCubit, UserState>(
-builder: (context, state) {
-if (state is UserLoading) {
-return const CircularProgressIndicator();
-} else if (state is UserLoaded) {
-return UserProfile(user: state.user);
-} else if (state is UserError) {
-return ErrorWidget(
-message: state.message,
-onRetry: () => context.read<UserCubit>().loadUser(userId),
-);
-}
-return const SizedBox.shrink();
-},
+  builder: (context, state) {
+    // Handle loading state
+    if (state is UserLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    } 
+    // Handle success state
+    else if (state is UserLoaded) {
+      return UserProfile(user: state.user);
+    } 
+    // Handle error state
+    else if (state is UserError) {
+      return Center(
+        child: ErrorWidget(
+          message: state.message,
+          // Provide retry functionality
+          onRetry: () => context
+              .read<UserCubit>()
+              .loadUser(userId),
+        ),
+      );
+    }
+    
+    // Handle initial state
+    return const SizedBox.shrink();
+  },
 )`} lang="dart" title="UI Error Handling" />
 
 ---
@@ -401,23 +538,43 @@ return const SizedBox.shrink();
 ### API Integration Checklist
 
 <Steps>
-  1. **Choose the right HTTP client** based on your app's complexity 2.
-  **Structure API clients** using the repository pattern 3. **Implement proper
-  error handling** with structured error classes 4. **Use secure storage** for
-  sensitive authentication data 5. **Choose appropriate serialization** based on
-  model complexity 6. **Handle network errors gracefully** in the UI layer
+  1. **Choose the right HTTP client** based on your app's complexity
+  
+  2. **Structure API clients** using the repository pattern
+  
+  3. **Implement proper error handling** with structured error classes
+  
+  4. **Use secure storage** for sensitive authentication data
+  
+  5. **Choose appropriate serialization** based on model complexity
+  
+  6. **Handle network errors gracefully** in the UI layer
 </Steps>
 
 ### Common Pitfalls to Avoid
 
-<Aside type="caution">
-  **Avoid these common mistakes:** - **Hardcoding API endpoints** - Use
-  constants and configuration files - **Ignoring timeout configurations** -
-  Always set appropriate timeouts - **Not handling offline scenarios** -
-  Implement proper connectivity checks - **Exposing sensitive data in logs** -
-  Be careful with logging interceptors - **Blocking the UI thread** - Always use
-  async/await for API calls
-</Aside>
+**Hardcoding API endpoints** 
+- Use constants and configuration files to manage API URLs
+- Keep environment-specific URLs separate (dev, staging, production)
+
+**Ignoring timeout configurations**
+- Always set appropriate timeouts for connect, receive, and send operations
+- Consider different timeout values for different types of requests
+
+**Not handling offline scenarios**
+- Implement proper connectivity checks before making requests
+- Provide meaningful feedback when the device is offline
+- Consider caching strategies for offline functionality
+
+**Exposing sensitive data in logs**
+- Be careful with logging interceptors in production builds
+- Never log authentication tokens or personal user data
+- Use conditional logging based on build mode
+
+**Blocking the UI thread**
+- Always use async/await for API calls
+- Never make synchronous network requests
+- Show loading indicators during API operations
 
 ### Performance Considerations
 
