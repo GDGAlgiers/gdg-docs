@@ -31,7 +31,8 @@ State management problems often manifest as inefficient UI updates, leading to p
 
 Use debug prints and the Widget Inspector to identify which widgets are rebuilding and how often. This helps pinpoint inefficiencies in your widget tree.
 
-<Code code={`// Add debug prints to track widget rebuilds
+```dart title="Tracking Rebuilds"
+// Add debug prints to track widget rebuilds
 import 'package:flutter/foundation.dart';
 
 class MyWidget extends StatelessWidget {
@@ -45,13 +46,14 @@ class MyWidget extends StatelessWidget {
     return Consumer<MyDataModel>(
       builder: (context, model, child) {
         // Track Consumer rebuilds with data changes
-        debugPrint('Consumer rebuilding with: \${model.someValue}');
+        debugPrint('Consumer rebuilding with: ${model.someValue}');
         
         return Text(model.someValue);
       },
     );
   }
-}`} lang="dart" title="Tracking Rebuilds" />
+}
+```
 
 <Aside type="note">
   **Widget Inspector**: Use Flutter DevTools' Widget Inspector to visualize rebuild boundaries and identify which parts of your widget tree are rebuilding.
@@ -61,7 +63,8 @@ class MyWidget extends StatelessWidget {
 
 Enable Flutter's performance overlay to see real-time performance metrics directly on your device screen.
 
-<Code code={`// Enable performance overlay in your app
+```dart title="Performance Overlay"
+// Enable performance overlay in your app
 import 'package:flutter/material.dart';
 
 void main() {
@@ -73,7 +76,8 @@ void main() {
       home: MyApp(),
     ),
   );
-}`} lang="dart" title="Performance Overlay" />
+}
+```
 
 ---
 
@@ -87,7 +91,8 @@ The key to efficient state management is isolating state changes to the smallest
   <TabItem label="Problem">
     **Rebuilding Too Much**: When state is placed too high in the widget tree, changing it causes unnecessary rebuilds of all child widgets.
 
-    <Code code={`// BAD: Entire screen rebuilds for a small counter change
+```dart
+// BAD: Entire screen rebuilds for a small counter change
 class CounterScreen extends StatefulWidget {
   @override
   _CounterScreenState createState() => _CounterScreenState();
@@ -102,7 +107,7 @@ class _CounterScreenState extends State<CounterScreen> {
       body: Column(
         children: [
           ExpensiveWidget(),  // Rebuilds unnecessarily!
-          Text('Count: \$_counter'),
+          Text('Count: $_counter'),
           ElevatedButton(
             onPressed: () => setState(() => _counter++),
             child: const Text('Increment'),
@@ -111,13 +116,15 @@ class _CounterScreenState extends State<CounterScreen> {
       ),
     );
   }
-}`} lang="dart" />
+}
+```
   </TabItem>
 
   <TabItem label="Solution">
     **Isolate State**: Move state down to the smallest widget that needs it, preventing unnecessary rebuilds of sibling widgets.
 
-    <Code code={`// GOOD: Only the counter widget rebuilds
+```dart
+// GOOD: Only the counter widget rebuilds
 class CounterScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -144,7 +151,7 @@ class _CounterWidgetState extends State<CounterWidget> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text('Count: \$_counter'),
+        Text('Count: $_counter'),
         ElevatedButton(
           onPressed: () => setState(() => _counter++),
           child: const Text('Increment'),
@@ -152,7 +159,8 @@ class _CounterWidgetState extends State<CounterWidget> {
       ],
     );
   }
-}`} lang="dart" />
+}
+```
   </TabItem>
 </Tabs>
 
@@ -160,7 +168,8 @@ class _CounterWidgetState extends State<CounterWidget> {
 
 For even more fine-grained control, use `ValueNotifier` to update only specific parts of the UI without rebuilding parent widgets.
 
-<Code code={`// ValueListenableBuilder updates only when the ValueNotifier changes
+```dart title="Selection Model Pattern"
+// ValueListenableBuilder updates only when the ValueNotifier changes
 class SelectableListItem extends StatelessWidget {
   final String title;
   final String id;
@@ -216,7 +225,8 @@ class SelectionModel extends ChangeNotifier {
     
     notifyListeners();
   }
-}`} lang="dart" title="Selection Model Pattern" />
+}
+```
 
 ---
 
@@ -228,14 +238,16 @@ Layout overflows occur when widgets attempt to render outside their allocated bo
 
 Enable debug painting to visualize widget boundaries and understand layout constraints:
 
-<Code code={`// Enable debug painting to visualize layout bounds
+```dart title="Debug Painting"
+// Enable debug painting to visualize layout bounds
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show debugPaintSizeEnabled;
 
 void main() {
   debugPaintSizeEnabled = true;  // Shows widget boundaries with borders
   runApp(MyApp());
-}`} lang="dart" title="Debug Painting" />
+}
+```
 
 ### Common Overflow Solutions
 
@@ -243,7 +255,8 @@ void main() {
   <TabItem label="Row/Column">
     **Text Overflow in Rows**: Text widgets in rows need explicit constraints to handle overflow properly.
 
-    <Code code={`// PROBLEM: Text overflows in Row
+```dart
+// PROBLEM: Text overflows in Row
 Row(
   children: [
     Icon(Icons.account_circle),
@@ -272,13 +285,15 @@ Row(
       ),
     ),
   ],
-)`} lang="dart" />
+)
+```
   </TabItem>
 
   <TabItem label="ListView">
     **ListView in Column**: ListView has unbounded height by default, which causes overflow in a Column.
 
-    <Code code={`// PROBLEM: ListView in Column
+```dart
+// PROBLEM: ListView in Column
 Column(
   children: [
     Text('Header'),
@@ -320,13 +335,15 @@ Column(
     ),
     Text('Footer'),
   ],
-)`} lang="dart" />
+)
+```
   </TabItem>
 
   <TabItem label="Text">
     **Text Overflow Handling**: Control how text behaves when it doesn't fit in its container.
 
-    <Code code={`// PROBLEM: Text overflows container
+```dart
+// PROBLEM: Text overflows container
 Container(
   width: 100,
   child: Text('This long text will overflow'),
@@ -358,7 +375,8 @@ Container(
     fit: BoxFit.scaleDown,  // Scales text to fit
     child: Text('This text scales down'),
   ),
-)`} lang="dart" />
+)
+```
   </TabItem>
 </Tabs>
 
@@ -366,7 +384,8 @@ Container(
 
 Use `LayoutBuilder` to adapt your UI based on available space and prevent overflow issues:
 
-<Code code={`// Adapt layout based on available space
+```dart title="Responsive Layouts"
+// Adapt layout based on available space
 LayoutBuilder(
   builder: (BuildContext context, BoxConstraints constraints) {
     // Choose layout based on width
@@ -396,7 +415,8 @@ LayoutBuilder(
       ),
     );
   },
-)`} lang="dart" title="Responsive Layouts" />
+)
+```
 
 <Aside type="tip">
   **Layout Explorer**: Use Flutter DevTools' Layout Explorer to visualize widget constraints and understand positioning and sizing decisions.
@@ -436,7 +456,8 @@ Flutter DevTools provides comprehensive profiling capabilities to identify perfo
 
 Create a custom widget to track rebuild performance in specific parts of your app:
 
-<Code code={`// Track rebuild times for specific widgets
+```dart title="Rebuild Tracker"
+// Track rebuild times for specific widgets
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 
@@ -476,37 +497,41 @@ class _RebuildTrackerState extends State<RebuildTracker> {
     // Log performance data
     if (_buildCount % 10 == 0 || _stopwatch.elapsedMilliseconds > 16) {
       debugPrint(
-        '[PERF] \${widget.name} rebuilt \$_buildCount times. '
-        'Last build: \${_stopwatch.elapsedMilliseconds}ms'
+        '[PERF] ${widget.name} rebuilt $_buildCount times. '
+        'Last build: ${_stopwatch.elapsedMilliseconds}ms'
       );
     }
     
     _stopwatch.reset();
     return result;
   }
-}`} lang="dart" title="Rebuild Tracker" />
+}
+```
 
 **Usage example:**
 
-<Code code={`// Wrap widgets to track their rebuild performance
+```dart title="Using Rebuild Tracker"
+// Wrap widgets to track their rebuild performance
 RebuildTracker(
   name: 'ProductList',
   child: ListView.builder(
     itemCount: products.length,
     itemBuilder: (context, index) {
       return RebuildTracker(
-        name: 'ProductItem \$index',
+        name: 'ProductItem $index',
         child: ProductItem(product: products[index]),
       );
     },
   ),
-)`} lang="dart" title="Using Rebuild Tracker" />
+)
+```
 
 ### Memory Leak Prevention
 
 Always dispose of resources properly to prevent memory leaks:
 
-<Code code={`// Properly dispose resources to prevent memory leaks
+```dart title="Resource Disposal"
+// Properly dispose resources to prevent memory leaks
 class _MyWidgetState extends State<MyWidget> {
   late StreamSubscription _subscription;
   late AnimationController _controller;
@@ -526,7 +551,8 @@ class _MyWidgetState extends State<MyWidget> {
     _controller.dispose();
     super.dispose();  // Always call super.dispose() last
   }
-}`} lang="dart" title="Resource Disposal" />
+}
+```
 
 <Aside type="tip">
   **Memory Snapshots**: Use DevTools' Memory page to take snapshots and identify memory leaks. Look for objects that persist unexpectedly or steadily increasing memory usage.
@@ -544,7 +570,8 @@ Minimize rebuilds to improve performance and create a smoother user experience.
   <TabItem label="Const Constructors">
     **Use Const for Static Widgets**: Const constructors create compile-time constants that are reused across builds, reducing memory allocations.
 
-    <Code code={`// BAD: Creates new widgets on every build
+```dart
+// BAD: Creates new widgets on every build
 Widget build(BuildContext context) {
   return Container(
     padding: EdgeInsets.all(16.0),
@@ -558,15 +585,17 @@ Widget build(BuildContext context) {
     padding: EdgeInsets.all(16.0),
     child: Icon(Icons.star),
   );
-}`} lang="dart" />
+}
+```
 
-    **When to use**: Widgets that don't depend on runtime data and never change.
+**When to use**: Widgets that don't depend on runtime data and never change.
   </TabItem>
   
   <TabItem label="ValueNotifier">
     **Granular Updates with ValueNotifier**: Update only specific parts of the UI without rebuilding parent widgets.
 
-    <Code code={`// ValueNotifier for fine-grained control
+```dart
+// ValueNotifier for fine-grained control
 class CounterWidget extends StatelessWidget {
   final ValueNotifier<int> _counter = ValueNotifier<int>(0);
   
@@ -580,7 +609,7 @@ class CounterWidget extends StatelessWidget {
         ValueListenableBuilder<int>(
           valueListenable: _counter,
           builder: (context, value, child) {
-            return Text('Count: \$value');
+            return Text('Count: $value');
           },
         ),
         
@@ -591,15 +620,17 @@ class CounterWidget extends StatelessWidget {
       ],
     );
   }
-}`} lang="dart" />
+}
+```
 
-    **When to use**: Simple, localized state updates without external state management.
+**When to use**: Simple, localized state updates without external state management.
   </TabItem>
   
   <TabItem label="RepaintBoundary">
     **Isolate Painting Operations**: Use `RepaintBoundary` to prevent unnecessary repaints of expensive widgets.
 
-    <Code code={`// Isolate painting for independent animations
+```dart
+// Isolate painting for independent animations
 class MyWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -617,13 +648,14 @@ class MyWidget extends StatelessWidget {
       ],
     );
   }
-}`} lang="dart" />
+}
+```
 
-    **When to use**: Complex animations, expensive renders, or independently updating widgets.
-    
-    <Aside type="caution">
-      Excessive use of RepaintBoundary can increase memory usage. Use it strategically for truly expensive operations.
-    </Aside>
+**When to use**: Complex animations, expensive renders, or independently updating widgets.
+
+<Aside type="caution">
+  Excessive use of RepaintBoundary can increase memory usage. Use it strategically for truly expensive operations.
+</Aside>
   </TabItem>
 </Tabs>
 
@@ -631,7 +663,8 @@ class MyWidget extends StatelessWidget {
 
 Use lazy loading and proper keys to optimize list performance:
 
-<Code code={`// Use ListView.builder for efficient lazy loading
+```dart title="List Optimization"
+// Use ListView.builder for efficient lazy loading
 ListView.builder(
   itemCount: items.length,
   itemBuilder: (context, index) {
@@ -664,13 +697,15 @@ ListView.builder(
       title: Text(item.title),
     );
   },
-)`} lang="dart" title="List Optimization" />
+)
+```
 
 ### Heavy Computation Strategies
 
 Move expensive operations off the main thread using isolates:
 
-<Code code={`// Using compute for simpler background processing
+```dart title="Compute Function"
+// Using compute for simpler background processing
 import 'package:flutter/foundation.dart';
 
 // Function to run in separate isolate
@@ -710,7 +745,8 @@ class _MyWidgetState extends State<MyWidget> {
       ),
     );
   }
-}`} lang="dart" title="Compute Function" />
+}
+```
 
 ---
 

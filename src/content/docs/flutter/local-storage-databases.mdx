@@ -65,9 +65,11 @@ Your choice should balance performance needs, development speed, and data comple
 
 ### Basic Setup and Usage
 
-<Code code={`// pubspec.yaml
+```yaml
+// pubspec.yaml
 dependencies:
-  shared_preferences: ^2.2.0`} lang="yaml" />
+  shared_preferences: ^2.2.0
+```
 
 ```dart title="Storing Data"
 // Storing different data types
@@ -145,10 +147,12 @@ class PreferencesService {
 
 Hive is a lightweight, high-performance NoSQL database optimized for Flutter applications.
 
-<Code code={`// pubspec.yaml
+```yaml title="Dependencies"
+// pubspec.yaml
 dependencies:
   hive: ^2.2.3
-  hive_flutter: ^1.1.0`} lang="yaml" title="Dependencies" />
+  hive_flutter: ^1.1.0
+```
 
 ```dart title="Model Definition"
 import 'package:hive/hive.dart';
@@ -200,10 +204,12 @@ await taskBox.delete(id);          // Delete
 
 Drift is a reactive persistence library for Dart & Flutter applications that builds on top of SQLite.
 
-<Code code={`// pubspec.yaml
+```yaml title="Dependencies"
+// pubspec.yaml
 dependencies:
   drift: ^2.8.0
-  sqlite3_flutter_libs: ^0.5.15`} lang="yaml" title="Dependencies" />
+  sqlite3_flutter_libs: ^0.5.15
+```
 
 ```dart title="Database Setup"
 // Define table and database
@@ -227,7 +233,8 @@ class AppDatabase extends _\$AppDatabase {
 }
 ```
 
-<Code code={`// Reactive UI updates
+```dart title="Reactive UI"
+// Reactive UI updates
 StreamBuilder<List<Task>>(
   stream: database.watchAllTasks(),
   builder: (context, snapshot) {
@@ -245,7 +252,8 @@ StreamBuilder<List<Task>>(
       ),
     );
   },
-)`} lang="dart" title="Reactive UI" />
+)
+```
 
 ### Best Practices for Drift
 
@@ -256,19 +264,20 @@ StreamBuilder<List<Task>>(
 - Implement repository pattern to abstract database operations
 - Use transactions for related operations
 
-<Code code={`// Example of using transactions in Drift
+```dart title="Drift Transaction Example"
+// Example of using transactions in Drift
 Future<void> transferFunds(int fromAccount, int toAccount, double amount) {
   return database.transaction(() async {
     // Deduct from source account
     await (update(accounts)..where((a) => a.id.equals(fromAccount)))
       .write(AccountsCompanion(
-        balance: Expression.custom('balance - \$amount')
+        balance: Expression.custom('balance - $amount')
       ));
       
     // Add to destination account
     await (update(accounts)..where((a) => a.id.equals(toAccount)))
       .write(AccountsCompanion(
-        balance: Expression.custom('balance + \$amount')
+        balance: Expression.custom('balance + $amount')
       ));
       
     // Create transaction record
@@ -281,7 +290,8 @@ Future<void> transferFunds(int fromAccount, int toAccount, double amount) {
       )
     );
   });
-}`} lang="dart" title="Drift Transaction Example" />
+}
+```
 
 ---
 
@@ -289,12 +299,15 @@ Future<void> transferFunds(int fromAccount, int toAccount, double amount) {
 
 SQFlite provides direct access to SQLite functionality in Flutter applications.
 
-<Code code={`// pubspec.yaml
+```yaml title="Dependencies"
+// pubspec.yaml
 dependencies:
   sqflite: ^2.2.8+4
-  path: ^1.8.3`} lang="yaml" title="Dependencies" />
+  path: ^1.8.3
+```
 
-<Code code={`// Database helper singleton
+```dart
+// Database helper singleton
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
@@ -380,7 +393,8 @@ Implementing effective offline capabilities ensures your app remains functional 
 
 <Tabs>
   <TabItem label="Basic Sync">
-    <Code code={`class BasicSyncService {
+```dart
+class BasicSyncService {
   final ApiService _api;
   final TaskRepository _repository;
   
@@ -402,19 +416,21 @@ Implementing effective offline capabilities ensures your app remains functional 
       }
     } catch (e) {
       // Handle connectivity issues
-      print('Sync failed: \$e');
+      print('Sync failed: $e');
     }
   }
-}`} lang="dart" />
+}
+```
 
-    **When to Use:**
+**When to Use:**
     - For simple data models
     - When conflicts are rare
     - For apps with limited offline editing
   </TabItem>
 
   <TabItem label="Timestamp-Based">
-    <Code code={`class TimestampSyncService {
+```dart
+class TimestampSyncService {
   final ApiService _api;
   final TaskRepository _repository;
   
@@ -444,16 +460,18 @@ Implementing effective offline capabilities ensures your app remains functional 
       // Handle sync errors
     }
   }
-}`} lang="dart" />
+}
+```
 
-    **When to Use:**
+**When to Use:**
     - For collaborative apps
     - When you need to track change history
     - For data with frequent updates
   </TabItem>
 
   <TabItem label="Queue-Based">
-    <Code code={`class QueueSyncService {
+```dart
+class QueueSyncService {
   final ApiService _api;
   final SyncQueueRepository _queueRepo;
   
@@ -512,9 +530,10 @@ Implementing effective offline capabilities ensures your app remains functional 
   bool _isServerError(Exception e) {
     // Determine if error is server-side (5xx) or client-side (4xx)
   }
-}`} lang="dart" />
+}
+```
 
-    **When to Use:**
+**When to Use:**
     - For mission-critical data
     - When order of operations matters
     - For apps with extensive offline functionality
@@ -549,7 +568,8 @@ As your app evolves, you may need to migrate from one storage solution to anothe
   5. **Cleanup** - Remove old storage system once migration is stable
 </Steps>
 
-<Code code={`// Migration service example
+```dart title="Migration Example"
+// Migration service example
 class StorageMigrationService {
   final SharedPreferences _prefs;
   final TaskRepository _hiveRepo;
@@ -571,10 +591,11 @@ class StorageMigrationService {
       // Mark as completed
       await _prefs.setBool('migration_completed', true);
     } catch (e) {
-      print('Migration failed: \$e');
+      print('Migration failed: $e');
     }
   }
-}`} lang="dart" title="Migration Example" />
+}
+```
 
 ---
 
