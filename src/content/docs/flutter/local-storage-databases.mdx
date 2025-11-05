@@ -69,7 +69,8 @@ Your choice should balance performance needs, development speed, and data comple
 dependencies:
   shared_preferences: ^2.2.0`} lang="yaml" />
 
-<Code code={`// Storing different data types
+```dart title="Storing Data"
+// Storing different data types
 Future<void> saveUserPreferences() async {
   final prefs = await SharedPreferences.getInstance();
   
@@ -78,9 +79,11 @@ Future<void> saveUserPreferences() async {
   await prefs.setBool('darkMode', true);
   await prefs.setInt('launchCount', 10);
   await prefs.setStringList('recentSearches', ['flutter', 'dart']);
-}`} lang="dart" title="Storing Data" />
+}
+```
 
-<Code code={`// Retrieving values with defaults
+```dart title="Reading Data"
+// Retrieving values with defaults
 Future<void> loadUserPreferences() async {
   final prefs = await SharedPreferences.getInstance();
   
@@ -90,24 +93,28 @@ Future<void> loadUserPreferences() async {
   
   // Increment launch count
   await prefs.setInt('launchCount', launchCount + 1);
-}`} lang="dart" title="Reading Data" />
+}
+```
 
 ### Best Practices
 
 **Use constants for keys** to avoid typos:
 
-<Code code={`class PreferenceKeys {
+```dart
+class PreferenceKeys {
   static const String username = 'username';
   static const String darkMode = 'darkMode';
   static const String launchCount = 'launchCount';
 }
 
 // Usage
-await prefs.setBool(PreferenceKeys.darkMode, true);`} lang="dart" />
+await prefs.setBool(PreferenceKeys.darkMode, true);
+```
 
 **Create a service class** for better organization:
 
-<Code code={`class PreferencesService {
+```dart title="Preferences Service"
+class PreferencesService {
   late SharedPreferences _prefs;
   
   Future<void> init() async {
@@ -123,7 +130,8 @@ await prefs.setBool(PreferenceKeys.darkMode, true);`} lang="dart" />
       _prefs.setString(PreferenceKeys.username, value);
   Future<void> setDarkMode(bool value) => 
       _prefs.setBool(PreferenceKeys.darkMode, value);
-}`} lang="dart" title="Preferences Service" />
+}
+```
 
 **Limitations of SharedPreferences:**
 - Only supports primitive types (bool, int, double, String) and String lists
@@ -142,7 +150,8 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0`} lang="yaml" title="Dependencies" />
 
-<Code code={`import 'package:hive/hive.dart';
+```dart title="Model Definition"
+import 'package:hive/hive.dart';
 
 @HiveType(typeId: 0)
 class Task {
@@ -156,9 +165,11 @@ class Task {
   bool completed;
   
   Task({required this.id, required this.title, this.completed = false});
-}`} lang="dart" title="Model Definition" />
+}
+```
 
-<Code code={`// Initialize and use Hive
+```dart title="Basic Usage"
+// Initialize and use Hive
 await Hive.initFlutter();
 Hive.registerAdapter(TaskAdapter());
 final taskBox = await Hive.openBox<Task>('tasks');
@@ -166,7 +177,8 @@ final taskBox = await Hive.openBox<Task>('tasks');
 // CRUD operations
 await taskBox.put(task.id, task);  // Create/Update
 final task = taskBox.get(id);      // Read
-await taskBox.delete(id);          // Delete`} lang="dart" title="Basic Usage" />
+await taskBox.delete(id);          // Delete
+```
 
 ### Best Practices for Hive
 
@@ -193,7 +205,8 @@ dependencies:
   drift: ^2.8.0
   sqlite3_flutter_libs: ^0.5.15`} lang="yaml" title="Dependencies" />
 
-<Code code={`// Define table and database
+```dart title="Database Setup"
+// Define table and database
 class Tasks extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get title => text()();
@@ -211,7 +224,8 @@ class AppDatabase extends _\$AppDatabase {
   Future<List<Task>> getAllTasks() => select(tasks).get();
   Stream<List<Task>> watchAllTasks() => select(tasks).watch();
   Future<int> createTask(TasksCompanion task) => into(tasks).insert(task);
-}`} lang="dart" title="Database Setup" />
+}
+```
 
 <Code code={`// Reactive UI updates
 StreamBuilder<List<Task>>(
@@ -311,7 +325,8 @@ class DatabaseHelper {
   }
 }`} lang="dart" title="Database Setup" />
 
-<Code code={`// CRUD operations
+```dart title="Basic Operations"
+// CRUD operations
 Future<int> createTask(String title) async {
   final db = await database;
   return await db.insert('tasks', {'title': title, 'completed': 0});
@@ -330,7 +345,8 @@ Future<int> updateTask(int id, bool completed) async {
     where: 'id = ?',
     whereArgs: [id],
   );
-}`} lang="dart" title="Basic Operations" />
+}
+```
 
 ### Best Practices for SQFlite
 
