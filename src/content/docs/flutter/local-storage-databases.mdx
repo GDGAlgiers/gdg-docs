@@ -1,75 +1,87 @@
 ---
-title: "Local Storage & Database Management"
+title: "Local Storage & Databases"
 description: "Best practices for implementing efficient local storage and database solutions in Flutter applications."
 ---
 
 import { Aside, Code, FileTree, Steps, Tabs, TabItem } from '@astrojs/starlight/components';
 
----
+Effective local data storage is crucial for creating responsive, offline-capable Flutter applications. Understanding the different storage solutions and when to use each will help you build more reliable and performant apps.
 
-Effective local data storage is crucial for creating responsive, offline-capable Flutter applications. This guide covers choosing and implementing the right storage solution for your needs.
-
-<Aside type="tip" title="Storage Strategy">
-Plan your data persistence strategy early - changing storage approaches later can be costly and time-consuming.
+<Aside type="tip">
+  **Pro tip:** Plan your data persistence strategy early in development. Changing storage approaches later can be costly and time-consuming.
 </Aside>
-
----
-
-## Storage Solutions Overview
-
-**Quick decision guide:**
-- **Settings & preferences** → SharedPreferences
-- **Simple object storage** → Hive  
-- **Complex relationships** → Drift (SQLite)
-- **Raw SQL control** → SQFlite
-
-### Storage Options
-
-**SharedPreferences** - Simple key-value storage for primitive data. Perfect for user settings and small data pieces.
-
-**Hive** - Fast NoSQL database built for Flutter. Great for moderate-sized structured data without relationships.
-
-**Drift (formerly Moor)** - Type-safe SQLite wrapper with code generation. Ideal for relational data with compile-time safety.
-
-**SQFlite** - Direct SQLite bindings for Flutter. Provides low-level control for complex SQL operations.
-
----
 
 ## Choosing the Right Storage Solution
 
-**Decision framework:**
+Flutter offers several storage options, each optimized for different use cases. Select the right tool based on your data complexity and requirements.
 
-<Steps>
-  1. **Basic Configuration or Simple Data**
-     Use SharedPreferences for small, non-structured data like settings and flags.
-  
-  2. **Moderate Structured Data**
-     Choose Hive for storing objects without complex relationships when performance is critical.
-  
-  3. **Relational Data with Type Safety**
-     Select Drift for complex, relational data that benefits from compile-time checking.
-  
-  4. **Complex SQL Requirements**
-     Use SQFlite when you need direct SQL control or are migrating from an existing SQLite database.
-</Steps>
+### Quick Decision Guide
 
-<Aside type="note" title="Pro Tip">
-Your choice should balance performance needs, development speed, and data complexity. Many apps use a combination of solutions.
-</Aside>
+**Simple key-value data** → SharedPreferences  
+**Structured objects without relations** → Hive  
+**Relational data with type safety** → Drift (SQLite)  
+**Direct SQL control** → SQFlite
+
+### Storage Options Overview
+
+<Tabs>
+  <TabItem label="SharedPreferences">
+    **Simple Key-Value Storage**
+    
+    - **Best for**: User settings, preferences, simple flags
+    - **Data types**: Primitives (String, int, bool, double) and String lists
+    - **Use case**: Small amounts of non-structured data
+    
+    **When to use**: Storing user preferences, app configuration, and simple application state.
+  </TabItem>
+  
+  <TabItem label="Hive">
+    **Fast NoSQL Database**
+    
+    - **Best for**: Moderate-sized structured data
+    - **Data types**: Dart objects with type adapters
+    - **Use case**: Storing objects without complex relationships
+    
+    **When to use**: Fast read/write operations with structured data that doesn't require SQL queries.
+  </TabItem>
+  
+  <TabItem label="Drift">
+    **Type-Safe SQLite Wrapper**
+    
+    - **Best for**: Complex relational data
+    - **Data types**: SQL tables with Dart type safety
+    - **Use case**: Data with relationships and complex queries
+    
+    **When to use**: Applications requiring relational data, compile-time safety, and reactive streams.
+  </TabItem>
+  
+  <TabItem label="SQFlite">
+    **Direct SQLite Access**
+    
+    - **Best for**: Raw SQL control
+    - **Data types**: SQL data types
+    - **Use case**: Complex queries and SQL optimization
+    
+    **When to use**: Maximum control over SQL, migrating existing SQLite databases, or custom query optimization.
+  </TabItem>
+</Tabs>
 
 ---
 
-## SharedPreferences - Simple Key-Value Storage
+## SharedPreferences
 
-**Best for:** User settings, app preferences, simple flags
+SharedPreferences provides simple key-value storage for primitive data types. It's the simplest storage solution and perfect for user settings and preferences.
 
-### Basic Setup and Usage
+### Basic Usage
 
-<Code code={`// pubspec.yaml
-dependencies:
+**Add the dependency:**
+
+<Code code={`dependencies:
   shared_preferences: ^2.2.0`} lang="yaml" />
 
-<Code code={`// Storing different data types
+**Store and retrieve data:**
+
+<Code code={`// Store different data types
 Future<void> saveUserPreferences() async {
   final prefs = await SharedPreferences.getInstance();
   
@@ -78,74 +90,91 @@ Future<void> saveUserPreferences() async {
   await prefs.setBool('darkMode', true);
   await prefs.setInt('launchCount', 10);
   await prefs.setStringList('recentSearches', ['flutter', 'dart']);
-}`} lang="dart" title="Storing Data" />
+}
 
-<Code code={`// Retrieving values with defaults
+// Retrieve values with defaults
 Future<void> loadUserPreferences() async {
   final prefs = await SharedPreferences.getInstance();
   
+  // Get values with fallback defaults
   final username = prefs.getString('username') ?? 'Guest';
   final isDarkMode = prefs.getBool('darkMode') ?? false;
   final launchCount = prefs.getInt('launchCount') ?? 0;
   
   // Increment launch count
   await prefs.setInt('launchCount', launchCount + 1);
-}`} lang="dart" title="Reading Data" />
+}`} lang="dart" title="Basic Operations" />
 
-### Best Practices
+### Organizing with Constants
 
-**Use constants for keys** to avoid typos:
+Use constants for keys to avoid typos and improve maintainability:
 
-<Code code={`class PreferenceKeys {
+<Code code={`// Define preference keys as constants
+class PreferenceKeys {
   static const String username = 'username';
   static const String darkMode = 'darkMode';
   static const String launchCount = 'launchCount';
 }
 
-// Usage
+// Usage with constants
 await prefs.setBool(PreferenceKeys.darkMode, true);`} lang="dart" />
 
-**Create a service class** for better organization:
+### Creating a Preferences Service
 
-<Code code={`class PreferencesService {
+Encapsulate SharedPreferences logic in a service class for better organization:
+
+<Code code={`// Preferences service for better code organization
+class PreferencesService {
   late SharedPreferences _prefs;
   
+  // Initialize the service
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
   }
   
-  // Getters
+  // Getters with default values
   String get username => _prefs.getString(PreferenceKeys.username) ?? 'Guest';
   bool get isDarkMode => _prefs.getBool(PreferenceKeys.darkMode) ?? false;
   
-  // Setters
+  // Setters return Future for async operations
   Future<void> setUsername(String value) => 
       _prefs.setString(PreferenceKeys.username, value);
+  
   Future<void> setDarkMode(bool value) => 
       _prefs.setBool(PreferenceKeys.darkMode, value);
 }`} lang="dart" title="Preferences Service" />
 
-**Limitations of SharedPreferences:**
-- Only supports primitive types (bool, int, double, String) and String lists
-- Not suitable for structured data or objects
-- Not designed for storing large amounts of data
-- Limited thread safety for high-frequency operations
+<Aside type="caution">
+  **Limitations**: SharedPreferences only supports primitive types (bool, int, double, String) and String lists. Not suitable for structured data, large datasets, or high-frequency operations.
+</Aside>
 
 ---
 
-## Structured Storage with Hive
+## Hive
 
-Hive is a lightweight, high-performance NoSQL database optimized for Flutter applications.
+Hive is a lightweight, blazing-fast NoSQL database written in pure Dart. It's perfect for storing structured data without the complexity of SQL.
 
-<Code code={`// pubspec.yaml
-dependencies:
+**Add dependencies:**
+
+<Code code={`dependencies:
   hive: ^2.2.3
-  hive_flutter: ^1.1.0`} lang="yaml" title="Dependencies" />
+  hive_flutter: ^1.1.0
+
+dev_dependencies:
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.6`} lang="yaml" />
+
+### Defining Models
+
+Create type-safe models with Hive's code generation:
 
 <Code code={`import 'package:hive/hive.dart';
 
-@HiveType(typeId: 0)
-class Task {
+// Generate adapter with: flutter pub run build_runner build
+part 'task.g.dart';
+
+@HiveType(typeId: 0)  // Unique ID for each model (0-223)
+class Task extends HiveObject {
   @HiveField(0)
   final String id;
   
@@ -155,50 +184,105 @@ class Task {
   @HiveField(2) 
   bool completed;
   
-  Task({required this.id, required this.title, this.completed = false});
+  Task({
+    required this.id,
+    required this.title,
+    this.completed = false,
+  });
 }`} lang="dart" title="Model Definition" />
 
-<Code code={`// Initialize and use Hive
-await Hive.initFlutter();
-Hive.registerAdapter(TaskAdapter());
-final taskBox = await Hive.openBox<Task>('tasks');
+**Generate the adapter:**
+
+<Code code={`# Run code generation
+flutter pub run build_runner build`} lang="bash" />
+
+### Basic Operations
+
+Initialize Hive and perform CRUD operations:
+
+<Code code={`// Initialize Hive in your app
+import 'package:hive_flutter/hive_flutter.dart';
+
+void main() async {
+  // Initialize Hive
+  await Hive.initFlutter();
+  
+  // Register adapters
+  Hive.registerAdapter(TaskAdapter());
+  
+  // Open boxes
+  await Hive.openBox<Task>('tasks');
+  
+  runApp(MyApp());
+}
 
 // CRUD operations
-await taskBox.put(task.id, task);  // Create/Update
-final task = taskBox.get(id);      // Read
-await taskBox.delete(id);          // Delete`} lang="dart" title="Basic Usage" />
+class TaskRepository {
+  late Box<Task> _taskBox;
+  
+  Future<void> init() async {
+    _taskBox = Hive.box<Task>('tasks');
+  }
+  
+  // Create or Update
+  Future<void> saveTask(Task task) async {
+    await _taskBox.put(task.id, task);
+  }
+  
+  // Read
+  Task? getTask(String id) {
+    return _taskBox.get(id);
+  }
+  
+  // Get all tasks
+  List<Task> getAllTasks() {
+    return _taskBox.values.toList();
+  }
+  
+  // Delete
+  Future<void> deleteTask(String id) async {
+    await _taskBox.delete(id);
+  }
+}`} lang="dart" title="Hive Operations" />
 
-### Best Practices for Hive
-
-**Hive Best Practices:**
-- Use unique typeIds for each model class (0-223)
-- Implement repository pattern to encapsulate database logic
-- Close boxes when they're no longer needed
-- Use Hive's lazy boxes for large collections
-- Consider encryption for sensitive data with `hive_flutter.encryptionCipher`
-
-**When Not to Use Hive:**
-- When you need complex relational queries
-- When data consistency is critical during crashes
-- For very large datasets where indexing is important
+<Aside type="tip">
+  **Performance tip**: Use unique typeIds (0-223) for each model. Close boxes when no longer needed to free up resources.
+</Aside>
 
 ---
 
-## SQL Storage with Drift
+## Drift (SQLite)
 
-Drift is a reactive persistence library for Dart & Flutter applications that builds on top of SQLite.
+Drift is a reactive persistence library that builds on SQLite, providing type safety and code generation for complex relational data.
 
-<Code code={`// pubspec.yaml
-dependencies:
-  drift: ^2.8.0
-  sqlite3_flutter_libs: ^0.5.15`} lang="yaml" title="Dependencies" />
+**Add dependencies:**
 
-<Code code={`// Define table and database
+<Code code={`dependencies:
+  drift: ^2.14.0
+  sqlite3_flutter_libs: ^0.5.0
+  path_provider: ^2.1.0
+  path: ^1.8.0
+
+dev_dependencies:
+  drift_dev: ^2.14.0
+  build_runner: ^2.4.0`} lang="yaml" />
+
+### Table Definition
+
+Define your database schema with Drift's table classes:
+
+<Code code={`import 'package:drift/drift.dart';
+
+// Define table structure
 class Tasks extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get title => text()();
+  TextColumn get title => text().withLength(min: 1, max: 100)();
   BoolColumn get completed => boolean().withDefault(const Constant(false))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
+
+// Generate code with: flutter pub run build_runner build
+part 'database.g.dart';
 
 @DriftDatabase(tables: [Tasks])
 class AppDatabase extends _\$AppDatabase {
@@ -207,80 +291,90 @@ class AppDatabase extends _\$AppDatabase {
   @override
   int get schemaVersion => 1;
   
-  // CRUD operations
+  // Query methods
   Future<List<Task>> getAllTasks() => select(tasks).get();
+  
+  // Reactive stream for real-time updates
   Stream<List<Task>> watchAllTasks() => select(tasks).watch();
-  Future<int> createTask(TasksCompanion task) => into(tasks).insert(task);
+  
+  Future<int> addTask(TasksCompanion task) => 
+      into(tasks).insert(task);
+  
+  Future<bool> updateTask(TasksCompanion task) => 
+      update(tasks).replace(task);
+  
+  Future<int> deleteTask(int id) => 
+      (delete(tasks)..where((t) => t.id.equals(id))).go();
+}
+
+// Database connection setup
+LazyDatabase _openConnection() {
+  return LazyDatabase(() async {
+    final dbFolder = await getApplicationDocumentsDirectory();
+    final file = File(join(dbFolder.path, 'app.db'));
+    return NativeDatabase(file);
+  });
 }`} lang="dart" title="Database Setup" />
 
-<Code code={`// Reactive UI updates
+### Reactive UI Updates
+
+Drift's reactive streams automatically update your UI when data changes:
+
+<Code code={`// UI automatically updates when data changes
 StreamBuilder<List<Task>>(
   stream: database.watchAllTasks(),
   builder: (context, snapshot) {
+    if (snapshot.connectionState == ConnectionState.waiting) {
+      return const CircularProgressIndicator();
+    }
+    
     final tasks = snapshot.data ?? [];
+    
     return ListView.builder(
       itemCount: tasks.length,
-      itemBuilder: (context, index) => ListTile(
-        title: Text(tasks[index].title),
-        leading: Checkbox(
-          value: tasks[index].completed,
-          onChanged: (value) => database.updateTask(
-            tasks[index].copyWith(completed: Value(value ?? false))
+      itemBuilder: (context, index) {
+        final task = tasks[index];
+        return ListTile(
+          title: Text(task.title),
+          leading: Checkbox(
+            value: task.completed,
+            onChanged: (value) {
+              // Update triggers automatic UI refresh
+              database.updateTask(
+                task.copyWith(completed: Value(value ?? false)),
+              );
+            },
           ),
-        ),
-      ),
+        );
+      },
     );
   },
 )`} lang="dart" title="Reactive UI" />
 
-### Best Practices for Drift
-
-**Drift Best Practices:**
-- Define database schema in a dedicated file
-- Use migrations for schema updates
-- Leverage reactive streams for UI updates
-- Implement repository pattern to abstract database operations
-- Use transactions for related operations
-
-<Code code={`// Example of using transactions in Drift
-Future<void> transferFunds(int fromAccount, int toAccount, double amount) {
-  return database.transaction(() async {
-    // Deduct from source account
-    await (update(accounts)..where((a) => a.id.equals(fromAccount)))
-      .write(AccountsCompanion(
-        balance: Expression.custom('balance - \$amount')
-      ));
-      
-    // Add to destination account
-    await (update(accounts)..where((a) => a.id.equals(toAccount)))
-      .write(AccountsCompanion(
-        balance: Expression.custom('balance + \$amount')
-      ));
-      
-    // Create transaction record
-    await into(transactions).insert(
-      TransactionsCompanion.insert(
-        fromAccountId: fromAccount,
-        toAccountId: toAccount,
-        amount: amount,
-        date: DateTime.now(),
-      )
-    );
-  });
-}`} lang="dart" title="Drift Transaction Example" />
+<Aside type="note">
+  **Type safety**: Drift provides compile-time type checking, eliminating runtime SQL errors and improving code reliability.
+</Aside>
 
 ---
 
-## SQL Storage with SQFlite
+## SQFlite
 
-SQFlite provides direct access to SQLite functionality in Flutter applications.
+SQFlite provides direct access to SQLite, giving you full control over SQL operations.
 
-<Code code={`// pubspec.yaml
-dependencies:
-  sqflite: ^2.2.8+4
-  path: ^1.8.3`} lang="yaml" title="Dependencies" />
+**Add dependencies:**
 
-<Code code={`// Database helper singleton
+<Code code={`dependencies:
+  sqflite: ^2.3.0
+  path: ^1.8.0`} lang="yaml" />
+
+### Database Setup
+
+Create a database helper class using the singleton pattern:
+
+<Code code={`import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
+
+// Singleton database helper
 class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper._init();
   static Database? _database;
@@ -297,73 +391,101 @@ class DatabaseHelper {
     final dbPath = await getDatabasesPath();
     final path = join(dbPath, filePath);
     
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+    return await openDatabase(
+      path,
+      version: 1,
+      onCreate: _createDB,
+    );
   }
   
   Future<void> _createDB(Database db, int version) async {
+    // Create tables
     await db.execute('''
-    CREATE TABLE tasks(
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      completed INTEGER NOT NULL
-    )
+      CREATE TABLE tasks(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        completed INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL
+      )
     ''');
   }
-}`} lang="dart" title="Database Setup" />
+  
+  // Close database
+  Future<void> close() async {
+    final db = await database;
+    db.close();
+  }
+}`} lang="dart" title="Database Helper" />
 
-<Code code={`// CRUD operations
-Future<int> createTask(String title) async {
-  final db = await database;
-  return await db.insert('tasks', {'title': title, 'completed': 0});
-}
+### CRUD Operations
 
-Future<List<Map<String, dynamic>>> readAllTasks() async {
-  final db = await database;
-  return await db.query('tasks');
-}
+Implement basic database operations:
 
-Future<int> updateTask(int id, bool completed) async {
-  final db = await database;
-  return await db.update(
-    'tasks',
-    {'completed': completed ? 1 : 0},
-    where: 'id = ?',
-    whereArgs: [id],
-  );
-}`} lang="dart" title="Basic Operations" />
+<Code code={`class TaskRepository {
+  // Create
+  Future<int> createTask(String title) async {
+    final db = await DatabaseHelper.instance.database;
+    return await db.insert('tasks', {
+      'title': title,
+      'completed': 0,
+      'created_at': DateTime.now().millisecondsSinceEpoch,
+    });
+  }
+  
+  // Read all
+  Future<List<Map<String, dynamic>>> getAllTasks() async {
+    final db = await DatabaseHelper.instance.database;
+    return await db.query('tasks', orderBy: 'created_at DESC');
+  }
+  
+  // Read one
+  Future<Map<String, dynamic>?> getTask(int id) async {
+    final db = await DatabaseHelper.instance.database;
+    final results = await db.query(
+      'tasks',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    return results.isNotEmpty ? results.first : null;
+  }
+  
+  // Update
+  Future<int> updateTask(int id, bool completed) async {
+    final db = await DatabaseHelper.instance.database;
+    return await db.update(
+      'tasks',
+      {'completed': completed ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+  
+  // Delete
+  Future<int> deleteTask(int id) async {
+    final db = await DatabaseHelper.instance.database;
+    return await db.delete(
+      'tasks',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+}`} lang="dart" title="CRUD Operations" />
 
-### Best Practices for SQFlite
-
-**SQFlite Best Practices:**
-- Use a singleton pattern for database helper
-- Define SQL queries as constants
-- Handle migrations carefully for schema changes
-- Close database connections when no longer needed
-- Use transactions for complex operations
-
-**Drift vs SQFlite:**
-- Drift provides compile-time type safety, eliminating SQL string errors
-- Drift generates boilerplate code for you
-- SQFlite gives more direct control over SQL queries
-- SQFlite has a lower learning curve for developers familiar with SQL
+<Aside type="tip">
+  **Drift vs SQFlite**: Drift provides compile-time type safety and eliminates SQL string errors, while SQFlite offers more direct control. Choose Drift for type safety, SQFlite for SQL flexibility.
+</Aside>
 
 ---
 
-## Offline Data Handling
+## Offline Data Synchronization
 
-Implementing effective offline capabilities ensures your app remains functional without an internet connection.
-
-<Steps>
-  1. **Local Persistence** - Store all essential data locally for offline access
-  2. **Sync Management** - Track changes made offline to sync later  
-  3. **Conflict Resolution** - Define strategies for handling conflicts during synchronization
-  4. **UI Feedback** - Inform users about offline mode and sync status
-</Steps>
+Implementing effective offline capabilities ensures your app remains functional without internet connectivity.
 
 ### Synchronization Strategies
 
 <Tabs>
   <TabItem label="Basic Sync">
+    **Simple Upload/Download**: Download remote data, upload local changes. Best for simple data models with rare conflicts.
     <Code code={`class BasicSyncService {
   final ApiService _api;
   final TaskRepository _repository;
@@ -390,29 +512,22 @@ Implementing effective offline capabilities ensures your app remains functional 
     }
   }
 }`} lang="dart" />
-
-    **When to Use:**
-    - For simple data models
-    - When conflicts are rare
-    - For apps with limited offline editing
   </TabItem>
 
   <TabItem label="Timestamp-Based">
+    **Track Changes by Time**: Use timestamps to sync only what changed. Best for collaborative apps with frequent updates.
     <Code code={`class TimestampSyncService {
   final ApiService _api;
   final TaskRepository _repository;
-  
-  TimestampSyncService(this._api, this._repository);
   
   Future<void> syncTasks() async {
     try {
       // Get last sync timestamp
       final lastSync = await _repository.getLastSyncTimestamp();
       
-      // Get remote changes since last sync
+      // Fetch only changes since last sync
       final remoteChanges = await _api.getChangesSince(lastSync);
       for (var change in remoteChanges) {
-        // Apply remote changes
         await _repository.applyRemoteChange(change);
       }
       
@@ -426,24 +541,19 @@ Implementing effective offline capabilities ensures your app remains functional 
       await _repository.setLastSyncTimestamp(DateTime.now());
     } catch (e) {
       // Handle sync errors
+      print('Sync failed: \$e');
     }
   }
 }`} lang="dart" />
-
-    **When to Use:**
-    - For collaborative apps
-    - When you need to track change history
-    - For data with frequent updates
   </TabItem>
 
   <TabItem label="Queue-Based">
+    **Operation Queue**: Queue all operations for sequential sync. Best for mission-critical data where order matters.
     <Code code={`class QueueSyncService {
   final ApiService _api;
   final SyncQueueRepository _queueRepo;
   
-  QueueSyncService(this._api, this._queueRepo);
-  
-  // Add operation to queue when offline
+  // Add operation to queue
   Future<void> addTask(Task task) async {
     await _queueRepo.addToQueue(
       SyncOperation(
@@ -454,17 +564,19 @@ Implementing effective offline capabilities ensures your app remains functional 
       ),
     );
     
-    // Try to sync immediately
+    // Try to process queue immediately
     processQueue();
   }
   
-  // Process the sync queue
+  // Process queued operations
   Future<void> processQueue() async {
     if (!await _hasConnectivity()) return;
     
     final operations = await _queueRepo.getOperationsToSync();
+    
     for (var op in operations) {
       try {
+        // Execute operation based on type
         switch (op.type) {
           case SyncOperationType.create:
             await _api.create(op.entityType, op.data);
@@ -480,9 +592,8 @@ Implementing effective offline capabilities ensures your app remains functional 
         // Mark as synced
         await _queueRepo.markAsSynced(op.id);
       } catch (e) {
-        // If operation fails, keep in queue for retry
+        // Keep in queue for retry if server error
         if (!_isServerError(e)) {
-          // Mark as failed if client error
           await _queueRepo.markAsFailed(op.id, e.toString());
         }
       }
@@ -490,105 +601,78 @@ Implementing effective offline capabilities ensures your app remains functional 
   }
   
   Future<bool> _hasConnectivity() async {
-    // Check for internet connectivity
+    // Check internet connection
+    return true;
   }
   
   bool _isServerError(Exception e) {
-    // Determine if error is server-side (5xx) or client-side (4xx)
+    // Determine if 5xx vs 4xx error
+    return false;
   }
 }`} lang="dart" />
-
-    **When to Use:**
-    - For mission-critical data
-    - When order of operations matters
-    - For apps with extensive offline functionality
   </TabItem>
 </Tabs>
 
-### Conflict Resolution Strategies
+### Conflict Resolution
 
-#### Server Wins
-Always prefer server data over local data during conflicts. Simple to implement but may result in lost offline changes.
+When the same data is modified offline and online, you need a strategy to resolve conflicts:
 
-#### Client Wins  
-Local changes override server data during conflicts. Preserves user changes but may overwrite others' updates in collaborative scenarios.
+**Server Wins**: Always prefer server data. Simple but may lose local changes.
 
-#### Last Write Wins
-Use timestamps to determine which change is more recent. Requires synchronized clocks but provides a logical resolution approach.
+**Client Wins**: Local changes override server data. Preserves user edits but may overwrite others' updates.
 
-#### Manual Merge
-Present conflicts to users and let them decide how to resolve them. Most user-friendly but increases complexity significantly.
+**Last Write Wins**: Use timestamps to determine the newest change. Requires clock synchronization.
 
----
-
-## Storage Migration Strategies
-
-As your app evolves, you may need to migrate from one storage solution to another:
-
-<Steps>
-  1. **Dual Write Period** - Write to both old and new storage systems during transition
-  2. **Data Migration** - Transfer existing data from old to new storage
-  3. **Validation** - Verify data integrity in the new system
-  4. **Switch Read Path** - Start reading from the new storage system
-  5. **Cleanup** - Remove old storage system once migration is stable
-</Steps>
-
-<Code code={`// Migration service example
-class StorageMigrationService {
-  final SharedPreferences _prefs;
-  final TaskRepository _hiveRepo;
-  
-  Future<void> migrateTasksToHive() async {
-    final migrated = _prefs.getBool('migration_completed') ?? false;
-    if (migrated) return;
-    
-    try {
-      // Get data from old storage
-      final taskJson = _prefs.getString('tasks') ?? '[]';
-      final tasks = jsonDecode(taskJson);
-      
-      // Migrate to new storage
-      for (var taskMap in tasks) {
-        await _hiveRepo.addTask(Task.fromMap(taskMap));
-      }
-      
-      // Mark as completed
-      await _prefs.setBool('migration_completed', true);
-    } catch (e) {
-      print('Migration failed: \$e');
-    }
-  }
-}`} lang="dart" title="Migration Example" />
+**Manual Resolution**: Let users resolve conflicts. Most user-friendly but adds complexity.
 
 ---
 
 ## Best Practices Summary
 
-### General Storage Best Practices
+### Storage Best Practices
 
-**Overall Storage Guidelines:**
-- Choose the right tool for each data type
-- Separate storage logic into repository classes
-- Implement proper error handling for storage operations
-- Use transactions for related operations
-- Always handle migration paths for schema changes
-- Implement data backup strategies for critical user data
+<Steps>
+  1. **Choose the right tool** for each data type
+  
+  2. **Use repository pattern** to encapsulate storage logic
+  
+  3. **Handle errors gracefully** with proper try-catch blocks
+  
+  4. **Implement migrations** for schema changes
+  
+  5. **Close resources** properly to prevent memory leaks
+  
+  6. **Test offline scenarios** to ensure data integrity
+</Steps>
 
-**Common Mistakes to Avoid:**
-- Storing large data structures in SharedPreferences
-- Performing database operations on the UI thread
-- Neglecting to close database connections
-- Overcomplicating the storage layer for simple needs
-- Missing error handling for storage failures
+### Common Mistakes to Avoid
+
+**Storing large data in SharedPreferences**
+- Use Hive or SQLite for structured or large datasets
+- SharedPreferences is only for simple key-value pairs
+
+**Blocking the UI thread**
+- Always use async/await for database operations
+- Never perform database calls synchronously
+
+**Ignoring database migrations**
+- Plan for schema changes from the start
+- Test migrations thoroughly before deployment
+
+**Not handling offline mode**
+- Implement proper connectivity checks
+- Queue operations for later sync when offline
+
+**Missing error handling**
+- Always wrap database operations in try-catch
+- Provide meaningful error messages to users
 
 ---
 
 ## See Also
 
-1. [SharedPreferences Documentation](https://pub.dev/packages/shared_preferences) – Flutter's key-value storage solution
-2. [Hive Documentation](https://docs.hivedb.dev/) – Fast, lightweight NoSQL database for Flutter
-3. [Drift Documentation](https://drift.simonbinder.eu/) – Type-safe SQLite wrapper for Flutter
-4. [SQFlite Documentation](https://pub.dev/packages/sqflite) – SQLite plugin for Flutter
-5. [State Management](../state-management) – Related guide on state management
-
----
+1. [State Management](../state-management) – Managing app state with stored data
+2. [SharedPreferences](https://pub.dev/packages/shared_preferences) – Simple key-value storage
+3. [Hive](https://docs.hivedb.dev/) – Fast NoSQL database for Flutter
+4. [Drift](https://drift.simonbinder.eu/) – Type-safe SQLite wrapper
+5. [SQFlite](https://pub.dev/packages/sqflite) – SQLite plugin for Flutter
