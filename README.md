@@ -198,7 +198,7 @@ This project is licensed under the MIT License - see the [LICENSE](./LICENSE) fi
 ## Community & Support
 
 - **Website**: [gdgalgiers.dev](https://gdgalgiers.dev)
-- **Discord**: [Join our community](https://discord.gg/tX2rAAvkxX)
+- **Discord**: [Join our community](https://discord.com/invite/3C8WV8EAsF)
 - **GitHub**: [GDGAlgiers](https://github.com/GDGAlgiers)
 - **Issues**: [Report bugs or request features](https://github.com/GDGAlgiers/gdg-docs/issues)
 
